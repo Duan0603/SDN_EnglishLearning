@@ -31,6 +31,12 @@ jobs:
       #     cd backend
       #     npm run lint
 
+      - name: Build Check
+        run: |
+          cd backend
+          # Với Express, bước "build" chính là đảm bảo Prisma và dependencies ổn định
+          node -c src/server.js 
+
   frontend-check:
     runs-on: ubuntu-latest
     steps:
@@ -45,7 +51,8 @@ jobs:
         run: |
           cd frontend
           npm install
-      # - name: Run Lint
-      #   run: |
-      #     cd frontend
-      #     npm run lint
+      - name: Build Check
+        run: |
+          cd frontend
+          npx expo export
+
