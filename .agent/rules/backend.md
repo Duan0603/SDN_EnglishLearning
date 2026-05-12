@@ -38,7 +38,10 @@ glob: "**/*.{py,js,ts,go,rs,sql,php,java,dockerfile,tf,yaml,yml}"
 
 ## 🗄️ 4. DATABASE & EMAILING
 
-1. **Database**: MongoDB (Mongoose) hoặc PostgreSQL (Prisma). Luôn sử dụng Index cho các trường tìm kiếm thường xuyên (`email`, `username`, `booking_date`).
-2. **Booking Logic**: Kiểm tra trùng lịch (Double booking) bằng Atomic operation hoặc Transaction.
+1. **Database**: MongoDB (Prisma). 
+   - Sử dụng `db push` thay vì `migrate dev` cho tính linh hoạt của NoSQL.
+   - Định nghĩa Schema với `@db.ObjectId` và `String` cho ID.
+   - Luôn sử dụng Index cho các trường tìm kiếm thường xuyên (`email`, `username`, `booking_date`).
+2. **Booking Logic**: Kiểm tra trùng lịch (Double booking) bằng MongoDB Transactions (Yêu cầu Replica Set).
 3. **Emailing**: Sử dụng `Nodemailer` với SMTP (Gmail/SendGrid). Template email HTML chuyên nghiệp cho thông báo đặt lịch.
 

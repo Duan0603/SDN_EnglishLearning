@@ -36,7 +36,7 @@ Antigravity Kit is a modular system consisting of:
 | `orchestrator` | **The Director** | Strategic flow & Final Operation |
 | `quality-inspector` | **The Gatekeeper** | Inspection, Validation & Audit (The Final Gate) |
 | `project-planner` | **The Architect** | Strategy, Requirements & MVP Mapping |
-| `backend-specialist` | **Worker** | Logic, API & Database (SQL Master) |
+| `backend-specialist` | **Worker** | Logic, API & Database (NoSQL Master) |
 | `frontend-specialist`| **Worker** | UI, UX & Web Performance |
 | `security-auditor` | **Worker** | Defensive & Offensive Security |
 | `test-engineer` | **Worker** | Test Infrastructure & TDD |
@@ -290,7 +290,7 @@ For details, see [scripts/README.md](scripts/README.md)
 | Web App | `frontend-specialist` | nextjs-react-expert, frontend-design |
 | API | `backend-specialist` | api-patterns, nodejs-best-practices |
 | Mobile | `mobile-developer` | mobile-design |
-| Database | `database-architect` | database-design, prisma-expert |
+| Database | `database-architect` | database-design, prisma-expert (MongoDB) |
 | Security | `security-auditor` | vulnerability-scanner |
 | Testing | `test-engineer` | testing-patterns, webapp-testing |
 | Debug | `debugger` | systematic-debugging |

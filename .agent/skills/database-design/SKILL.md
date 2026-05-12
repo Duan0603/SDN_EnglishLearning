@@ -27,9 +27,9 @@ layer: master-skill
 
 ## ⚠️ Core Principle
 
-- ASK user for database preferences when unclear
-- Choose database/ORM based on CONTEXT
-- Don't default to PostgreSQL for everything
+- Use MongoDB as the project's default database.
+- Choose MongoDB/Prisma NoSQL patterns for all features.
+- Don't default to PostgreSQL (Project migrated to MongoDB).
 
 ---
 

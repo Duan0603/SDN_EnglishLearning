@@ -20,10 +20,10 @@ Tệp này kiểm soát hành vi của AI Agent.
 **Mức độ xác nhận**: Hỏi trước các tác vụ quan trọng
 
 ## 🛠️ Công nghệ cốt lõi (Tech Stack)
-- **Backend**: NodeJS, Express, MongoDB/PostgreSQL, JWT Auth.
-- **Frontend**: React Native, Zustand/Redux, React Navigation.
+- **Backend**: NodeJS, Express, MongoDB, Prisma ORM, JWT Auth.
+- **Frontend**: React Native, Zustand, React Navigation.
 - **AI Integration**: OpenAI (GPT-4o/GPT-4o-mini), Whisper API (STT).
-- **Other**: Nodemailer (Email), Web Audio API (Recording).
+- **Other**: Docker (MongoDB Replica Set), Nodemailer, Web Audio API.
 
 ## 🌐 Giao thức Ngôn ngữ (Language Protocol)
 

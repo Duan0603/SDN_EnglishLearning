@@ -1,56 +1,51 @@
-# Schema Design Principles
+# Schema Design Principles (NoSQL Focus)
 
-> Normalization, primary keys, timestamps, relationships.
+> Embedding vs Referencing, ObjectIds, flexible documents.
 
-## Normalization Decision
+## NoSQL Pattern Decision (Embedding vs Referencing)
 
 ```
-When to normalize (separate tables):
-├── Data is repeated across rows
-├── Updates would need multiple changes
-├── Relationships are clear
-└── Query patterns benefit
+When to Embed (Single Document):
+├── Data is "owned" by the parent
+├── Data is always fetched together
+├── Relationships are One-to-Few
+└── Read performance is critical
 
-When to denormalize (embed/duplicate):
-├── Read performance critical
-├── Data rarely changes
-├── Always fetched together
-└── Simpler queries needed
+When to Reference (Separate Collections):
+├── Data is shared across multiple parents
+├── Data grows without bound
+├── Relationships are One-to-Many/Many-to-Many
+└── Large document size limit concerns
 ```
 
-## Primary Key Selection
+## Primary Key Selection (MongoDB)
 
-| Type | Use When |
-|------|----------|
-| **UUID** | Distributed systems, security |
-| **ULID** | UUID + sortable by time |
-| **Auto-increment** | Simple apps, single database |
-| **Natural key** | Rarely (business meaning) |
+| Type | Use When | Prisma Implementation |
+|------|----------|-----------------------|
+| **ObjectId** | Default MongoDB ID | `@id @default(auto()) @map("_id") @db.ObjectId` |
+| **UUID/String** | Cross-platform migration | `@id @default(uuid()) @map("_id")` |
 
 ## Timestamp Strategy
 
 ```
-For every table:
-├── created_at → When created
-├── updated_at → Last modified
-└── deleted_at → Soft delete (if needed)
-
-Use TIMESTAMPTZ (with timezone) not TIMESTAMP
+For every model:
+├── createdAt → @default(now())
+└── updatedAt → @updatedAt
 ```
 
-## Relationship Types
+## Relationship Types (Prisma MongoDB)
 
 | Type | When | Implementation |
 |------|------|----------------|
-| **One-to-One** | Extension data | Separate table with FK |
-| **One-to-Many** | Parent-children | FK on child table |
-| **Many-to-Many** | Both sides have many | Junction table |
+| **One-to-One** | Extension data | `@unique` relation field |
+| **One-to-Many** | Parent-children | Array of IDs or `@relation` |
+| **Many-to-Many** | Shared relationships | Array of IDs on both sides (Implicit/Explicit) |
 
-## Foreign Key ON DELETE
+## Referential Actions (Prisma)
 
 ```
-├── CASCADE → Delete children with parent
-├── SET NULL → Children become orphans
-├── RESTRICT → Prevent delete if children exist
-└── SET DEFAULT → Children get default value
+├── Cascade → Delete children with parent
+├── SetNull → Children become orphans
+├── Restrict → Prevent delete if children exist
+└── NoAction → No referential integrity check (Standard NoSQL)
 ```

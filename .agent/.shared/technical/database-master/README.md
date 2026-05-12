@@ -9,19 +9,19 @@ references:
   - rules: [backend.md, database-architect.md]
 ---
 
-# 📁 Database Master Schemas & 3NF Patterns
+# 📁 Database Master Schemas & NoSQL Patterns
 **: Data Core
-> **Type**: Shared Module (Schemas & optimization)
+> **Type**: Shared Module (Schemas & NoSQL optimization)
 
-This module centralizes database design patterns, schema standards, and migration strategies.
+This module centralizes NoSQL database design patterns, flexible schema standards, and MongoDB Replica Set strategies.
 
 ## 📂 Structure
 
 ```
 database-master/
-├── schemas/              # 🗂️ Standard Schemas
+├── schemas/              # 🗂️ Standard Prisma Schemas (MongoDB)
 │   └── user_model.prisma
-├── normalization.md      # 📜 3NF Standards
+├── document_design.md    # 📜 NoSQL Design Standards
 └── checklists/           # ✅ Audit Tools
     └── index_audit.md    #    - Performance indexing check
 ```

@@ -38,7 +38,7 @@ Antigravity Kit là một hệ thống nhất thể hóa (Unified), được thi
 | `orchestrator` | **Thuyền trưởng** | Điều phối luồng chiến lược & Quyết định cuối cùng |
 | `quality-inspector` | **Thanh tra viên** | Kiểm tra, Xác thực & Kiểm toán (Cổng chặn cuối cùng) |
 | `project-planner` | **Kiến trúc sư** | Chiến lược, Yêu cầu & MVP Mapping |
-| `backend-specialist` | **Worker** | Logic, API & Cấu trúc Dữ liệu (SQL Master) |
+| `backend-specialist` | **Worker** | Logic, API & Cấu trúc Dữ liệu (NoSQL Master) |
 | `frontend-specialist`| **Worker** | UI, UX & Hiệu suất Web (Premium UI) |
 | `security-auditor` | **Worker** | Bảo mật phòng thủ & Tấn công (Security Armor) |
 | `test-engineer` | **Worker** | Hạ tầng kiểm thử & TDD |
@@ -62,7 +62,7 @@ Các miền tri thức mô-đun mà Agent có thể tải theo yêu cầu dựa 
 
 ### Backend & Infrastructure:
 - `api-patterns`: Chuẩn thiết kế REST, GraphQL, tRPC.
-- `database-design`: Thiết kế Schema 3NF và tối ưu hóa truy vấn.
+- `database-design`: Thiết kế NoSQL Schema và tối ưu hóa truy vấn MongoDB.
 - `deployment-engineer`: Quy trình CI/CD và triển khai Docker/K8s.
 
 ### Bảo mật & Chất lượng:

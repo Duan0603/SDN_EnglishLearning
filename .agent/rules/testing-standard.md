@@ -50,7 +50,7 @@ Chúng ta tuân thủ tỷ lệ vàng trong kiểm thử:
 *   **External Services**: BẮT BUỘC Mock các 3rd-party API (Stripe, SendGrid, Google Auth). Không được gọi API thật trong test.
 *   **Database**:
     *   Với Unit Test: Repository Pattern -> Mock Repository.
-    *   Với Integration Test: Dùng Test Database (SQLite/Docker).
+    *   Với Integration Test: Dùng MongoDB (Test Database) hoặc Mocking tầng Prisma.
 
 ---
 
