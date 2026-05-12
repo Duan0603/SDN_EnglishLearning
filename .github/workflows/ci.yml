@@ -2,9 +2,10 @@ name: IELTS App CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ '*' ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ '*' ]
+  workflow_dispatch:
 
 jobs:
   backend-lint:
