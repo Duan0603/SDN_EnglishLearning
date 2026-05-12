@@ -1,12 +1,9 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
@@ -17,44 +14,43 @@ enum Role {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  password      String
-  fullName      String?
-  role          Role      @default(STUDENT)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  bookings      Booking[] @relation("StudentBookings")
-  mentorSlots   Booking[] @relation("MentorBookings")
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  email     String    @unique
+  username  String?   @unique
+  password  String
+  fullName  String?
+  role      Role      @default(STUDENT)
+  avatar    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  bookings  Booking[]
 }
 
 model Booking {
-  id          String   @id @default(uuid())
-  studentId   String
-  mentorId    String
-  startTime   DateTime
-  endTime     DateTime
-  status      String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED
-  student     User     @relation("StudentBookings", fields: [studentId], references: [id])
-  mentor      User     @relation("MentorBookings", fields: [mentorId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  date      DateTime
+  status    String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 }
 
 model Test {
-  id          String     @id @default(uuid())
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
   title       String
-  type        String     // READING, LISTENING
-  content     String     // JSON or URL to content
+  description String?
+  type        String // READING, LISTENING, WRITING, SPEAKING
+  content     Json // Linh hoạt cho nhiều loại câu hỏi
   createdAt   DateTime   @default(now())
   questions   Question[]
 }
 
 model Question {
-  id        String   @id @default(uuid())
-  testId    String
-  text      String
-  options   String[] // Array of options
-  answer    String
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  testId    String   @db.ObjectId
   test      Test     @relation(fields: [testId], references: [id])
+  content   String
+  answer    String
+  options   Json?
+  createdAt DateTime @default(now())
 }

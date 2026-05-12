@@ -1,38 +1,88 @@
-version: '3.8'
-
 services:
-  db:
-    image: postgres:15-alpine
-    container_name: ielts_db
+  # Database: MongoDB
+  mongodb:
+    image: mongo:latest
+    container_name: ielts_mongodb
     restart: always
-    environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_NAME:-ielts_app}
+    command: mongod --replSet rs0 --bind_ip_all
     ports:
-      - "5433:5432"
+      - "27017:27017"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongodb_data:/data/db
 
-  api:
-    build: ./backend
-    container_name: ielts_api
+  # Worker: Tự động khởi tạo Replica Set VÀ Tạo User
+  mongodb-init:
+    image: mongo:latest
+    container_name: ielts_mongodb_init
+    entrypoint: [ "sh", "-c" ]
+    command:
+      - |
+        sleep 5
+        echo "Đang cấu hình MongoDB..."
+        mongosh --host mongodb:27017 --eval "
+          // 1. Khởi tạo Replica Set nếu chưa có
+          try {
+            rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]});
+            print('Đã gửi lệnh khởi tạo Replica Set');
+          } catch (e) {
+            print('Replica Set đã tồn tại');
+          }
+          
+          // Đợi một chút để RS ổn định
+          sleep(5000);
+
+          // 2. Tạo User Admin (Chỉ tạo nếu chưa có)
+          try {
+            var userCount = db.getSiblingDB('admin').getUser('${MONGO_USER}');
+            if (!userCount) {
+              db.getSiblingDB('admin').createUser({
+                user: '${MONGO_USER}',
+                pwd: '${MONGO_PASS}',
+                roles: [{ role: 'root', db: 'admin' }]
+              });
+              print('Đã tạo User thành công');
+            } else {
+              print('User đã tồn tại');
+            }
+          } catch (e) {
+            print('Lỗi khi kiểm tra/tạo User: ' + e);
+          }
+        "
+    depends_on:
+      - mongodb
+
+  # MongoDB GUI
+  mongo-express:
+    image: mongo-express:latest
+    container_name: ielts_mongo_express
     restart: always
+    ports:
+      - "8082:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASS}
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_USER}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_PASS}
+      # Thêm &directConnection=true để tránh lỗi DNS khi kết nối Single Node RS
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USER}:${MONGO_PASS}@mongodb:27017/${MONGO_DB}?authSource=admin&replicaSet=rs0&directConnection=true
+    depends_on:
+      - mongodb
+      - mongodb-init
+
+  # Backend API
+  api:
+    build:
+      context: ./backend
+    container_name: ielts_api
     ports:
       - "5000:5000"
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-ielts_app}?schema=public
-      JWT_SECRET: ${JWT_SECRET}
-      PORT: 5000
+      - DATABASE_URL=mongodb://${MONGO_USER}:${MONGO_PASS}@mongodb:27017/${MONGO_DB}?authSource=admin&replicaSet=rs0&directConnection=true
+      - JWT_SECRET=your_jwt_secret_here
+      - PORT=5000
     depends_on:
-      - db
-
-  adminer:
-    image: adminer
-    container_name: ielts_adminer
-    restart: always
-    ports:
-      - "8080:8080"
+      - mongodb
+      - mongodb-init
 
 volumes:
-  postgres_data:
+  mongodb_data:
