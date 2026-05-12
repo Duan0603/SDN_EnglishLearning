@@ -15,6 +15,7 @@ glob: "**/*.{js,jsx,ts,tsx,css,scss,html,vue,svelte,dart,swift,kt,xml}"
 2. **Safe Areas**: Sử dụng `SafeAreaView` hoặc `react-native-safe-area-context` để tránh notch và home indicator.
 3. **Feedback**: Sử dụng `Pressable` với `android_ripple` hoặc `Opacity` feedback. Mọi hành động phải có phản hồi thị giác.
 4. **Layout**: Ưu tiên Flexbox. Tránh hardcode `width`/`height` theo pixel, sử dụng `%` hoặc `flex`.
+5. **Styling**: Sử dụng **NativeWind** (Tailwind CSS) làm phương thức chính để viết style. Tránh sử dụng `StyleSheet` thuần trừ khi cần xử lý logic phức tạp.
 
 ---
 

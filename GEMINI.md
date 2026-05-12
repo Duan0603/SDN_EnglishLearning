@@ -21,7 +21,7 @@ Tệp này kiểm soát hành vi của AI Agent.
 
 ## 🛠️ Công nghệ cốt lõi (Tech Stack)
 - **Backend**: NodeJS, Express, MongoDB, Prisma ORM, JWT Auth.
-- **Frontend**: React Native, Zustand, React Navigation.
+- **Frontend**: React Native, NativeWind (Tailwind CSS), Zustand, React Navigation.
 - **AI Integration**: OpenAI (GPT-4o/GPT-4o-mini), Whisper API (STT).
 - **Other**: Docker (MongoDB Replica Set), Nodemailer, Web Audio API.
 

@@ -1,6 +1,5 @@
 import React from 'react';
 import { 
-  StyleSheet, 
   View, 
   Text, 
   TouchableOpacity, 
@@ -12,114 +11,47 @@ const ProfileScreen = () => {
   const { user, logout } = useAuthStore();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
+    <SafeAreaView className="flex-1 bg-slate-950">
+      <View className="items-center px-6 pt-16 pb-12 bg-slate-900 rounded-b-[48px] border-b border-slate-800">
+        <View className="w-32 h-32 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 justify-center items-center mb-6 border-4 border-slate-900 relative">
+          <Text className="text-5xl text-white font-black tracking-tighter">
             {user?.fullName?.charAt(0).toUpperCase()}
           </Text>
+          <View className="absolute bottom-0 right-2 w-6 h-6 bg-emerald-500 rounded-full border-4 border-slate-900" />
         </View>
-        <Text style={styles.name}>{user?.fullName}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleText}>{user?.role}</Text>
+        <Text className="text-3xl font-black text-white tracking-tight">{user?.fullName}</Text>
+        <Text className="text-base text-slate-400 mt-2 font-medium">{user?.email}</Text>
+        
+        <View className="bg-indigo-500/10 px-6 py-2 rounded-full mt-6 border border-indigo-500/20">
+          <Text className="text-indigo-400 text-sm font-bold uppercase tracking-widest">{user?.role}</Text>
         </View>
       </View>
 
-      <View style={styles.content}>
-        <Text style={styles.sectionTitle}>IELTS Progress</Text>
-        <View style={styles.card}>
-          <Text style={styles.cardText}>You haven't taken any tests yet.</Text>
+      <View className="flex-1 px-8 pt-10">
+        <View className="flex-row items-center justify-between mb-6">
+          <Text className="text-xl font-bold text-white tracking-tight">IELTS Progress</Text>
+          <TouchableOpacity>
+            <Text className="text-indigo-400 font-semibold">View All</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View className="bg-slate-900/50 p-8 rounded-3xl border border-slate-800 mb-auto items-center justify-center">
+          <View className="w-16 h-16 bg-slate-800 rounded-full mb-4 items-center justify-center">
+            <Text className="text-2xl">🏆</Text>
+          </View>
+          <Text className="text-slate-400 text-center font-medium text-lg">No tests taken yet.</Text>
+          <Text className="text-slate-500 text-center text-sm mt-2">Start a mock test to see your score here.</Text>
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-          <Text style={styles.logoutText}>Logout</Text>
+        <TouchableOpacity 
+          className="bg-red-500/10 p-5 rounded-2xl items-center border border-red-500/20 active:bg-red-500/20 active:scale-[0.98] transition-all mb-8" 
+          onPress={logout}
+        >
+          <Text className="text-red-400 text-lg font-bold tracking-wide">Sign Out</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    alignItems: 'center',
-    padding: 40,
-    backgroundColor: '#f8f9fa',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#007bff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  avatarText: {
-    fontSize: 40,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-  },
-  email: {
-    fontSize: 14,
-    color: '#6c757d',
-    marginTop: 4,
-  },
-  roleBadge: {
-    backgroundColor: '#e7f1ff',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
-    marginTop: 12,
-  },
-  roleText: {
-    color: '#007bff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  content: {
-    padding: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#1a1a1a',
-  },
-  card: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    marginBottom: 40,
-  },
-  cardText: {
-    color: '#6c757d',
-    textAlign: 'center',
-  },
-  logoutButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#dc3545',
-  },
-  logoutText: {
-    color: '#dc3545',
-    fontWeight: 'bold',
-  }
-});
 
 export default ProfileScreen;
