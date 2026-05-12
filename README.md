@@ -18,7 +18,7 @@ docker-compose up -d db adminer
 cd backend
 npm install
 cp .env.example .env # Cấu hình DATABASE_URL
-npx prisma migrate dev
+npm run migrate
 npm run dev
 ```
 
