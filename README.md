@@ -3,7 +3,7 @@
 Dự án học tiếng Anh IELTS tích hợp AI.
 
 ## Cấu trúc thư mục
-- `backend/`: NodeJS Express API + Prisma + PostgreSQL.
+- `backend/`: NodeJS Express API + Prisma + MongoDB.
 - `frontend/`: React Native (Expo) app.
 - `docker-compose.yml`: Orchestration cho môi trường dev.
 
@@ -11,14 +11,18 @@ Dự án học tiếng Anh IELTS tích hợp AI.
 
 ### 1. Backend & Database
 ```bash
-# Chạy database và adminer
-docker-compose up -d db adminer
+# Chạy database (MongoDB Replica Set)
+docker-compose up -d mongodb
 
 # Cài đặt backend
 cd backend
 npm install
 cp .env.example .env # Cấu hình DATABASE_URL
+
+# Đồng bộ schema và tạo dữ liệu mẫu (Seed)
 npm run migrate
+
+# Chạy server
 npm run dev
 ```
 
@@ -28,6 +32,17 @@ cd frontend
 npm install
 npm start
 ```
+
+## Tài khoản dùng thử (Test Accounts)
+Sau khi chạy lệnh `npm run migrate`, bạn có thể sử dụng các tài khoản sau để test:
+
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Admin** | `admin@sdn.com` | `password123` |
+| **Mentor** | `mentor@sdn.com` | `password123` |
+| **Student** | `student@sdn.com` | `password123` |
+
+> **Swagger UI**: Bạn có thể truy cập tài liệu API tại `http://localhost:5000/api-docs`
 
 ## Tính năng (Epics)
 - Epic 1: Authentication & User Management
