@@ -12,7 +12,7 @@ Dự án học tiếng Anh IELTS tích hợp AI.
 ### 1. Backend & Database
 ```bash
 # Chạy database (MongoDB Replica Set)
-docker-compose up -d mongodb
+docker-compose up -d
 
 # Cài đặt backend
 cd backend
