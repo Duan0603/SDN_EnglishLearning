@@ -2,38 +2,43 @@ import mongoose from "mongoose"
 
 
 const userSchema = new mongoose.Schema({
-    name:{
-        type:String,
-        required:true,
-        unique:true,
-        index:true,
+    username: {
+        type: String,
+        unique: true,
+        sparse: true // Cho phép null nếu không có username
     },
-    email:{
-        type:String,
-        required:true,
-        unique:true,
+    fullName: {
+        type: String,
+        default: ''
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
         trim: true
     },
-    password:{
-        type:String,
-        required:true,
+    password: {
+        type: String,
+        required: true,
     },
     status: {
         type: String,
         enum: ['active', 'inactive'],
-        required: true,
         default: 'active'
     },
     verify: {
-        type: mongoose.Schema.Types.Boolean,
+        type: Boolean,
         default: false,
-        required: true,
     },
     role: {
-        type: Array,
-        default: []
+        type: String,
+        enum: ['STUDENT', 'MENTOR', 'ADMIN'],
+        default: 'STUDENT'
     }
+}, {
+    timestamps: true,
+    collection: 'User' // Chỉ định chính xác collection mà Prisma đã tạo
 });
 
-const UserModel = mongoose.model('Users', userSchema)
+const UserModel = mongoose.model('User', userSchema)
 export default UserModel

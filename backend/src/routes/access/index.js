@@ -4,4 +4,6 @@ import {AccessController} from "../../controllers/access.controller.js";
 
 export const accessRouter = express.Router();
 
-accessRouter.post('/user/signup', asyncHandler(AccessController.signUp))
+// Access routes (logout, refresh token, etc.)
+// accessRouter.post('/logout', asyncHandler(AccessController.logout))
+

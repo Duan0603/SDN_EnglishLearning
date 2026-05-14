@@ -8,25 +8,71 @@ import {KeyTokenService} from "./keyToken.service.js";
 import {getInfoData} from "../ultils/index.js";
 
 export class AccessService {
-    static signUp = async ({name, email, password}) => {
-        // Validate required fields
-        if (!name || !email || !password) {
-            throw new BadRequestError("name, email and password are required")
+    static login = async ({email, password}) => {
+        // 1. Check email in dbs
+        const foundUser = await userModel.findOne({email}).lean()
+        if (!foundUser) {
+            throw new BadRequestError("User not registered")
         }
 
-        const holdShop = await userModel.findOne({email}).lean()
+        // 2. Match password
+        const match = await bcrypt.compare(password, foundUser.password)
+        if (!match) {
+            throw new BadRequestError("Authentication failed")
+        }
 
-        if(holdShop){
+        // 3. Create privateKey, publicKey
+        const {privateKey, publicKey} = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 4096,
+            publicKeyEncoding: {
+                type: 'pkcs1',
+                format: 'pem'
+            },
+            privateKeyEncoding: {
+                type: 'pkcs1',
+                format: 'pem'
+            }
+        })
+
+        // 4. Generate tokens
+        const tokens = await createTokenPair({userId: foundUser._id, email}, publicKey, privateKey)
+
+        // 5. Save tokens
+        await KeyTokenService.createKeyToken({
+            userId: foundUser._id,
+            publicKey,
+            refreshToken: tokens.refreshToken
+        })
+
+        return {
+            user: getInfoData({field: ['_id', 'fullName', 'email'], object: foundUser}),
+            tokens
+        }
+
+    }
+
+    static signUp = async ({fullName, email, password}) => {
+        // Validate required fields
+        if (!fullName || !email || !password) {
+            throw new BadRequestError("fullName, email and password are required")
+        }
+
+
+        const holdUser = await userModel.findOne({email}).lean()
+
+        if(holdUser){
             //nem ra global error handling
             throw new BadRequestError("User already registered")
         }
+
 
         const hashedPassword = await bcrypt.hash(password, 10)
 
         //tao user mooi
         const newUser = await userModel.create({
-            name, email, password: hashedPassword, role: [Role.STUDENT]
+            fullName, email, password: hashedPassword, role: Role.STUDENT
         })
+
 
         if(newUser){
             //tao privateKey, publicKey
@@ -61,10 +107,11 @@ export class AccessService {
             return {
                 code: 201,
                 metadata: {
-                    user: getInfoData({field: ['_id', 'name', 'email'], object: newUser}),
+                    user: getInfoData({field: ['_id', 'fullName', 'email'], object: newUser}),
                     tokens
                 }
             }
+
         }
 
         return {

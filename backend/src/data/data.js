@@ -1,9 +1,10 @@
 export const Role = {
-    STUDENT: 'student',
-    MENTOR: 'mentor',
-    ADMIN: 'admin',
-    GUEST: 'guest'
+    STUDENT: 'STUDENT',
+    MENTOR: 'MENTOR',
+    ADMIN: 'ADMIN',
+    GUEST: 'GUEST'
 }
+
 export const StatusCode = {
     OK: 200,                  // Thành công lấy dữ liệu hoặc cập nhật
     CREATED: 201,             // Tạo tài nguyên mới thành công
