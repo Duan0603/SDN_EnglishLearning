@@ -2,9 +2,14 @@
 
 Dự án học tiếng Anh IELTS tích hợp AI.
 
-## Mục tiêu và Hàm lượng nghiên cứu
+## Liên kết dự án
 
-Dự án này tập trung vào việc nghiên cứu và ứng dụng công nghệ hiện đại, đặc biệt là Trí tuệ Nhân tạo (AI), nhằm giải quyết các bài toán trong giáo dục và luyện thi IELTS:
+- Jira: [Jira board của nhóm](https://knightdragon184.atlassian.net/jira/software/projects/EMAL/boards/1)
+- SRS: [Tài liệu SRS của nhóm] (https://docs.google.com/document/d/1KBLJLe8Z7QSNdK9XqvogO0MOMtQrduZYJ1euGcqtld8/edit?tab=t.0)
+
+## Mục tiêu nghiên cứu & phạm vi đề tài
+
+Dự án tập trung vào nghiên cứu và ứng dụng Trí tuệ Nhân tạo (AI) cùng các kỹ thuật hệ thống hiện đại để xây dựng một nền tảng học IELTS thông minh, có khả năng hỗ trợ đánh giá, phản hồi và cá nhân hóa lộ trình học tập cho người dùng. Hàm lượng nghiên cứu của đề tài nằm ở ba hướng chính:
 
 1. **Nghiên cứu ứng dụng AI trong đánh giá ngôn ngữ (AI-Assisted Grading)**
    - **Writing**: Khảo sát và tối ưu hóa Prompt Engineering cho LLM (Large Language Models - ví dụ OpenAI GPT) để tự động chấm điểm, chữa lỗi và nhận xét bài viết dựa trên 4 tiêu chí chuẩn của IELTS (Task Achievement, Coherence & Cohesion, Lexical Resource, Grammatical Range & Accuracy).
