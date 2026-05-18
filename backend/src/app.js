@@ -1,40 +1,49 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const dotenv = require('dotenv');
+import express from 'express'
+import morgan from 'morgan'
+import helmet from "helmet";
+import  compression from 'compression'
+import {checkOverload} from "./helper/checkConnect.js";
+import instanceMongodb from "./db/init.mongodb.js";
+import {router} from "./routes/index.js";
+export const app = express()
 
-dotenv.config();
-
-const app = express();
-
-// Middleware
+app.use(morgan("dev"))
 app.use(helmet());
-app.use(cors());
-app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(compression())
+app.use(express.json())
+app.use(express.urlencoded({extended: true}))
 
-// Swagger Documentation
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('./config/swagger');
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+//init db
+instanceMongodb
 
-// Health Check
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'IELTS Backend is running' });
-});
+//helper (cac function ho tro, chua trong folder helper)
+checkOverload()
 
-// Routes
-app.use('/api/auth', require('./routes/authRoutes'));
+//init route
+app.use(router)
 
-// Error Handling Middleware
-app.use((err, req, res, next) => {
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  res.status(statusCode).json({
-    message: err.message,
-    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
-  });
-});
+//global error handling
 
-module.exports = app;
+
+app.get("/", (req, res, next) => {
+    const strCompress = 'This is backend port'
+    return res.status(200).json({
+        message: "Hello th ngu"
+    })
+})
+
+app.use((req, res, next) => {
+    const error = new Error('Not found route')
+    error.status = 404
+    next(error)
+})
+
+app.use((error, req, res, next) => {
+    const statusCode = error.status || 500
+
+    return res.status(statusCode).json({
+        status: 'error',
+        code: statusCode,
+        message: error.message || "Internal server error"
+    })
+})

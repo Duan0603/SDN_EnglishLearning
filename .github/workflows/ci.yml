@@ -50,7 +50,8 @@ jobs:
         run: npx prisma generate
 
       - name: Build Check (Syntax)
-        run: node -c src/server.js
+        run: node -c server.js
+
 
   frontend-ci:
     name: Frontend Expo Check
