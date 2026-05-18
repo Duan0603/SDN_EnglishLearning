@@ -44,12 +44,13 @@ const LoginScreen = ({ navigation }) => {
           <View className="space-y-4 mb-8">
             <TextInput
               className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 text-lg focus:border-indigo-500 focus:bg-slate-900/80 transition-colors"
-              placeholder="Email address"
+              placeholder="Username or Email"
               placeholderTextColor="#64748b"
               value={email}
               onChangeText={setEmail}
-              keyboardType="email-address"
+              keyboardType="default"
               autoCapitalize="none"
+              autoCorrect={false}
             />
 
             <TextInput

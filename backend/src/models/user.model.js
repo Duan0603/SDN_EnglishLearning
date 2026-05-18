@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema({
     username: {
         type: String,
         unique: true,
-        sparse: true // Cho phép null nếu không có username
+        sparse: true // Allow null/undefined values without violating unique constraint
     },
     fullName: {
         type: String,
