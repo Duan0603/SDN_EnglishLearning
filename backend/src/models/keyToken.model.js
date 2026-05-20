@@ -11,13 +11,16 @@ const keyTokenSchema = new Schema({
         required: true
     } ,
     refreshToken: {
-        type: Array, default: []
+        type: [String], default: []
+    },
+    refreshTokensUsed: {
+        type: [String], default: []
     }
 }, {
-    collection: 'Keys',
+    collection: 'KeyToken',
     timestamps: true
-})
+});
 
-const Key = model('Key', keyTokenSchema)
+const Key = model('KeyToken', keyTokenSchema)
 
 export default Key

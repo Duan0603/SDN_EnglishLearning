@@ -13,44 +13,182 @@ enum Role {
   ADMIN
 }
 
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum TestType {
+  READING
+  LISTENING
+  WRITING
+  SPEAKING
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  FILL_IN_BLANKS
+  MATCHING_HEADINGS
+  TRUE_FALSE_NOT_GIVEN
+  SHORT_ANSWER
+}
+
 model User {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  email     String    @unique
-  username  String?
-  password  String
-  fullName  String?
-  role      Role      @default(STUDENT)
-  avatar    String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  bookings  Booking[]
+  id                 String               @id @default(auto()) @map("_id") @db.ObjectId
+  email              String               @unique
+  username           String?              @unique
+  password           String
+  fullName           String?
+  role               Role                 @default(STUDENT)
+  avatar             String?
+  status             String               @default("active") // active, inactive
+  verify             Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  
+  // Quan hệ đặt lịch (Epic 4)
+  studentBookings    Booking[]            @relation("StudentBookings")
+  mentorBookings     Booking[]            @relation("MentorBookings")
+  availabilities     Availability[]       @relation("MentorAvailabilities")
+  
+  // Quan hệ học tập & Lịch sử thi (Epic 2, 3)
+  testResults        TestResult[]
+  writingSubmissions WritingSubmission[]
+  speakingSubmissions SpeakingSubmission[]
+  
+  // Tokens xác thực
+  keyToken           KeyToken?
+}
+
+model KeyToken {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String   @unique @db.ObjectId
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publicKey         String
+  refreshToken      String[] // Danh sách token đang hoạt động
+  refreshTokensUsed String[] // Token cũ đã sử dụng (để phát hiện replay)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Availability {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  mentorId  String   @db.ObjectId
+  mentor    User     @relation("MentorAvailabilities", fields: [mentorId], references: [id], onDelete: Cascade)
+  startTime DateTime
+  endTime   DateTime
+  isBooked  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  booking   Booking?
 }
 
 model Booking {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  date      DateTime
-  status    String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED
-  userId    String   @db.ObjectId
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  studentId      String        @db.ObjectId
+  student        User          @relation("StudentBookings", fields: [studentId], references: [id], onDelete: Cascade)
+  mentorId       String        @db.ObjectId
+  mentor         User          @relation("MentorBookings", fields: [mentorId], references: [id], onDelete: Cascade)
+  availabilityId String        @unique @db.ObjectId
+  availability   Availability  @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
+  startTime      DateTime
+  endTime        DateTime
+  status         BookingStatus @default(PENDING)
+  notes          String?       // Học viên ghi chú mục tiêu buổi học
+  mentorNotes    String?       // Mentor nhận xét sau buổi học
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
 model Test {
-  id          String     @id @default(auto()) @map("_id") @db.ObjectId
-  title       String
-  description String?
-  type        String // READING, LISTENING, WRITING, SPEAKING
-  content     Json // Linh hoạt cho nhiều loại câu hỏi
-  createdAt   DateTime   @default(now())
-  questions   Question[]
+  id                 String               @id @default(auto()) @map("_id") @db.ObjectId
+  title              String
+  description        String?
+  type               TestType
+  duration           Int                  // Thời gian thi (phút)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  
+  sections           TestSection[]
+  testResults        TestResult[]
+  writingSubmissions WritingSubmission[]
+  speakingSubmissions SpeakingSubmission[]
+}
+
+model TestSection {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  testId       String     @db.ObjectId
+  test         Test       @relation(fields: [testId], references: [id], onDelete: Cascade)
+  sectionOrder Int        // Thứ tự phần thi (ví dụ: Section 1, 2, 3, 4 hoặc Passage 1, 2, 3)
+  title        String?    // Tiêu đề của đoạn văn hoặc phần thi nghe
+  passageText  String?    // Văn bản bài đọc (Markdown/HTML)
+  audioUrl     String?    // Audio riêng cho từng section nghe
+  images       String[]   // Ảnh biểu đồ cho đề viết Task 1 hoặc Cue Card nói
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  questions    Question[]
 }
 
 model Question {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  testId    String   @db.ObjectId
-  test      Test     @relation(fields: [testId], references: [id])
-  content   String
-  answer    String
-  options   Json?
-  createdAt DateTime @default(now())
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  sectionId      String       @db.ObjectId
+  section        TestSection  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  questionNumber Int          // Số thứ tự câu hỏi (ví dụ: Câu 1 đến 40)
+  type           QuestionType
+  content        String       // Nội dung câu hỏi
+  options        Json?        // Danh sách đáp án lựa chọn trắc nghiệm
+  answer         String       // Đáp án đúng để đối chiếu tự động
+  explanation    String?      // Giải thích đáp án chi tiết
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model TestResult {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testId       String   @db.ObjectId
+  test         Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  answers      Json     // Câu trả lời của học viên: [{ questionId: String, userAnswer: String }]
+  correctCount Int      // Số câu trả lời đúng
+  bandScore    Float    // Điểm Band IELTS quy đổi (từ 0 đến 9.0)
+  timeTaken    Int      // Thời gian làm bài (giây)
+  createdAt    DateTime @default(now())
+}
+
+model WritingSubmission {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String   @db.ObjectId
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testId            String?  @db.ObjectId
+  test              Test?    @relation(fields: [testId], references: [id], onDelete: SetNull)
+  prompt            String?  // Đề bài viết tự do (nếu không chọn từ Test)
+  essayText         String   // Bài viết của học viên
+  bandScore         Float    // Điểm tổng thể AI chấm
+  taskAchievement   Float    // Điểm tiêu chí 1
+  coherenceCohesion Float    // Điểm tiêu chí 2
+  lexicalResource   Float    // Điểm tiêu chí 3
+  grammarAccuracy   Float    // Điểm tiêu chí 4
+  aiFeedback        Json     // Nhận xét chi tiết dạng JSON chứa lỗi sai và gợi ý sửa đổi
+  createdAt         DateTime @default(now())
+}
+
+model SpeakingSubmission {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String   @db.ObjectId
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testId            String?  @db.ObjectId
+  test              Test?    @relation(fields: [testId], references: [id], onDelete: SetNull)
+  prompt            String?  // Chủ đề nói tự do (nếu không chọn từ Test)
+  audioUrl          String   // Đường dẫn file ghi âm giọng nói lưu trên Cloudinary
+  transcription     String?  // Đoạn text chuyển đổi từ Whisper STT
+  bandScore         Float    // Điểm tổng thể AI chấm
+  fluencyCoherence  Float    // Điểm tiêu chí 1
+  lexicalResource   Float    // Điểm tiêu chí 2
+  grammarAccuracy   Float    // Điểm tiêu chí 3
+  pronunciation     Float    // Điểm tiêu chí 4
+  aiFeedback        Json     // Nhận xét chi tiết từ OpenAI về phát âm, ngữ điệu, từ vựng
+  createdAt         DateTime @default(now())
 }
