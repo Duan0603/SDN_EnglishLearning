@@ -9,8 +9,13 @@ import {getInfoData} from "../ultils/index.js";
 
 export class AccessService {
     static login = async ({email, password}) => {
-        // 1. Check email in dbs
-        const foundUser = await userModel.findOne({email}).lean()
+        // 1. Check email or username in dbs
+        const foundUser = await userModel.findOne({
+            $or: [
+                { email: email },
+                { username: email }
+            ]
+        }).lean()
         if (!foundUser) {
             throw new BadRequestError("User not registered")
         }
@@ -35,7 +40,7 @@ export class AccessService {
         })
 
         // 4. Generate tokens
-        const tokens = await createTokenPair({userId: foundUser._id, email}, publicKey, privateKey)
+        const tokens = await createTokenPair({userId: foundUser._id, email: foundUser.email}, publicKey, privateKey)
 
         // 5. Save tokens
         await KeyTokenService.createKeyToken({
@@ -45,32 +50,33 @@ export class AccessService {
         })
 
         return {
-            user: getInfoData({field: ['_id', 'fullName', 'email'], object: foundUser}),
+            user: getInfoData({field: ['_id', 'username', 'fullName', 'email'], object: foundUser}),
             tokens
         }
 
     }
 
-    static signUp = async ({fullName, email, password}) => {
+    static signUp = async ({username, email, password, fullName}) => {
         // Validate required fields
-        if (!fullName || !email || !password) {
-            throw new BadRequestError("fullName, email and password are required")
+        if (!username || !email || !password || !fullName) {
+            throw new BadRequestError("username, email, password and fullName are required")
         }
 
-
-        const holdUser = await userModel.findOne({email}).lean()
-
-        if(holdUser){
-            //nem ra global error handling
-            throw new BadRequestError("User already registered")
+        const holdUserByEmail = await userModel.findOne({email}).lean()
+        if (holdUserByEmail) {
+            throw new BadRequestError("User with this email already registered")
         }
 
+        const holdUserByUsername = await userModel.findOne({username}).lean()
+        if (holdUserByUsername) {
+            throw new BadRequestError("Username already taken")
+        }
 
         const hashedPassword = await bcrypt.hash(password, 10)
 
-        //tao user mooi
+        //tao user moi
         const newUser = await userModel.create({
-            fullName, email, password: hashedPassword, role: Role.STUDENT
+            username, fullName, email, password: hashedPassword, role: Role.STUDENT
         })
 
 
@@ -105,18 +111,15 @@ export class AccessService {
             console.log(`Create Token Success:: `, tokens)
 
             return {
-                code: 201,
-                metadata: {
-                    user: getInfoData({field: ['_id', 'fullName', 'email'], object: newUser}),
-                    tokens
-                }
+                user: getInfoData({field: ['_id', 'username', 'fullName', 'email'], object: newUser}),
+                tokens
             }
 
         }
 
         return {
-            code: 200,
-            metadata: null
+            user: null,
+            tokens: null
         }
     }
 }

@@ -2,6 +2,26 @@
 
 Dự án học tiếng Anh IELTS tích hợp AI.
 
+## Liên kết dự án
+
+- Jira: [Jira board của nhóm](https://knightdragon184.atlassian.net/jira/software/projects/EMAL/boards/1)
+- SRS: [Tài liệu SRS của nhóm] (https://docs.google.com/document/d/1KBLJLe8Z7QSNdK9XqvogO0MOMtQrduZYJ1euGcqtld8/edit?tab=t.0)
+
+## Mục tiêu nghiên cứu & phạm vi đề tài
+
+Dự án tập trung vào nghiên cứu và ứng dụng Trí tuệ Nhân tạo (AI) cùng các kỹ thuật hệ thống hiện đại để xây dựng một nền tảng học IELTS thông minh, có khả năng hỗ trợ đánh giá, phản hồi và cá nhân hóa lộ trình học tập cho người dùng. Hàm lượng nghiên cứu của đề tài nằm ở ba hướng chính:
+
+1. **Nghiên cứu ứng dụng AI trong đánh giá ngôn ngữ (AI-Assisted Grading)**
+   - **Writing**: Khảo sát và tối ưu hóa Prompt Engineering cho LLM (Large Language Models - ví dụ OpenAI GPT) để tự động chấm điểm, chữa lỗi và nhận xét bài viết dựa trên 4 tiêu chí chuẩn của IELTS (Task Achievement, Coherence & Cohesion, Lexical Resource, Grammatical Range & Accuracy).
+   - **Speaking**: Tích hợp mô hình nhận dạng giọng nói (Speech-to-Text như Whisper API) kết hợp LLM để đánh giá phát âm, độ trôi chảy và cung cấp feedback cá nhân hóa theo thời gian thực.
+
+2. **Nghiên cứu Tối ưu hóa Kiến trúc Hệ thống (System Architecture)**
+   - Xây dựng hệ thống Backend xử lý luồng dữ liệu đa phương tiện (Media Streaming/Upload) hiệu quả cho phần thi Listening & Speaking.
+   - Xử lý bài toán đồng bộ dữ liệu và xung đột lịch đặt phòng (Double Booking) ở mức Database level bằng Transaction/Locking trong MongoDB.
+
+3. **Cá nhân hóa trải nghiệm học tập**
+   - Áp dụng các thuật toán theo dõi tiến độ và đánh giá điểm mạnh, điểm yếu qua từng bài thi để tối ưu hóa lộ trình tự học của học viên.
+
 ## Cấu trúc thư mục
 - `backend/`: NodeJS Express API + Prisma + MongoDB.
 - `frontend/`: React Native (Expo) app.
@@ -12,7 +32,7 @@ Dự án học tiếng Anh IELTS tích hợp AI.
 ### 1. Backend & Database
 ```bash
 # Chạy database (MongoDB Replica Set)
-docker-compose up -d
+docker-compose up -d mongodb
 
 # Cài đặt backend
 cd backend
