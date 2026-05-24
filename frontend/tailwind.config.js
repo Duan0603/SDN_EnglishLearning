@@ -5,8 +5,19 @@ module.exports = {
   presets: [require("nativewind/preset")],
   darkMode: "class",
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        apex: {
+          mint: "#00CC99",
+          emerald: "#00B386",
+          forest: "#005C42",
+          dark: "#1E1E1E",
+          background: "#F7F9FA",
+          muted: "#9CA3AF",
+          amber: "#F97316",
+        }
+      }
+    },
   },
   plugins: [],
 }
-

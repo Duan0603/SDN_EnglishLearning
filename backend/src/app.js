@@ -2,11 +2,13 @@ import express from 'express'
 import morgan from 'morgan'
 import helmet from "helmet";
 import  compression from 'compression'
+import cors from 'cors'
 import {checkOverload} from "./helper/checkConnect.js";
 import instanceMongodb from "./db/init.mongodb.js";
 import {router} from "./routes/index.js";
 export const app = express()
 
+app.use(cors())
 app.use(morgan("dev"))
 app.use(helmet());
 app.use(compression())
