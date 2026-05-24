@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   ScrollView
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import useAuthStore from '../store/useAuthStore';
 
 const RegisterScreen = ({ navigation }) => {
@@ -87,50 +88,62 @@ const RegisterScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-950">
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+    <SafeAreaView className="flex-1 bg-[#F7F9FA]">
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1 px-8 justify-center"
+          className="flex-1 px-8 justify-center py-10"
         >
-          {/* Header */}
-          <View className="mb-10 mt-10">
-            <View className="w-16 h-16 bg-emerald-500 rounded-3xl mb-6 items-center justify-center">
-              <Text className="text-white text-3xl font-black tracking-tighter">SD</Text>
+          {/* Logo Brand */}
+          <View className="items-center mb-8">
+            <View className="w-16 h-16 bg-white rounded-[24px] items-center justify-center shadow-xs border border-[#E5E7EB] mb-3">
+              <Svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                <Path d="M12 2L2 7l10 5 10-5-10-5z" fill="#00CC99" />
+                <Path d="M6 12.5V17c0 1.66 2.69 3 6 3s6-1.34 6-3v-4.5l-6 3-6-3z" fill="#005C42" />
+                <Path d="M21.5 10v5.5" stroke="#00CC99" strokeWidth="1.5" strokeLinecap="round"/>
+              </Svg>
             </View>
-            
-            {step === 1 && (
-              <>
-                <Text className="text-4xl font-black text-white mb-3 tracking-tight">Choose a username</Text>
-                <Text className="text-lg text-slate-400 font-medium">This will be your unique identity on SDN.</Text>
-              </>
-            )}
-            {step === 2 && (
-              <>
-                <Text className="text-4xl font-black text-white mb-3 tracking-tight">Secure account</Text>
-                <Text className="text-lg text-slate-400 font-medium">Enter your email and a strong password.</Text>
-              </>
-            )}
-            {step === 3 && (
-              <>
-                <Text className="text-4xl font-black text-white mb-3 tracking-tight">What's your name?</Text>
-                <Text className="text-lg text-slate-400 font-medium">We'll use this to personalize your IELTS study plan.</Text>
-              </>
-            )}
+            <View className="flex-row items-center justify-center">
+              <Text className="text-2xl font-bold text-[#1E1E1E]">Apex</Text>
+              <Text className="text-2xl font-bold text-[#00CC99] ml-1">IELTS</Text>
+            </View>
           </View>
 
-          <View className="w-full">
+          {/* Form Card */}
+          <View className="w-full bg-white p-6 rounded-[32px] border border-[#E5E7EB] shadow-xs">
+            {/* Step Title */}
+            <View className="mb-4">
+              {step === 1 && (
+                <>
+                  <Text className="text-2xl font-bold text-[#1E1E1E] tracking-tight">Choose a username</Text>
+                  <Text className="text-sm text-[#6B7280] mt-1 font-medium">This will be your unique identity on Apex.</Text>
+                </>
+              )}
+              {step === 2 && (
+                <>
+                  <Text className="text-2xl font-bold text-[#1E1E1E] tracking-tight">Secure account</Text>
+                  <Text className="text-sm text-[#6B7280] mt-1 font-medium">Enter your email and a strong password.</Text>
+                </>
+              )}
+              {step === 3 && (
+                <>
+                  <Text className="text-2xl font-bold text-[#1E1E1E] tracking-tight">What's your name?</Text>
+                  <Text className="text-sm text-[#6B7280] mt-1 font-medium">We'll use this to personalize your study plan.</Text>
+                </>
+              )}
+            </View>
+
             {/* Progress Bar */}
-            <View className="flex-row space-x-2 mb-8 items-center">
-              <View className={`flex-1 h-1.5 rounded-full ${step >= 1 ? 'bg-emerald-500' : 'bg-slate-800'}`} />
-              <View className={`flex-1 h-1.5 rounded-full ${step >= 2 ? 'bg-emerald-500' : 'bg-slate-800'}`} />
-              <View className={`flex-1 h-1.5 rounded-full ${step >= 3 ? 'bg-emerald-500' : 'bg-slate-800'}`} />
+            <View className="flex-row space-x-2 mb-6 items-center">
+              <View className={`flex-1 h-1.5 rounded-full ${step >= 1 ? 'bg-[#00CC99]' : 'bg-[#E5E7EB]'}`} />
+              <View className={`flex-1 h-1.5 rounded-full ${step >= 2 ? 'bg-[#00CC99]' : 'bg-[#E5E7EB]'}`} />
+              <View className={`flex-1 h-1.5 rounded-full ${step >= 3 ? 'bg-[#00CC99]' : 'bg-[#E5E7EB]'}`} />
             </View>
 
             {/* Error Message */}
             {(error || validationError) && (
-              <View className="bg-red-500/10 border border-red-500/50 p-4 rounded-2xl mb-6">
-                <Text className="text-red-400 text-center font-medium">
+              <View className="bg-red-50 border border-red-200 p-4 rounded-2xl mb-6">
+                <Text className="text-red-600 text-center font-semibold text-sm">
                   {validationError || error}
                 </Text>
               </View>
@@ -138,124 +151,136 @@ const RegisterScreen = ({ navigation }) => {
             
             {/* Step Inputs */}
             {step === 1 && (
-              <View className="space-y-6">
-                <TextInput
-                  className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 text-lg focus:border-emerald-500 focus:bg-slate-900/80 transition-colors"
-                  placeholder="Username"
-                  placeholderTextColor="#64748b"
-                  value={username}
-                  onChangeText={(text) => {
-                    setUsername(text);
-                    clearErrors();
-                  }}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+              <View className="space-y-4">
+                <View>
+                  <Text className="text-sm font-bold text-[#1E1E1E] mb-2 ml-1">Username</Text>
+                  <TextInput
+                    className="bg-[#F7F9FA] text-[#1E1E1E] px-5 py-4 rounded-2xl border border-[#E5E7EB] text-base focus:border-[#00CC99] focus:bg-white"
+                    placeholder="e.g. ielts_warrior"
+                    placeholderTextColor="#9CA3AF"
+                    value={username}
+                    onChangeText={(text) => {
+                      setUsername(text);
+                      clearErrors();
+                    }}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
                 <TouchableOpacity 
-                  className="bg-emerald-500 p-5 rounded-2xl items-center active:scale-[0.98] transition-transform mt-4"
+                  className="bg-[#00CC99] py-4 rounded-2xl items-center shadow-sm active:opacity-90 mt-4"
                   onPress={handleNextStep1}
                 >
-                  <Text className="text-white text-xl font-bold tracking-wide">Next</Text>
+                  <Text className="text-white text-lg font-bold tracking-wide">Continue</Text>
                 </TouchableOpacity>
               </View>
             )}
 
             {step === 2 && (
-              <View className="space-y-6">
-                <TextInput
-                  className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 text-lg focus:border-emerald-500 focus:bg-slate-900/80 transition-colors mb-4"
-                  placeholder="Email address"
-                  placeholderTextColor="#64748b"
-                  value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    clearErrors();
-                  }}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+              <View className="space-y-4">
+                <View>
+                  <Text className="text-sm font-bold text-[#1E1E1E] mb-2 ml-1">Email address</Text>
+                  <TextInput
+                    className="bg-[#F7F9FA] text-[#1E1E1E] px-5 py-4 rounded-2xl border border-[#E5E7EB] text-base focus:border-[#00CC99] focus:bg-white mb-2"
+                    placeholder="name@example.com"
+                    placeholderTextColor="#9CA3AF"
+                    value={email}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      clearErrors();
+                    }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
 
-                <TextInput
-                  className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 text-lg focus:border-emerald-500 focus:bg-slate-900/80 transition-colors"
-                  placeholder="Password"
-                  placeholderTextColor="#64748b"
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    clearErrors();
-                  }}
-                  secureTextEntry
-                />
+                <View>
+                  <Text className="text-sm font-bold text-[#1E1E1E] mb-2 ml-1">Password</Text>
+                  <TextInput
+                    className="bg-[#F7F9FA] text-[#1E1E1E] px-5 py-4 rounded-2xl border border-[#E5E7EB] text-base focus:border-[#00CC99] focus:bg-white"
+                    placeholder="At least 6 characters"
+                    placeholderTextColor="#9CA3AF"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      clearErrors();
+                    }}
+                    secureTextEntry
+                  />
+                </View>
 
-                <View className="flex-row space-x-4 mt-6">
+                <View className="flex-row space-x-3 mt-6">
                   <TouchableOpacity 
-                    className="bg-slate-900 border border-slate-800 p-5 rounded-2xl items-center justify-center w-24 active:scale-[0.98] transition-transform"
+                    className="bg-[#F7F9FA] border border-[#E5E7EB] py-4 rounded-2xl items-center justify-center w-24 active:opacity-80"
                     onPress={() => {
                       clearErrors();
                       setStep(1);
                     }}
                   >
-                    <Text className="text-slate-400 text-lg font-bold">Back</Text>
+                    <Text className="text-[#6B7280] text-base font-bold">Back</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity 
-                    className="bg-emerald-500 p-5 rounded-2xl items-center justify-center flex-1 active:scale-[0.98] transition-transform"
+                    className="bg-[#00CC99] py-4 rounded-2xl items-center justify-center flex-1 shadow-sm active:opacity-90"
                     onPress={handleNextStep2}
                   >
-                    <Text className="text-white text-xl font-bold tracking-wide">Next</Text>
+                    <Text className="text-white text-lg font-bold tracking-wide">Continue</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             )}
 
             {step === 3 && (
-              <View className="space-y-6">
-                <TextInput
-                  className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 text-lg focus:border-emerald-500 focus:bg-slate-900/80 transition-colors"
-                  placeholder="Full Name"
-                  placeholderTextColor="#64748b"
-                  value={fullName}
-                  onChangeText={(text) => {
-                    setFullName(text);
-                    clearErrors();
-                  }}
-                />
+              <View className="space-y-4">
+                <View>
+                  <Text className="text-sm font-bold text-[#1E1E1E] mb-2 ml-1">Full Name</Text>
+                  <TextInput
+                    className="bg-[#F7F9FA] text-[#1E1E1E] px-5 py-4 rounded-2xl border border-[#E5E7EB] text-base focus:border-[#00CC99] focus:bg-white"
+                    placeholder="Enter your full name"
+                    placeholderTextColor="#9CA3AF"
+                    value={fullName}
+                    onChangeText={(text) => {
+                      setFullName(text);
+                      clearErrors();
+                    }}
+                  />
+                </View>
 
-                <View className="flex-row space-x-4 mt-6">
+                <View className="flex-row space-x-3 mt-6">
                   <TouchableOpacity 
-                    className="bg-slate-900 border border-slate-800 p-5 rounded-2xl items-center justify-center w-24 active:scale-[0.98] transition-transform"
+                    className="bg-[#F7F9FA] border border-[#E5E7EB] py-4 rounded-2xl items-center justify-center w-24 active:opacity-80"
                     onPress={() => {
                       clearErrors();
                       setStep(2);
                     }}
                     disabled={isLoading}
                   >
-                    <Text className="text-slate-400 text-lg font-bold">Back</Text>
+                    <Text className="text-[#6B7280] text-base font-bold">Back</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity 
-                    className="bg-emerald-500 p-5 rounded-2xl items-center justify-center flex-1 active:scale-[0.98] transition-transform"
+                    className="bg-[#00CC99] py-4 rounded-2xl items-center justify-center flex-1 shadow-sm active:opacity-90"
                     onPress={handleRegister}
                     disabled={isLoading}
                   >
                     {isLoading ? (
                       <ActivityIndicator color="#fff" size="small" />
                     ) : (
-                      <Text className="text-white text-xl font-bold tracking-wide">Sign Up</Text>
+                      <Text className="text-white text-lg font-bold tracking-wide">Register</Text>
                     )}
                   </TouchableOpacity>
                 </View>
               </View>
             )}
+          </View>
 
-            {/* Bottom Navigation */}
-            <View className="flex-row justify-center mt-10 mb-10">
-              <Text className="text-slate-500 text-base font-medium">Already have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text className="text-emerald-400 text-base font-bold">Log in</Text>
-              </TouchableOpacity>
-            </View>
+          {/* Login Link */}
+          <View className="flex-row justify-center mt-8">
+            <Text className="text-[#6B7280] text-base font-medium">Already have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text className="text-[#00CC99] text-base font-bold">Log in</Text>
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </ScrollView>
