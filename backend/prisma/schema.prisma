@@ -58,12 +58,12 @@ model User {
   speakingSubmissions SpeakingSubmission[]
   
   // Tokens xác thực
-  keyToken           KeyToken?
+  keyTokens          KeyToken[]
 }
 
 model KeyToken {
   id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String   @unique @db.ObjectId
+  userId            String   @db.ObjectId @map("user")
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   publicKey         String
   refreshToken      String[] // Danh sách token đang hoạt động
