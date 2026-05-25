@@ -46,7 +46,36 @@ npm run migrate
 npm run dev
 ```
 
-### 2. Frontend
+### 2. Chạy bằng Docker
+```bash
+# Khởi động toàn bộ stack: MongoDB, mongo-express và API
+docker compose up -d
+```
+
+Nếu muốn đổi user/password MongoDB, copy `.env.example` thành `.env` rồi chỉnh giá trị trước khi chạy.
+
+Sau khi chạy xong:
+- API: http://localhost:5000
+- mongo-express: http://localhost:8082
+
+### 3. Kết nối MongoDB Compass
+Compass trên máy Windows nên dùng kết nối trực tiếp và không nhập username/password:
+
+```text
+mongodb://127.0.0.1:27017/ielts_app?directConnection=true
+```
+
+Thiết lập nhanh trong Compass:
+- Host: `127.0.0.1`
+- Port: `27017`
+- Authentication Method: `None`
+- Database: `ielts_app`
+
+Nên tạo connection mới thay vì sửa connection cũ đã lưu để tránh Compass giữ lại credential hoặc option cũ.
+
+Backend trong Docker vẫn dùng replica set nội bộ theo URI trong `.env` và `docker-compose.yml`.
+
+### 4. Frontend
 ```bash
 cd frontend
 npm install

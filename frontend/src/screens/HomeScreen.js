@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -6,59 +6,243 @@ import {
   TouchableOpacity, 
   SafeAreaView,
   Image,
-  Dimensions
+  Pressable,
+  Animated,
+  Easing
 } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import useAuthStore from '../store/useAuthStore';
 
-const { width } = Dimensions.get('window');
-const isWeb = width > 768;
-
 const HomeScreen = ({ navigation }) => {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const isWeb = true;
+  const [isUserMenuVisible, setIsUserMenuVisible] = useState(false);
+  const [menuAnim] = useState(new Animated.Value(0));
+
+  const userInitial = user?.fullName?.charAt(0)?.toUpperCase() || 'U';
+  const userDisplayName = user?.fullName || 'IELTS Learner';
+  const userEmail = user?.email || 'user@sdn.com';
+
+  const handleProfilePress = () => {
+    toggleUserMenu(false);
+    setTimeout(() => navigation.navigate('Profile'), 150);
+  };
+
+  const handleLogoutPress = () => {
+    toggleUserMenu(false);
+    setTimeout(() => logout(), 150);
+  };
+
+  const toggleUserMenu = (open = !isUserMenuVisible) => {
+    if (open === isUserMenuVisible) return;
+
+    Animated.timing(menuAnim, {
+      toValue: open ? 1 : 0,
+      duration: open ? 150 : 120,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+
+    setIsUserMenuVisible(open);
+  };
+
+  const menuAnimatedStyle = {
+    opacity: menuAnim,
+    transform: [
+      {
+        translateY: menuAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [-12, 0],
+        }),
+      },
+      {
+        scale: menuAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.95, 1],
+        }),
+      },
+    ],
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-[#F7F9FA]">
       {/* Premium Header */}
-      <View className="flex-row items-center justify-between px-6 py-4 bg-white border-b border-[#E5E7EB] shadow-xs sticky top-0 z-50">
-        <View className="flex-row items-center">
-          <View className="w-10 h-10 bg-[#E6F9F5] rounded-[16px] items-center justify-center border border-[#A7F3D0]">
-            <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <Path d="M12 2L2 7l10 5 10-5-10-5z" fill="#00CC99" />
-              <Path d="M6 12.5V17c0 1.66 2.69 3 6 3s6-1.34 6-3v-4.5l-6 3-6-3z" fill="#005C42" />
-              <Path d="M21.5 10v5.5" stroke="#00CC99" strokeWidth="1.5" strokeLinecap="round"/>
-            </Svg>
-          </View>
-          <Text className="text-2xl font-black text-[#1E1E1E] ml-2.5 tracking-tight">Apex IELTS</Text>
-        </View>
+      <View className="flex-row items-center justify-between px-6 h-16 bg-white border-b border-[#E5E7EB] z-40">
 
-        {/* Web Navigation Menu (Visible on Web width) */}
-        {isWeb && (
-          <View className="flex-row space-x-8 items-center">
-            {['Home', 'Courses', 'Practice', 'Mentors'].map((menu, i) => (
-              <TouchableOpacity key={i} onPress={() => menu === 'Practice' ? navigation.navigate('Practice') : menu === 'Home' ? null : navigation.navigate('Profile')}>
-                <Text className={`text-sm font-bold ${menu === 'Home' ? 'text-[#00CC99]' : 'text-[#6B7280] hover:text-[#1E1E1E]'}`}>{menu}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+  {/* Logo */}
+  <View className="flex-row items-center">
+    <View className="w-10 h-10 bg-[#E6F9F5] rounded-[16px] items-center justify-center border border-[#A7F3D0]">
+      <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <Path d="M12 2L2 7l10 5 10-5-10-5z" fill="#00CC99" />
+        <Path
+          d="M6 12.5V17c0 1.66 2.69 3 6 3s6-1.34 6-3v-4.5l-6 3-6-3z"
+          fill="#005C42"
+        />
+        <Path
+          d="M21.5 10v5.5"
+          stroke="#00CC99"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </Svg>
+    </View>
 
-        <View className="flex-row items-center space-x-3">
-          <TouchableOpacity className="w-10 h-10 bg-[#F7F9FA] rounded-full items-center justify-center border border-[#E5E7EB]">
-            <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2">
-              <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
-            </Svg>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('Profile')}
-            className="w-10 h-10 bg-[#00CC99] rounded-full items-center justify-center border border-[#A7F3D0] shadow-sm"
+    <Text className="text-2xl font-black text-[#1E1E1E] ml-2.5">
+      Apex IELTS
+    </Text>
+  </View>
+
+  {/* Center Menu */}
+  {isWeb && (
+    <View className="absolute left-0 right-0 flex-row justify-center items-center">
+      {['Home', 'Courses', 'Practice', 'Mentors'].map((menu, i) => (
+        <TouchableOpacity
+          key={i}
+          className="mx-5"
+          style={{ marginHorizontal: 12 }}
+          onPress={() =>
+            menu === 'Practice'
+              ? navigation.navigate('Practice')
+              : menu === 'Home'
+              ? null
+              : navigation.navigate('Profile')
+          }
+        >
+          <Text
+            className={`text-sm font-bold ${
+              menu === 'Home'
+                ? 'text-[#00CC99]'
+                : 'text-[#6B7280]'
+            }`}
           >
-            <Text className="text-white font-bold text-base">
-              {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+            {menu}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  )}
+
+  {/* Right Side */}
+  <View className="flex-row items-center">
+
+    {/* Notification */}
+    <TouchableOpacity className="w-10 h-10 rounded-full border border-[#E5E7EB] items-center justify-center bg-white mr-3">
+      <Svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#6B7280"
+        strokeWidth="2"
+      >
+        <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
+      </Svg>
+    </TouchableOpacity>
+
+    {/* Avatar */}
+    <View className="relative">
+
+      <TouchableOpacity
+        onPress={toggleUserMenu}
+        className="w-10 h-10 rounded-full bg-[#00CC99] items-center justify-center"
+      >
+        <Text className="text-white font-bold text-base">
+          {userInitial}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Dropdown */}
+      {isUserMenuVisible && (
+        <Animated.View
+          style={menuAnimatedStyle}
+          className="absolute right-0 top-14 w-72 bg-white rounded-2xl border border-[#E5E7EB] shadow-xl z-50"
+        >
+
+          {/* User Card */}
+          <View className="p-4 border-b border-[#F3F4F6]">
+            <View className="flex-row items-center bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl p-3">
+
+              <View className="w-11 h-11 rounded-full bg-[#00CC99] items-center justify-center">
+                <Text className="text-white font-bold">
+                  {userInitial}
+                </Text>
+              </View>
+
+              <View className="ml-3 flex-1">
+                <Text
+                  numberOfLines={1}
+                  className="text-sm font-bold text-[#111827]"
+                >
+                  {userDisplayName}
+                </Text>
+
+                <Text
+                  numberOfLines={1}
+                  className="text-xs text-[#6B7280] mt-1"
+                >
+                  {userEmail}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Profile */}
+          <TouchableOpacity
+            onPress={handleProfilePress}
+            className="flex-row items-center px-4 py-4"
+          >
+            <Svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#6B7280"
+              strokeWidth="2"
+            >
+              <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <Circle cx="12" cy="7" r="4" />
+            </Svg>
+
+            <Text className="ml-3 text-sm font-medium text-[#111827]">
+              Profile
             </Text>
           </TouchableOpacity>
-        </View>
-      </View>
+
+          {/* Divider */}
+          <View className="h-px bg-[#F3F4F6]" />
+
+          {/* Logout */}
+          <TouchableOpacity
+            onPress={handleLogoutPress}
+            className="flex-row items-center px-4 py-4"
+          >
+            <Svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#EF4444"
+              strokeWidth="2"
+            >
+              <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <Path d="M16 17l5-5-5-5" />
+              <Path d="M21 12H9" />
+            </Svg>
+
+            <Text className="ml-3 text-sm font-medium text-[#DC2626]">
+              Logout
+            </Text>
+          </TouchableOpacity>
+
+        </Animated.View>
+      )}
+    </View>
+  </View>
+</View>
+
+      {isUserMenuVisible && (
+        <Pressable className="absolute inset-0 z-30" onPress={() => toggleUserMenu(false)} />
+      )}
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* HERO SECTION: Minimal, spacious, modern */}

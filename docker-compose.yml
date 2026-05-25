@@ -9,6 +9,12 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   # Worker: Tự động khởi tạo Replica Set VÀ Tạo User
   mongodb-init:
@@ -22,7 +28,7 @@ services:
         mongosh --host mongodb:27017 --eval "
           // 1. Khởi tạo Replica Set nếu chưa có
           try {
-            rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]});
+            rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]});
             print('Đã gửi lệnh khởi tạo Replica Set');
           } catch (e) {
             print('Replica Set đã tồn tại');
@@ -33,11 +39,11 @@ services:
 
           // 2. Tạo User Admin (Chỉ tạo nếu chưa có)
           try {
-            var userCount = db.getSiblingDB('admin').getUser('${MONGO_USER}');
+            var userCount = db.getSiblingDB('admin').getUser('${MONGO_USER:-admin}');
             if (!userCount) {
               db.getSiblingDB('admin').createUser({
-                user: '${MONGO_USER}',
-                pwd: '${MONGO_PASS}',
+                user: '${MONGO_USER:-admin}',
+                pwd: '${MONGO_PASS:-password}',
                 roles: [{ role: 'root', db: 'admin' }]
               });
               print('Đã tạo User thành công');
@@ -49,7 +55,8 @@ services:
           }
         "
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
 
   # MongoDB GUI
   mongo-express:
@@ -59,15 +66,16 @@ services:
     ports:
       - "8082:8081"
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASS}
-      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_USER}
-      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_PASS}
-      # Thêm &directConnection=true để tránh lỗi DNS khi kết nối Single Node RS
-      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USER}:${MONGO_PASS}@mongodb:27017/${MONGO_DB}?authSource=admin&replicaSet=rs0&directConnection=true
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER:-admin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASS:-password}
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_USER:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_PASS:-password}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USER:-admin}:${MONGO_PASS:-password}@mongodb:27017/${MONGO_DB:-ielts_app}?authSource=admin&directConnection=true
     depends_on:
-      - mongodb
-      - mongodb-init
+      mongodb:
+        condition: service_healthy
+      mongodb-init:
+        condition: service_completed_successfully
 
   # Backend API
   api:
@@ -77,12 +85,14 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - DATABASE_URL=mongodb://${MONGO_USER}:${MONGO_PASS}@mongodb:27017/${MONGO_DB}?authSource=admin&replicaSet=rs0&directConnection=true
+      - DATABASE_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASS:-password}@mongodb:27017/${MONGO_DB:-ielts_app}?authSource=admin&directConnection=true
       - JWT_SECRET=your_jwt_secret_here
       - PORT=5000
     depends_on:
-      - mongodb
-      - mongodb-init
+      mongodb:
+        condition: service_healthy
+      mongodb-init:
+        condition: service_completed_successfully
 
 volumes:
   mongodb_data:
