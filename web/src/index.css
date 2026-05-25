@@ -1,0 +1,42 @@
+/* Apex IELTS — Global Styles */
+/* Architecture: Tailwind CSS is the primary styling solution */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-background text-accent-dark;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Apex IELTS Design System — Card component */
+  .card {
+    @apply bg-background-card rounded-card shadow-sm;
+  }
+
+  /* Primary action button */
+  .btn-primary {
+    @apply bg-primary-dark text-white font-semibold px-6 py-3 rounded-full
+           hover:bg-primary transition-all duration-200 active:scale-95;
+  }
+
+  /* Secondary action button */
+  .btn-secondary {
+    @apply bg-primary text-white font-semibold px-6 py-3 rounded-full
+           hover:opacity-90 transition-all duration-200 active:scale-95;
+  }
+}

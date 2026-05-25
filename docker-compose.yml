@@ -1,7 +1,9 @@
 services:
-  # Database: MongoDB
+  # ============================================================
+  # Database: MongoDB (Replica Set — required for Prisma ORM)
+  # ============================================================
   mongodb:
-    image: mongo:latest
+    image: mongo:7.0
     container_name: ielts_mongodb
     restart: always
     command: mongod --replSet rs0 --bind_ip_all
@@ -14,51 +16,70 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-      start_period: 10s
+      start_period: 15s
 
-  # Worker: Tự động khởi tạo Replica Set VÀ Tạo User
+  # Worker: Initialize MongoDB Replica Set + Admin User
   mongodb-init:
-    image: mongo:latest
+    image: mongo:7.0
     container_name: ielts_mongodb_init
-    entrypoint: [ "sh", "-c" ]
+    entrypoint: ["sh", "-c"]
     command:
       - |
         sleep 5
-        echo "Đang cấu hình MongoDB..."
+        echo "Configuring MongoDB Replica Set..."
         mongosh --host mongodb:27017 --eval "
-          // 1. Khởi tạo Replica Set nếu chưa có
           try {
             rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]});
-            print('Đã gửi lệnh khởi tạo Replica Set');
+            print('Replica Set initiated');
           } catch (e) {
-            print('Replica Set đã tồn tại');
+            print('Replica Set already exists: ' + e);
           }
-          
-          // Đợi một chút để RS ổn định
+
           sleep(5000);
 
-          // 2. Tạo User Admin (Chỉ tạo nếu chưa có)
           try {
-            var userCount = db.getSiblingDB('admin').getUser('${MONGO_USER:-admin}');
-            if (!userCount) {
+            var userExists = db.getSiblingDB('admin').getUser('${MONGO_USER:-admin}');
+            if (!userExists) {
               db.getSiblingDB('admin').createUser({
                 user: '${MONGO_USER:-admin}',
                 pwd: '${MONGO_PASS:-password}',
                 roles: [{ role: 'root', db: 'admin' }]
               });
-              print('Đã tạo User thành công');
+              print('Admin user created');
             } else {
-              print('User đã tồn tại');
+              print('Admin user already exists');
             }
           } catch (e) {
-            print('Lỗi khi kiểm tra/tạo User: ' + e);
+            print('Error creating user: ' + e);
           }
         "
     depends_on:
       mongodb:
         condition: service_healthy
 
-  # MongoDB GUI
+  # ============================================================
+  # Cache & Lock Layer: Redis
+  # Architecture: Used ONLY for booking concurrency locking (Epic 4)
+  # Pattern: SETNX + Lua Script + TTL for deadlock prevention
+  # ============================================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: ielts_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ============================================================
+  # MongoDB GUI (Development only)
+  # ============================================================
   mongo-express:
     image: mongo-express:latest
     container_name: ielts_mongo_express
@@ -77,22 +98,33 @@ services:
       mongodb-init:
         condition: service_completed_successfully
 
-  # Backend API
+  # ============================================================
+  # Backend API (for production Docker deployment)
+  # Development: Run `npm run dev` in backend/ directly
+  # ============================================================
   api:
     build:
       context: ./backend
+      dockerfile: Dockerfile
     container_name: ielts_api
     ports:
       - "5000:5000"
     environment:
-      - DATABASE_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASS:-password}@mongodb:27017/${MONGO_DB:-ielts_app}?authSource=admin&directConnection=true
-      - JWT_SECRET=your_jwt_secret_here
+      - DATABASE_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASS:-password}@mongodb:27017/${MONGO_DB:-ielts_app}?authSource=admin&replicaSet=rs0&directConnection=true
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-change_this_in_production}
       - PORT=5000
+      - NODE_ENV=production
     depends_on:
       mongodb:
         condition: service_healthy
       mongodb-init:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
 volumes:
   mongodb_data:
+    driver: local
+  redis_data:
+    driver: local

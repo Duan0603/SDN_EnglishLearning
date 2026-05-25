@@ -1,0 +1,4 @@
+// Services directory — business logic lives here
+// Architecture: Prisma Client MUST only be accessed from this layer
+// Never access Prisma directly from controllers/routes
+export {};

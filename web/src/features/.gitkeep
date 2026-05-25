@@ -1,0 +1,11 @@
+// Feature-based organization — each feature folder contains:
+// - [Feature]Page.tsx  (Smart Component — connects to Redux)
+// - [feature]Slice.ts  (Redux state management)
+// - components/        (Dumb components specific to this feature)
+//
+// Features to be added:
+// - auth/    (Epic 1, Story 1.3)
+// - exam/    (Epic 2)
+// - speaking/ (Epic 3)
+// - booking/ (Epic 4)
+export {};

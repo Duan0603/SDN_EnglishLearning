@@ -1,0 +1,5 @@
+// Socket.io event handlers directory
+// Architecture: All Socket.io events are handled HERE — never in controllers
+// Pattern: Use 'scope:action' naming (e.g., 'audio:chunk_received', 'exam:time_sync')
+// Socket.io setup happens in server.ts (Epic 1, Story 1.4)
+export {};
