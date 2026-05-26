@@ -8,15 +8,30 @@ import PracticeScreen from '../screens/PracticeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ExamScreen from '../screens/ExamScreen';
 import useAuthStore from '../store/useAuthStore';
+import useSocketStore from '../store/useSocketStore';
 
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
   const { user, restoreToken } = useAuthStore();
+  const { connectSocket, disconnectSocket } = useSocketStore();
 
   useEffect(() => {
     restoreToken();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      connectSocket();
+    } else {
+      disconnectSocket();
+    }
+    
+    // Clean up connection on unmount
+    return () => {
+      disconnectSocket();
+    };
+  }, [user]);
 
   return (
     <NavigationContainer>

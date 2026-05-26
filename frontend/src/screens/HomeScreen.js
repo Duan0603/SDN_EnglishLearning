@@ -12,9 +12,11 @@ import {
 } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import useAuthStore from '../store/useAuthStore';
+import useSocketStore from '../store/useSocketStore';
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
+  const { isConnected, socketId, sendPing, pingResponse } = useSocketStore();
   const isWeb = true;
   const [isUserMenuVisible, setIsUserMenuVisible] = useState(false);
   const [menuAnim] = useState(new Animated.Value(0));
@@ -482,6 +484,57 @@ const HomeScreen = ({ navigation }) => {
                     className="bg-[#1E1E1E] py-4 rounded-[16px] items-center active:opacity-90"
                   >
                     <Text className="text-white text-sm font-bold">Start Free Mock Now</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Real-time Socket Diagnostics Card */}
+                <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] shadow-xs relative overflow-hidden">
+                  <View className="flex-row justify-between items-center mb-4">
+                    <View className="bg-[#F0FDF4] px-3.5 py-1 rounded-full border border-[#DCFCE7] flex-row items-center">
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: isConnected ? '#00CC99' : '#EF4444', marginRight: 6 }} />
+                      <Text className="text-[#005C42] text-[10px] font-extrabold uppercase tracking-widest">
+                        {isConnected ? 'SOCKET ACTIVE' : 'SOCKET OFFLINE'}
+                      </Text>
+                    </View>
+                    {socketId && (
+                      <Text className="text-[10px] text-gray-400 font-mono">
+                        ID: {socketId.substring(0, 8)}...
+                      </Text>
+                    )}
+                  </View>
+
+                  <Text className="text-xl font-bold text-[#1E1E1E] mb-2 tracking-tight">
+                    Real-time Gateway
+                  </Text>
+                  
+                  <Text className="text-sm text-[#6B7280] mb-6 leading-6">
+                    {isConnected 
+                      ? 'The real-time bidirectional messaging pipeline is active. You can now execute heartbeats or check network latency.'
+                      : 'Real-time gateway is currently disconnected. Sign in or refresh the page to restore real-time communications.'}
+                  </Text>
+
+                  {isConnected && (
+                    <View className="mb-6 p-4 bg-[#F9FAFB] rounded-2xl border border-[#F3F4F6]">
+                      <Text className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Server Diagnostic Response</Text>
+                      {pingResponse ? (
+                        <View className="space-y-1">
+                          <Text className="text-xs text-emerald-600 font-semibold">✓ Connected - Message: "{pingResponse.message}"</Text>
+                          <Text className="text-[10px] text-gray-400 font-mono">Received: {new Date(pingResponse.timestamp).toLocaleTimeString()}</Text>
+                        </View>
+                      ) : (
+                        <Text className="text-xs text-gray-400 italic">No heartbeats sent yet. Press "Test Socket Latency" below.</Text>
+                      )}
+                    </View>
+                  )}
+
+                  <TouchableOpacity 
+                    onPress={() => isConnected ? sendPing({ text: 'Apex IELTS Heartbeat Check' }) : null}
+                    disabled={!isConnected}
+                    className={`py-4 rounded-[16px] items-center ${isConnected ? 'bg-[#00CC99] active:opacity-90' : 'bg-gray-200'}`}
+                  >
+                    <Text className={`text-sm font-bold ${isConnected ? 'text-[#005C42]' : 'text-gray-400'}`}>
+                      {isConnected ? 'Test Socket Latency' : 'Connection Inactive'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
