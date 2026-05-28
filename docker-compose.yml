@@ -4,11 +4,12 @@ services:
   # ============================================================
   mongodb:
     image: mongo:7.0
+    platform: linux/amd64
     container_name: ielts_mongodb
     restart: always
     command: mongod --replSet rs0 --bind_ip_all
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongodb_data:/data/db
     healthcheck:
@@ -21,6 +22,7 @@ services:
   # Worker: Initialize MongoDB Replica Set + Admin User
   mongodb-init:
     image: mongo:7.0
+    platform: linux/amd64
     container_name: ielts_mongodb_init
     entrypoint: ["sh", "-c"]
     command:
