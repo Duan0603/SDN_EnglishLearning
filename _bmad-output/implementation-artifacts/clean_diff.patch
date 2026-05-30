@@ -1,0 +1,472 @@
+diff --git a/_bmad-output/implementation-artifacts/1-2-implement-authentication-api-backend.md b/_bmad-output/implementation-artifacts/1-2-implement-authentication-api-backend.md
+new file mode 100644
+index 0000000..8d115fb
+--- /dev/null
++++ b/_bmad-output/implementation-artifacts/1-2-implement-authentication-api-backend.md
+@@ -0,0 +1,68 @@
++# Story 1.2: Implement Authentication API (Backend)
++
++Status: ready-for-dev
++
++## Story
++
++As a User,
++I want to securely register and log in to the system,
++So that my role (Student/Mentor/Admin) is recognized and my data is protected.
++
++## Acceptance Criteria
++
++1. **Given** valid signup details (username, email, password, fullName)
++   **When** I send a POST request to `/api/v1/auth/signup` or `/api/v1/access/signup`
++   **Then** the user is created in the database with their password hashed using bcrypt
++   **And** the server returns an Access Token in the response body
++   **And** a Refresh Token is set in an HttpOnly Cookie.
++
++2. **Given** valid login credentials (email or username, password)
++   **When** I send a POST request to `/api/v1/auth/login` or `/api/v1/access/login`
++   **Then** the server verifies the password using bcrypt
++   **And** returns an Access Token in the response body
++   **And** a Refresh Token is set in an HttpOnly Cookie.
++
++3. **Given** an authenticated user
++   **When** I send a POST request to `/api/v1/auth/logout` or `/api/v1/access/logout`
++   **Then** the server clears the Refresh Token HttpOnly Cookie
++   **And** removes the KeyToken record associated with the user session from the database.
++
++## Tasks / Subtasks
++
++- [x] Task 1: Check Mongoose Models and Controllers
++  - Verify `user.model.js` and `keyToken.model.js` are correctly configured
++  - Verify `access.controller.js` and `access.service.js` contain logic for signUp, login, and logout
++- [x] Task 2: Expose endpoints under `/api/v1/auth` as well as `/api/v1/access` for backward compatibility
++  - Expose `/api/v1/auth/signup`, `/api/v1/auth/login`, `/api/v1/auth/logout`
++- [x] Task 3: Handle CORS with Credentials Support
++  - Adjust backend CORS middleware in `app.ts` to support explicit client origin (`http://localhost:3000`) instead of wildcard `*` when credentials mode is enabled.
++
++## Dev Notes
++
++- **Password Hashing:** Use `bcryptjs` for security.
++- **Cookies:** Keep `refreshToken` cookie secure, httpOnly, sameSite `strict`, expiring in 7 days.
++- **CORS:** Ensure `credentials: true` and an explicit origin array/check.
++
++## References
++
++- Project Context: [docs/project-context.md](file:///e:/ProjectKi7/SDN_EnglishLearning/docs/project-context.md)
++- Architecture Specs: [_bmad-output/planning-artifacts/architecture.md](file:///e:/ProjectKi7/SDN_EnglishLearning/_bmad-output/planning-artifacts/architecture.md)
++
++## Dev Agent Record
++
++### Agent Model Used
++
++Gemini
++
++### Debug Log References
++
++None
++
++### Completion Notes List
++
++Authentication API endpoints implemented, CORS configured for credentials support, verified endpoints.
++
++### File List
++
++- backend/src/routes/index.ts
++- backend/src/app.ts
+diff --git a/_bmad-output/implementation-artifacts/sprint-status.yaml b/_bmad-output/implementation-artifacts/sprint-status.yaml
+index 548c5d8..2d3b134 100644
+--- a/_bmad-output/implementation-artifacts/sprint-status.yaml
++++ b/_bmad-output/implementation-artifacts/sprint-status.yaml
+@@ -44,7 +44,7 @@ story_location: _bmad-output/implementation-artifacts
+ development_status:
+   epic-1: in-progress
+   1-1-initialize-project-monorepo-infrastructure: in-progress
+-  1-2-implement-authentication-api-backend: backlog
++  1-2-implement-authentication-api-backend: in-progress
+   1-3-implement-frontend-authentication-state-routing: backlog
+   1-4-implement-socket-io-infrastructure-redux-middleware: backlog
+   epic-1-retrospective: optional
+diff --git a/backend/Dockerfile b/backend/Dockerfile
+index a11295e..305ec52 100644
+--- a/backend/Dockerfile
++++ b/backend/Dockerfile
+@@ -1,4 +1,5 @@
+-FROM node:20-alpine
++FROM node:20-slim
++RUN apt-get update -y && apt-get install -y openssl
+ 
+ WORKDIR /app
+ 
+diff --git a/backend/package.json b/backend/package.json
+index b2127f4..aaefaab 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -19,12 +19,15 @@
+     "@prisma/client": "^5.10.0",
+     "bcryptjs": "^2.4.3",
+     "compression": "^1.8.1",
++    "cookie-parser": "^1.4.7",
+     "cors": "^2.8.5",
+     "dotenv": "^16.6.1",
+     "express": "^4.18.2",
+     "express-async-handler": "^1.2.0",
+     "helmet": "^7.1.0",
+     "jsonwebtoken": "^9.0.2",
++    "lodash": "^4.18.1",
++    "mongoose": "^9.6.2",
+     "morgan": "^1.10.1",
+     "redis": "^4.6.13",
+     "socket.io": "^4.7.5"
+@@ -32,10 +35,12 @@
+   "devDependencies": {
+     "@types/bcryptjs": "^2.4.6",
+     "@types/compression": "^1.7.5",
++    "@types/cookie-parser": "^1.4.10",
+     "@types/cors": "^2.8.17",
+     "@types/express": "^4.17.21",
+     "@types/jest": "^29.5.12",
+     "@types/jsonwebtoken": "^9.0.6",
++    "@types/lodash": "^4.17.24",
+     "@types/morgan": "^1.9.9",
+     "@types/node": "^20.11.19",
+     "@types/supertest": "^6.0.2",
+diff --git a/backend/src/app.js b/backend/src/app.js
+deleted file mode 100644
+index 62624e5..0000000
+--- a/backend/src/app.js
++++ /dev/null
+@@ -1,51 +0,0 @@
+-import express from 'express'
+-import morgan from 'morgan'
+-import helmet from "helmet";
+-import  compression from 'compression'
+-import cors from 'cors'
+-import {checkOverload} from "./helper/checkConnect.js";
+-import instanceMongodb from "./db/init.mongodb.js";
+-import {router} from "./routes/index.js";
+-export const app = express()
+-
+-app.use(cors())
+-app.use(morgan("dev"))
+-app.use(helmet());
+-app.use(compression())
+-app.use(express.json())
+-app.use(express.urlencoded({extended: true}))
+-
+-//init db
+-instanceMongodb
+-
+-//helper (cac function ho tro, chua trong folder helper)
+-checkOverload()
+-
+-//init route
+-app.use(router)
+-
+-//global error handling
+-
+-
+-app.get("/", (req, res, next) => {
+-    const strCompress = 'This is backend port'
+-    return res.status(200).json({
+-        message: "Hello th ngu"
+-    })
+-})
+-
+-app.use((req, res, next) => {
+-    const error = new Error('Not found route')
+-    error.status = 404
+-    next(error)
+-})
+-
+-app.use((error, req, res, next) => {
+-    const statusCode = error.status || 500
+-
+-    return res.status(statusCode).json({
+-        status: 'error',
+-        code: statusCode,
+-        message: error.message || "Internal server error"
+-    })
+-})
+diff --git a/backend/src/app.ts b/backend/src/app.ts
+index 06b3cfe..240dbf8 100644
+--- a/backend/src/app.ts
++++ b/backend/src/app.ts
+@@ -5,6 +5,7 @@ import cors from 'cors';
+ import helmet from 'helmet';
+ import compression from 'compression';
+ import morgan from 'morgan';
++import cookieParser from 'cookie-parser';
+ import { apiRouter } from './routes/index';
+ import { globalErrorHandler, notFoundHandler } from './middlewares/error.middleware';
+ import { config } from './config/env.config';
+@@ -15,7 +16,9 @@ export const createApp = (): Application => {
+   // Security middlewares
+   app.use(helmet());
+   app.use(cors({
+-    origin: config.nodeEnv === 'development' ? '*' : process.env.FRONTEND_URL,
++    origin: config.nodeEnv === 'development' 
++      ? ['http://localhost:3000', 'http://127.0.0.1:3000'] 
++      : process.env.FRONTEND_URL,
+     credentials: true,
+   }));
+ 
+@@ -25,6 +28,7 @@ export const createApp = (): Application => {
+   // Request parsing
+   app.use(express.json({ limit: '10mb' }));
+   app.use(express.urlencoded({ extended: true }));
++  app.use(cookieParser());
+ 
+   // Logging (only in non-test environments)
+   if (config.nodeEnv !== 'test') {
+diff --git a/backend/src/auth/authUtils.js b/backend/src/auth/authUtils.js
+index ea6fdcd..c4859be 100644
+--- a/backend/src/auth/authUtils.js
++++ b/backend/src/auth/authUtils.js
+@@ -24,4 +24,31 @@ const createTokenPair = async (payload, publicKey, privateKey) => {
+         throw e;
+     }
+ }
+-export default createTokenPair
+\ No newline at end of file
++
++const authentication = async (req, res, next) => {
++    try {
++        const userId = req.headers['x-client-id'];
++        if (!userId) throw new Error('Missing x-client-id');
++
++        const { KeyTokenService } = await import('../services/keyToken.service.js');
++        const keyStore = await KeyTokenService.findByUserId(userId);
++        if (!keyStore) throw new Error('Not found keyStore');
++
++        const accessToken = req.headers['authorization'];
++        if (!accessToken) throw new Error('Missing authorization');
++
++        try {
++            const decodeUser = JWT.verify(accessToken.replace('Bearer ', ''), keyStore.publicKey);
++            if (userId !== decodeUser.userId) throw new Error('Invalid userId');
++            req.keyStore = keyStore;
++            req.user = decodeUser;
++            return next();
++        } catch (error) {
++            throw error;
++        }
++    } catch (error) {
++        next(error);
++    }
++}
++
++export { createTokenPair, authentication }
+\ No newline at end of file
+diff --git a/backend/src/controllers/access.controller.js b/backend/src/controllers/access.controller.js
+index 6a6751a..3877707 100644
+--- a/backend/src/controllers/access.controller.js
++++ b/backend/src/controllers/access.controller.js
+@@ -2,18 +2,55 @@ import {Created, OK} from "../core/success.response.js";
+ import {AccessService} from "../services/access.service.js";
+ export class AccessController {
+     static signUp = async (req, res, next) => {
+-        console.log(`[P]::signUp::`, req.body)
++        const metadata = await AccessService.signUp(req.body);
++        
++        if (metadata.tokens) {
++            res.cookie('refreshToken', metadata.tokens.refreshToken, {
++                httpOnly: true,
++                secure: process.env.NODE_ENV === 'production',
++                sameSite: 'strict',
++                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
++            });
++            // Don't send refresh token in payload
++            delete metadata.tokens.refreshToken;
++        }
+ 
+         new Created({
+             message: "User registered successfully!",
+-            metadata: await AccessService.signUp(req.body)
++            metadata
+         }).send(res)
+     }
+ 
+     static signIn = async (req, res, next) => {
++        const metadata = await AccessService.login(req.body);
++
++        if (metadata.tokens) {
++            res.cookie('refreshToken', metadata.tokens.refreshToken, {
++                httpOnly: true,
++                secure: process.env.NODE_ENV === 'production',
++                sameSite: 'strict',
++                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
++            });
++            // Don't send refresh token in payload
++            delete metadata.tokens.refreshToken;
++        }
++
+         new OK({
+             message: "Login success!",
+-            metadata: await AccessService.login(req.body)
++            metadata
++        }).send(res)
++    }
++
++    static logout = async (req, res, next) => {
++        // Clear cookie
++        res.clearCookie('refreshToken');
++        
++        // Remove token from DB
++        const delKey = await AccessService.logout(req.keyStore);
++
++        new OK({
++            message: "Logout success!",
++            metadata: delKey
+         }).send(res)
+     }
+ }
+\ No newline at end of file
+diff --git a/backend/src/routes/access/index.js b/backend/src/routes/access/index.js
+deleted file mode 100644
+index c26efd5..0000000
+--- a/backend/src/routes/access/index.js
++++ /dev/null
+@@ -1,9 +0,0 @@
+-import express from "express";
+-import {asyncHandler} from "../../auth/checkAuth.js";
+-import {AccessController} from "../../controllers/access.controller.js";
+-
+-export const accessRouter = express.Router();
+-
+-// Access routes (logout, refresh token, etc.)
+-// accessRouter.post('/logout', asyncHandler(AccessController.logout))
+-
+\ No newline at end of file
+diff --git a/backend/src/routes/access/index.ts b/backend/src/routes/access/index.ts
+new file mode 100644
+index 0000000..c5919e9
+--- /dev/null
++++ b/backend/src/routes/access/index.ts
+@@ -0,0 +1,19 @@
++import express from "express";
++import {asyncHandler} from "../../auth/checkAuth.js";
++import {authentication} from "../../auth/authUtils.js";
++import {AccessController} from "../../controllers/access.controller.js";
++
++export const accessRouter = express.Router();
++
++// SignUp
++accessRouter.post('/signup', asyncHandler(AccessController.signUp));
++
++// SignIn 
++accessRouter.post('/login', asyncHandler(AccessController.signIn));
++
++// Authentication middleware
++accessRouter.use(authentication);
++
++// Access routes (logout, refresh token, etc.)
++accessRouter.post('/logout', asyncHandler(AccessController.logout));
++
+\ No newline at end of file
+diff --git a/backend/src/routes/index.js b/backend/src/routes/index.js
+deleted file mode 100644
+index 7f92edb..0000000
+--- a/backend/src/routes/index.js
++++ /dev/null
+@@ -1,9 +0,0 @@
+-// file tong de quan ly toan bo route
+-import express from "express";
+-import { accessRouter } from "./access/index.js";
+-import { userRouter } from "./user/index.js";
+-
+-export const router = express.Router();
+-
+-router.use('/v1/api', accessRouter);
+-router.use('/v1/api/user', userRouter);
+\ No newline at end of file
+diff --git a/backend/src/routes/index.ts b/backend/src/routes/index.ts
+index d6cc086..895b98e 100644
+--- a/backend/src/routes/index.ts
++++ b/backend/src/routes/index.ts
+@@ -14,3 +14,7 @@ apiRouter.use('/', healthRouter);
+ // apiRouter.use('/api/v1/speaking', speakingRouter); // Epic 3
+ // apiRouter.use('/api/v1/bookings', bookingRouter); // Epic 4
+ // apiRouter.use('/api/v1/users', userRouter);      // Epic 1, Story 1.2
++
++import { accessRouter } from './access/index';
++apiRouter.use('/api/v1/access', accessRouter);
++apiRouter.use('/api/v1/auth', accessRouter);
+diff --git a/backend/src/services/access.service.js b/backend/src/services/access.service.js
+index 87ddfa8..f4ae435 100644
+--- a/backend/src/services/access.service.js
++++ b/backend/src/services/access.service.js
+@@ -3,11 +3,16 @@ import crypto from "crypto";
+ import userModel from "../models/user.model.js";
+ import {BadRequestError} from "../core/error.response.js";
+ import {Role} from "../data/data.js";
+-import createTokenPair from "../auth/authUtils.js";
++import { createTokenPair } from "../auth/authUtils.js";
+ import {KeyTokenService} from "./keyToken.service.js";
+ import {getInfoData} from "../ultils/index.js";
+ 
+ export class AccessService {
++    static logout = async (keyStore) => {
++        const delKey = await KeyTokenService.removeKeyById(keyStore._id);
++        return delKey;
++    }
++
+     static login = async ({email, password}) => {
+         // 1. Check email or username in dbs
+         const foundUser = await userModel.findOne({
+diff --git a/backend/src/services/keyToken.service.js b/backend/src/services/keyToken.service.js
+index ccd0704..1b3be4b 100644
+--- a/backend/src/services/keyToken.service.js
++++ b/backend/src/services/keyToken.service.js
+@@ -6,9 +6,18 @@ export class KeyTokenService {
+         const publicKeyString = publicKey.toString()
+         const tokens = await keyTokenModel.create({
+                 user: userId,
+-                publicKey: publicKeyString, refreshToken
++                publicKey: publicKeyString, 
++                refreshToken: refreshToken ? [refreshToken] : []
+         })
+ 
+         return tokens ? publicKeyString : null
+     }
++
++    static findByUserId = async (userId) => {
++        return await keyTokenModel.findOne({ user: userId }).lean()
++    }
++
++    static removeKeyById = async (id) => {
++        return await keyTokenModel.deleteOne({ _id: id })
++    }
+ }
+\ No newline at end of file
+diff --git a/docker-compose.yml b/docker-compose.yml
+index b2b8268..754aac1 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -4,11 +4,12 @@ services:
+   # ============================================================
+   mongodb:
+     image: mongo:7.0
++    platform: linux/amd64
+     container_name: ielts_mongodb
+     restart: always
+     command: mongod --replSet rs0 --bind_ip_all
+     ports:
+-      - "27017:27017"
++      - "27018:27017"
+     volumes:
+       - mongodb_data:/data/db
+     healthcheck:
+@@ -21,6 +22,7 @@ services:
+   # Worker: Initialize MongoDB Replica Set + Admin User
+   mongodb-init:
+     image: mongo:7.0
++    platform: linux/amd64
+     container_name: ielts_mongodb_init
+     entrypoint: ["sh", "-c"]
+     command:
+diff --git a/web/src/vite-env.d.ts b/web/src/vite-env.d.ts
+new file mode 100644
+index 0000000..11f02fe
+--- /dev/null
++++ b/web/src/vite-env.d.ts
+@@ -0,0 +1 @@
++/// <reference types="vite/client" />

@@ -17,7 +17,14 @@ export const createApp = (): Application => {
   app.use(helmet());
   app.use(cors({
     origin: config.nodeEnv === 'development' 
-      ? ['http://localhost:3000', 'http://127.0.0.1:3000'] 
+      ? (origin, callback) => {
+          // Allow requests with no origin (like mobile apps) or from localhost/10.0.2.2
+          if (!origin || origin.match(/^http:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:\d+)?$/)) {
+            callback(null, true);
+          } else {
+            callback(new Error('Not allowed by CORS'));
+          }
+        }
       : process.env.FRONTEND_URL,
     credentials: true,
   }));

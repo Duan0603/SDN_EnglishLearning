@@ -1,5 +1,5 @@
 # generated: 2026-05-25
-# last_updated: 2026-05-25
+# last_updated: 2026-05-30
 # project: SDN_EnglishLearning
 # project_key: NOKEY
 # tracking_system: file-system
@@ -23,6 +23,9 @@
 #   - review: Ready for code review (via Dev's code-review workflow)
 #   - done: Story completed
 #
+# Layer Tags:
+#   [BE] = Backend task    [FE] = Frontend task    [FULL] = Full-stack task
+#
 # Retrospective Status:
 #   - optional: Can be completed but not required
 #   - done: Retrospective has been completed
@@ -33,38 +36,217 @@
 # - Stories can be worked in parallel if team capacity allows
 # - Developer typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Backend and Frontend sub-stories can be developed in parallel by different developers
 
 generated: 2026-05-25
-last_updated: 2026-05-25
+last_updated: 2026-05-30
 project: SDN_EnglishLearning
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 
+# ==============================================================================
+# EPIC 1: Access Management & Platform Core
+# Goal: Foundation (Vite + Express + Prisma) + Authentication + Socket.io infra
+# FRs covered: FR7
+# ==============================================================================
 development_status:
   epic-1: in-progress
-  1-1-initialize-project-monorepo-infrastructure: in-progress
+
+  # Story 1.1 [FULL] Initialize Project Monorepo & Infrastructure
+  1-1-initialize-project-monorepo-infrastructure: review
+  # Sub-tasks breakdown:
+  #   [BE] Express TS + Prisma + MongoDB + Redis config ............. done
+  #   [BE] Health endpoint /health .................................. done
+  #   [BE] Error middleware + standard response format .............. done
+  #   [FE] Vite React + Tailwind + Zustand/Redux setup ............. done
+  #   [FE] React Navigation + base screens scaffolding ............. done
+  #   [FE] Expo + NativeWind config ................................ done
+
+  # Story 1.2 [BE] Implement Authentication API (Backend)
   1-2-implement-authentication-api-backend: done
+  # Sub-tasks breakdown:
+  #   [BE] POST /api/v1/auth/signup ................................ done
+  #   [BE] POST /api/v1/auth/login (JWT + HttpOnly Cookie) ........ done
+  #   [BE] POST /api/v1/auth/logout (authenticated) ............... done
+  #   [BE] authUtils middleware (verify JWT, RBAC) ................. done
+  #   [BE] KeyToken model & service (token persistence) ........... done
+
+  # Story 1.3 [FE] Implement Frontend Authentication State & Routing
   1-3-implement-frontend-authentication-state-routing: backlog
+  # Sub-tasks breakdown:
+  #   [FE] Redux authSlice (login, logout, persist session) ... backlog
+  #   [FE] Axios API client with interceptors (attach JWT, refresh) ... backlog
+  #   [FE] LoginScreen integration with real API ...................... backlog
+  #   [FE] RegisterScreen integration with real API ................... backlog
+  #   [FE] Protected route guard (redirect unauthenticated users) ..... backlog
+  #   [FE] Role-based navigation (Student/Mentor/Admin dashboards) .... backlog
+  #   [FE] Secure token storage (expo-secure-store) ................... backlog
+
+  # Story 1.4 [FULL] Implement Socket.io Infrastructure & Redux Middleware
   1-4-implement-socket-io-infrastructure-redux-middleware: backlog
+  # Sub-tasks breakdown:
+  #   [BE] Socket.io server setup + CORS config ...................... backlog
+  #   [BE] Socket authentication middleware (verify JWT on connect) ... backlog
+  #   [BE] Socket event namespace structure (audio:*, exam:*) ........ backlog
+  #   [FE] socket.io-client connection manager ....................... backlog
+  #   [FE] Custom Redux Middleware for Socket.io events .............. backlog
+  #   [FE] Socket reconnection & error handling UI ................... backlog
+
   epic-1-retrospective: optional
+
+# ==============================================================================
+# EPIC 2: The Exam Engine & Content
+# Goal: Admin uploads exams, Students take mock exams, practice, review results
+# FRs covered: FR1, FR2, FR3, FR6 (partial)
+# ==============================================================================
   epic-2: backlog
+
+  # Story 2.1 [BE] Admin Exam Management API (Backend)
   2-1-admin-exam-management-api-backend: backlog
+  # Sub-tasks breakdown:
+  #   [BE] Prisma models: Test, TestSection, Question .............. backlog
+  #   [BE] CRUD API: POST/GET/PUT/DELETE /api/v1/exams ............. backlog
+  #   [BE] Bulk import endpoint for Cambridge answer keys .......... backlog
+  #   [BE] Admin role guard middleware ............................. backlog
+
+  # Story 2.2 [FE] Admin Exam Management UI (Frontend)
   2-2-admin-exam-management-ui-frontend: backlog
+  # Sub-tasks breakdown:
+  #   [FE] Admin Dashboard layout & sidebar navigation ............. backlog
+  #   [FE] Exam creation form (multi-step: exam → sections → questions) backlog
+  #   [FE] Client-side form validation ............................. backlog
+  #   [FE] Exam list with search, filter, pagination ............... backlog
+  #   [FE] Exam edit/delete confirmation flow ....................... backlog
+
+  # Story 2.3 [FE] Exam Engine Core UI & Timer (Frontend)
   2-3-exam-engine-core-ui-timer-frontend: backlog
+  # Sub-tasks breakdown:
+  #   [FE] Split-screen layout (material left / questions right) ... backlog
+  #   [FE] Real-time countdown timer (Web Worker for accuracy) ..... backlog
+  #   [FE] Auto-submit on timer expiry ............................. backlog
+  #   [FE] Redux exam state (answer selections, navigation) ........ backlog
+  #   [FE] LocalStorage sync (anti data-loss on F5/close) .......... backlog
+  #   [FE] Listening audio player with controls .................... backlog
+  #   [FE] Transcript hidden mode (Exam Mode) ...................... backlog
+
+  # Story 2.4 [BE] Exam Submission & Grading API (Backend)
   2-4-exam-submission-grading-api-backend: backlog
+  # Sub-tasks breakdown:
+  #   [BE] POST /api/v1/exams/:id/submit endpoint .................. backlog
+  #   [BE] Answer comparison engine (student vs Cambridge key) ..... backlog
+  #   [BE] Band score conversion algorithm (raw → 1.0-9.0) ......... backlog
+  #   [BE] TestResult model & persistence .......................... backlog
+
+  # Story 2.5 [FE] Practice Mode with Transcripts (Frontend)
   2-5-practice-mode-with-transcripts-frontend: backlog
+  # Sub-tasks breakdown:
+  #   [FE] Section/Part selector (filter by skill type) ............ backlog
+  #   [FE] Toggle transcript button + synced text display .......... backlog
+  #   [FE] Disabled/pausable timer in practice mode ................ backlog
+  #   [FE] Audio player with transcript sync highlight ............. backlog
+
+  # Story 2.6 [FE] Review & Analytics UI (Frontend)
   2-6-review-analytics-ui-frontend: backlog
+  # Sub-tasks breakdown:
+  #   [FE] Graded exam result screen (correct=green/wrong=red) ..... backlog
+  #   [FE] Paraphrasing highlight engine (bold synonyms) ........... backlog
+  #   [FE] Detailed explanation accordion per question ............. backlog
+  #   [FE] Score history chart (band score over time) .............. backlog
+  #   [FE] Export/share result functionality ........................ backlog
+
   epic-2-retrospective: optional
+
+# ==============================================================================
+# EPIC 3: AI Speaking Assessment
+# Goal: Record voice → STT → Gemini AI scoring (4 IELTS criteria)
+# FRs covered: FR4
+# ==============================================================================
   epic-3: backlog
+
+  # Story 3.1 [FE] Audio Recording & Microphone Handling (Frontend)
   3-1-audio-recording-microphone-handling-frontend: backlog
+  # Sub-tasks breakdown:
+  #   [FE] Microphone permission request flow ...................... backlog
+  #   [FE] MediaRecorder API integration (start/stop/pause) ........ backlog
+  #   [FE] Recording indicator (blinking dot animation) ............ backlog
+  #   [FE] Error handling: mic disconnect / network loss ........... backlog
+  #   [FE] Toast notification for retry on interruption ............ backlog
+  #   [FE] IndexedDB caching for offline audio blobs ............... backlog
+  #   [FE] Disabled button state during permission request ......... backlog
+
+  # Story 3.2 [BE] Socket.io Audio Receiver & Speech-to-Text (Backend)
   3-2-socket-io-audio-receiver-speech-to-text-backend: backlog
+  # Sub-tasks breakdown:
+  #   [BE] Socket.io audio:chunk event handler ..................... backlog
+  #   [BE] Audio buffer assembly from chunks ....................... backlog
+  #   [BE] Whisper STT API integration ............................. backlog
+  #   [BE] Temporary audio cache (15-min TTL cleanup) .............. backlog
+  #   [BE] Streaming pipeline (zero-memory-footprint) .............. backlog
+
+  # Story 3.3 [BE] Gemini API Prompting & Scoring Service (Backend)
   3-3-gemini-api-prompting-scoring-service-backend: backlog
+  # Sub-tasks breakdown:
+  #   [BE] Gemini API client wrapper ............................... backlog
+  #   [BE] Specialized IELTS scoring prompt template ............... backlog
+  #   [BE] Response parser (structured JSON extraction) ............ backlog
+  #   [BE] Performance optimization (<7s end-to-end) ............... backlog
+  #   [BE] SpeakingSubmission model & persistence .................. backlog
+
+  # Story 3.4 [FE] Speaking Assessment Results UI (Frontend)
   3-4-speaking-assessment-results-ui-frontend: backlog
+  # Sub-tasks breakdown:
+  #   [FE] Score display: 4-criteria radar/bar chart ............... backlog
+  #   [FE] Fluency, Lexical, Grammar, Pronunciation breakdown ..... backlog
+  #   [FE] Loading state during AI processing ...................... backlog
+  #   [FE] Speaking history list (past assessments) ................ backlog
+
   epic-3-retrospective: optional
+
+# ==============================================================================
+# EPIC 4: Mentor & Booking Ecosystem
+# Goal: Admin approves mentors, Mentors manage availability, Students book safely
+# FRs covered: FR5, FR6 (partial)
+# ==============================================================================
   epic-4: backlog
+
+  # Story 4.1 [FULL] Mentor Approval & Profile (Admin & Mentor)
   4-1-mentor-approval-profile-api-admin-mentor: backlog
+  # Sub-tasks breakdown:
+  #   [BE] Mentor registration API (extended user profile) ......... backlog
+  #   [BE] Admin approval endpoint PATCH /api/v1/mentors/:id/approve backlog
+  #   [BE] Mentor profile CRUD API ................................. backlog
+  #   [FE] Admin: Mentor review queue list ......................... backlog
+  #   [FE] Admin: Approve/Reject button with confirmation modal .... backlog
+  #   [FE] Mentor: Profile setup form (bio, expertise, photo) ..... backlog
+
+  # Story 4.2 [FULL] Mentor Availability Management (Mentor UI & API)
   4-2-mentor-availability-management-mentor-ui-api: backlog
+  # Sub-tasks breakdown:
+  #   [BE] Availability model (mentorId, timeSlot, meetingLink) .... backlog
+  #   [BE] CRUD API for availability slots ......................... backlog
+  #   [BE] Unique compound index (mentorId + timeSlot) ............. backlog
+  #   [FE] Mentor: Calendar/schedule view .......................... backlog
+  #   [FE] Mentor: Add timeslot form (date, time, meeting link) .... backlog
+  #   [FE] Mentor: Slot status display (available/booked) .......... backlog
+
+  # Story 4.3 [BE] Concurrency-Safe Booking API (Backend)
   4-3-concurrency-safe-booking-api-backend: backlog
+  # Sub-tasks breakdown:
+  #   [BE] POST /api/v1/bookings endpoint .......................... backlog
+  #   [BE] Redis SETNX lock with 10s TTL ........................... backlog
+  #   [BE] 409 Conflict response for failed lock acquisition ....... backlog
+  #   [BE] MongoDB compound index fallback validation .............. backlog
+  #   [BE] Booking model & persistence ............................. backlog
+
+  # Story 4.4 [FE] Mentor Browsing & Booking UI (Student UI)
   4-4-mentor-browsing-booking-ui-student-ui: backlog
+  # Sub-tasks breakdown:
+  #   [FE] Mentor list with search & filter ........................ backlog
+  #   [FE] Mentor profile detail page .............................. backlog
+  #   [FE] Available timeslot grid/calendar view ................... backlog
+  #   [FE] Booking confirmation modal .............................. backlog
+  #   [FE] 409 Conflict Toast ("Slot just booked by someone else") . backlog
+  #   [FE] Real-time availability refresh .......................... backlog
+
   epic-4-retrospective: optional

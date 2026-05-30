@@ -64,7 +64,7 @@ const LoginScreen = ({ navigation }) => {
               Sign In
             </Text>
 
-            {error && (
+            {!!error && (
               <View className="bg-red-50 border border-red-200 p-4 rounded-2xl mb-6 flex-row items-center">
                 <Text className="text-red-600 text-center font-semibold text-sm flex-1">{error}</Text>
               </View>

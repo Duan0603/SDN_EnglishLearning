@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ocean-light: #006994;
+  --color-ocean-main: #004c6d;
+  --color-ocean-deep: #002b40;
+  --color-ocean-abyss: #000c14;
+  --color-glow-primary: #00f0ff;
+  --color-glow-secondary: #00ffa3;
+  --color-glow-treasure: #ffd700;
+
+  --font-sans: var(--font-inter);
+}
+
+@utility glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+:root {
+  --background: var(--color-ocean-abyss);
+  --foreground: #f8fafc;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+  overflow-x: hidden;
+  /* Smooth scrolling for native scroll, though GSAP controls the narrative */
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar for immersive feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-ocean-abyss);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ocean-main);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ocean-light);
+}

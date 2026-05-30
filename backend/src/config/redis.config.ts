@@ -10,6 +10,15 @@ export const getRedisClient = async () => {
   if (!redisClient) {
     redisClient = createClient({
       url: config.redisUrl,
+      socket: {
+        reconnectStrategy: (retries) => {
+          if (retries > 5) {
+            console.error('[Redis] Max retries reached, giving up.');
+            return new Error('Max retries reached');
+          }
+          return Math.min(retries * 100, 3000);
+        }
+      }
     });
 
     redisClient.on('error', (err) => {

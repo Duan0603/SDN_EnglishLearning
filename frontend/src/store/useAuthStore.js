@@ -11,7 +11,7 @@ const useAuthStore = create((set) => ({
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await client.post('/user/login', { email, password });
+      const response = await client.post('/auth/login', { email, password });
       const { metadata } = response.data;
       const token = metadata.tokens.accessToken;
       const user = metadata.user;
@@ -29,7 +29,7 @@ const useAuthStore = create((set) => ({
   register: async (userData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await client.post('/user/signup', userData);
+      const response = await client.post('/auth/signup', userData);
       const { metadata } = response.data;
       const token = metadata.tokens.accessToken;
       const user = metadata.user;

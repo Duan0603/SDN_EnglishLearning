@@ -4,6 +4,7 @@ import { createApp } from './app';
 import { config } from './config/env.config';
 import { prisma } from './config/prisma.config';
 import { getRedisClient } from './config/redis.config';
+import './db/init.mongodb';
 
 const startServer = async () => {
   // Initialize database connections

@@ -12,4 +12,9 @@ module.exports = {
     '!src/**/*.d.ts',
   ],
   coverageDirectory: 'coverage',
+  transform: {
+    '^.+\\.(ts|tsx)$': 'ts-jest',
+    '^.+\\.(js|jsx)$': 'ts-jest',
+  },
+  transformIgnorePatterns: ['<rootDir>/node_modules/'],
 };

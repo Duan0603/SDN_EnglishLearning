@@ -141,7 +141,7 @@ const RegisterScreen = ({ navigation }) => {
             </View>
 
             {/* Error Message */}
-            {(error || validationError) && (
+            {!!(error || validationError) && (
               <View className="bg-red-50 border border-red-200 p-4 rounded-2xl mb-6">
                 <Text className="text-red-600 text-center font-semibold text-sm">
                   {validationError || error}

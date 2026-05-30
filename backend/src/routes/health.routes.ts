@@ -5,6 +5,13 @@ import { prisma } from '../config/prisma.config';
 
 export const healthRouter = Router();
 
+healthRouter.get('/', (req: Request, res: Response) => {
+  res.status(200).json({
+    success: true,
+    message: 'Welcome to Apex IELTS API. Use /health for system status.',
+  });
+});
+
 healthRouter.get('/health', async (req: Request, res: Response) => {
   try {
     // Verify Prisma/MongoDB connection is alive
