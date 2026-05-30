@@ -7,8 +7,13 @@ export const healthRouter = Router();
 
 healthRouter.get('/health', async (req: Request, res: Response) => {
   try {
-    // Verify Prisma/MongoDB connection is alive
-    await prisma.$runCommandRaw({ ping: 1 });
+    // Verify Prisma/MongoDB connection is alive with 2s timeout
+    const dbPing = prisma.$runCommandRaw({ ping: 1 });
+    const timeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database ping timeout')), 2000)
+    );
+
+    await Promise.race([dbPing, timeout]);
 
     res.status(200).json({
       success: true,

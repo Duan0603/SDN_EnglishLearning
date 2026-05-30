@@ -15,7 +15,7 @@ export const createApp = (): Application => {
   // Security middlewares
   app.use(helmet());
   app.use(cors({
-    origin: config.nodeEnv === 'development' ? '*' : process.env.FRONTEND_URL,
+    origin: config.nodeEnv === 'development' ? '*' : (process.env.FRONTEND_URL || ''),
     credentials: true,
   }));
 

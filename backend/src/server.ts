@@ -32,7 +32,15 @@ const startServer = async () => {
   // Graceful shutdown handlers
   const shutdown = async (signal: string) => {
     console.log(`\n[Server] ${signal} received — shutting down gracefully...`);
+    
+    // Force shutdown after 10s timeout
+    const forceExit = setTimeout(() => {
+      console.error('[Server] Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+
     server.close(async () => {
+      clearTimeout(forceExit);
       await prisma.$disconnect();
       console.log('[Server] HTTP server closed');
       process.exit(0);
@@ -42,10 +50,15 @@ const startServer = async () => {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
-  // Handle uncaught exceptions (prevent server crash)
+  // Handle uncaught exceptions (ensure graceful shutdown on sync errors)
+  process.on('uncaughtException', (err: Error) => {
+    console.error('[Server] Uncaught Exception:', err.message);
+    shutdown('Uncaught Exception');
+  });
+
+  // Handle unhandled rejections (prevent server crash)
   process.on('unhandledRejection', (reason: Error) => {
     console.error('[Server] Unhandled Rejection:', reason.message);
-    // In production, you may want to gracefully restart
   });
 };
 
