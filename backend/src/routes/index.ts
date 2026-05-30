@@ -14,3 +14,7 @@ apiRouter.use('/', healthRouter);
 // apiRouter.use('/api/v1/speaking', speakingRouter); // Epic 3
 // apiRouter.use('/api/v1/bookings', bookingRouter); // Epic 4
 // apiRouter.use('/api/v1/users', userRouter);      // Epic 1, Story 1.2
+
+import { accessRouter } from './access/index';
+apiRouter.use('/api/v1/access', accessRouter);
+apiRouter.use('/api/v1/auth', accessRouter);

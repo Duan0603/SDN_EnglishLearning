@@ -3,11 +3,16 @@ import crypto from "crypto";
 import userModel from "../models/user.model.js";
 import {BadRequestError} from "../core/error.response.js";
 import {Role} from "../data/data.js";
-import createTokenPair from "../auth/authUtils.js";
+import { createTokenPair } from "../auth/authUtils.js";
 import {KeyTokenService} from "./keyToken.service.js";
 import {getInfoData} from "../ultils/index.js";
 
 export class AccessService {
+    static logout = async (keyStore) => {
+        const delKey = await KeyTokenService.removeKeyById(keyStore._id);
+        return delKey;
+    }
+
     static login = async ({email, password}) => {
         // 1. Check email or username in dbs
         const foundUser = await userModel.findOne({
