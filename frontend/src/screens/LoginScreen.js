@@ -1,126 +1,121 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView
-} from 'react-native';
+import { View, KeyboardAvoidingView, Platform, TouchableOpacity, ScrollView } from 'react-native';
+import { TextInput, Button, Text } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import useAuthStore from '../store/useAuthStore';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login, isLoading, error } = useAuthStore();
+  const insets = useSafeAreaInsets();
 
   const handleLogin = () => {
     login(email, password);
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F9FA]">
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1 px-8 justify-center py-10"
+          style={{ flex: 1 }}
         >
-          {/* Logo Brand */}
-          <View className="items-center mb-12">
-            <View className="w-20 h-20 bg-white rounded-[28px] items-center justify-center shadow-sm border border-[#E5E7EB] mb-4">
-              <Svg width="44" height="44" viewBox="0 0 24 24" fill="none">
-                <Path 
-                  d="M12 2L2 7l10 5 10-5-10-5z" 
-                  fill="#00CC99" 
-                />
-                <Path 
-                  d="M6 12.5V17c0 1.66 2.69 3 6 3s6-1.34 6-3v-4.5l-6 3-6-3z" 
-                  fill="#005C42" 
-                />
-                <Path 
-                  d="M21.5 10v5.5" 
-                  stroke="#00CC99" 
-                  strokeWidth="1.5" 
-                  strokeLinecap="round"
-                />
-              </Svg>
-            </View>
-            <View className="flex-row items-center justify-center">
-              <Text className="text-3xl font-bold text-[#1E1E1E] tracking-tight">Apex</Text>
-              <Text className="text-3xl font-bold text-[#00CC99] tracking-tight ml-1">IELTS</Text>
-            </View>
-            <Text className="text-base text-[#6B7280] mt-2 font-medium text-center">
-              Unleash your full potential, achieve Band 8.0+
+          {/* Header Section */}
+          <View style={{ backgroundColor: '#00D1A0', paddingTop: insets.top + 20, paddingHorizontal: 32, height: 260 }}>
+            {/* We don't have a back button on Login usually, but we keep the space */}
+            <View style={{ height: 40 }} />
+            <Text variant="displaySmall" style={{ color: '#FFFFFF', fontFamily: 'Outfit_700Bold', lineHeight: 44 }}>
+              Welcome{'\n'}Back
             </Text>
           </View>
+          
+          {/* Wave */}
+          <View style={{ backgroundColor: '#FFFFFF', marginTop: -1 }}>
+            <Svg height="80" width="100%" viewBox="0 0 1440 320" preserveAspectRatio="none">
+              <Path 
+                fill="#00D1A0" 
+                d="M0,0 L1440,0 L1440,120 C1140,320 960,20 720,120 C480,220 240,40 0,120 Z" 
+              />
+            </Svg>
+          </View>
 
-          {/* Form */}
-          <View className="w-full bg-white p-6 rounded-[32px] border border-[#E5E7EB] shadow-xs">
-            <Text className="text-2xl font-bold text-[#1E1E1E] mb-6 tracking-tight">
-              Sign In
-            </Text>
-
+          {/* Form Section */}
+          <View style={{ flex: 1, paddingHorizontal: 32, paddingTop: 16, paddingBottom: 40 }}>
             {!!error && (
-              <View className="bg-red-50 border border-red-200 p-4 rounded-2xl mb-6 flex-row items-center">
-                <Text className="text-red-600 text-center font-semibold text-sm flex-1">{error}</Text>
+              <View style={{ backgroundColor: '#FEE2E2', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+                <Text style={{ color: '#DC2626', textAlign: 'center', fontFamily: 'Outfit_500Medium' }}>{error}</Text>
               </View>
             )}
 
-            <View className="space-y-4 mb-6">
-              <View>
-                <Text className="text-sm font-bold text-[#1E1E1E] mb-2 ml-1">Email or Username</Text>
-                <TextInput
-                  className="bg-[#F7F9FA] text-[#1E1E1E] px-5 py-4 rounded-2xl border border-[#E5E7EB] text-base focus:border-[#00CC99] focus:bg-white"
-                  placeholder="name@example.com"
-                  placeholderTextColor="#9CA3AF"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
+            <View style={{ gap: 8, marginBottom: 24 }}>
+              <TextInput
+                mode="flat"
+                label="Email"
+                placeholder="name@example.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                // left={<TextInput.Icon icon="email-outline" color="#737373" />}
+                style={{ backgroundColor: 'transparent', paddingHorizontal: 0 }}
+                activeUnderlineColor="#00D1A0"
+                underlineColor="#E5E7EB"
+              />
 
               <View>
-                <Text className="text-sm font-bold text-[#1E1E1E] mb-2 ml-1">Password</Text>
                 <TextInput
-                  className="bg-[#F7F9FA] text-[#1E1E1E] px-5 py-4 rounded-2xl border border-[#E5E7EB] text-base focus:border-[#00CC99] focus:bg-white"
+                  mode="flat"
+                  label="Password"
                   placeholder="Enter your password"
-                  placeholderTextColor="#9CA3AF"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
+                  // left={<TextInput.Icon icon="lock-outline" color="#737373" />}
+                  style={{ backgroundColor: 'transparent', paddingHorizontal: 0 }}
+                  activeUnderlineColor="#00D1A0"
+                  underlineColor="#E5E7EB"
                 />
+                <TouchableOpacity style={{ alignSelf: 'flex-end', marginTop: 12 }}>
+                  <Text style={{ color: '#00D1A0', fontFamily: 'Outfit_500Medium' }}>Forgot password?</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
-            <TouchableOpacity 
-              className="bg-[#00CC99] py-4 rounded-2xl items-center shadow-sm active:opacity-90"
-              onPress={handleLogin}
+            <Button 
+              mode="contained" 
+              onPress={handleLogin} 
+              loading={isLoading}
               disabled={isLoading}
+              contentStyle={{ height: 56 }}
+              labelStyle={{ fontSize: 18, fontFamily: 'Outfit_700Bold' }}
+              style={{ borderRadius: 12, marginBottom: 16, elevation: 0 }}
             >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text className="text-white text-lg font-bold tracking-wide">Continue</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+              Log in
+            </Button>
 
-          {/* Register Link */}
-          <View className="flex-row justify-center mt-8">
-            <Text className="text-[#6B7280] text-base font-medium">New to Apex IELTS? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text className="text-[#00CC99] text-base font-bold">Create account</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <View style={{ flex: 1, height: 1, backgroundColor: '#E5E7EB' }} />
+              <Text style={{ marginHorizontal: 16, color: '#737373', fontFamily: 'Outfit_400Regular' }}>or</Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: '#E5E7EB' }} />
+            </View>
+
+            <Button 
+              mode="outlined" 
+              onPress={() => navigation.navigate('Register')}
+              contentStyle={{ height: 56 }}
+              labelStyle={{ fontSize: 18, color: '#737373', fontFamily: 'Outfit_500Medium' }}
+              style={{ borderRadius: 12, borderColor: '#E5E7EB' }}
+            >
+              Sign up
+            </Button>
           </View>
         </KeyboardAvoidingView>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
