@@ -6,7 +6,17 @@ const useAuthStore = create((set) => ({
   user: null,
   token: null,
   isLoading: false,
+  isBootstrapping: true,
   error: null,
+
+  setSession: (user, token) => {
+    set({ user, token, isLoading: false, isBootstrapping: false, error: null });
+  },
+
+  clearSession: async () => {
+    await storage.deleteItem('userToken');
+    set({ user: null, token: null, isLoading: false, isBootstrapping: false, error: null });
+  },
 
   login: async (email, password) => {
     set({ isLoading: true, error: null });
@@ -17,7 +27,7 @@ const useAuthStore = create((set) => ({
       const user = metadata.user;
       
       await storage.setItem('userToken', token);
-      set({ user, token, isLoading: false });
+      set({ user, token, isLoading: false, isBootstrapping: false });
     } catch (error) {
       set({ 
         error: error.response?.data?.message || 'Login failed', 
@@ -35,7 +45,7 @@ const useAuthStore = create((set) => ({
       const user = metadata.user;
       
       await storage.setItem('userToken', token);
-      set({ user, token, isLoading: false });
+      set({ user, token, isLoading: false, isBootstrapping: false });
     } catch (error) {
       set({ 
         error: error.response?.data?.message || 'Registration failed', 
@@ -46,20 +56,30 @@ const useAuthStore = create((set) => ({
 
 
   logout: async () => {
-    await storage.deleteItem('userToken');
-    set({ user: null, token: null });
+    try {
+      await client.post('/auth/logout');
+    } catch (error) {
+      // Continue clearing local auth state even if the remote session is already gone.
+    } finally {
+      await storage.deleteItem('userToken');
+      set({ user: null, token: null, isLoading: false, isBootstrapping: false, error: null });
+    }
   },
 
   restoreToken: async () => {
+    set({ isBootstrapping: true });
     try {
       const token = await storage.getItem('userToken');
       if (token) {
         const response = await client.get('/auth/profile');
-        set({ user: response.data, token });
+        set({ user: response.data, token, isLoading: false, isBootstrapping: false, error: null });
+        return;
       }
+
+      set({ user: null, token: null, isLoading: false, isBootstrapping: false, error: null });
     } catch (error) {
       await storage.deleteItem('userToken');
-      set({ user: null, token: null });
+      set({ user: null, token: null, isLoading: false, isBootstrapping: false, error: null });
     }
   }
 }));

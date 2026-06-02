@@ -17,6 +17,7 @@ const getBaseURL = () => {
 
 const client = axios.create({
   baseURL: getBaseURL(), 
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },

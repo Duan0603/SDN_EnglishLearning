@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { ActivityIndicator, View } from 'react-native';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -12,11 +13,19 @@ import useAuthStore from '../store/useAuthStore';
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
-  const { user, restoreToken } = useAuthStore();
+  const { user, restoreToken, isBootstrapping } = useAuthStore();
 
   useEffect(() => {
     restoreToken();
   }, []);
+
+  if (isBootstrapping) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' }}>
+        <ActivityIndicator size="large" color="#00D1A0" />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
