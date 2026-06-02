@@ -3,8 +3,22 @@ import { render, fireEvent } from '@testing-library/react-native';
 import LoginScreen from '../../src/screens/LoginScreen';
 import useAuthStore from '../../src/store/useAuthStore';
 
-// Mock the store
-jest.mock('../../src/store/useAuthStore');
+jest.mock('react-native-safe-area-context', () => {
+  const actual = jest.requireActual('react-native-safe-area-context');
+  return {
+    ...actual,
+    useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+  };
+});
+
+jest.mock('@expo/vector-icons', () => ({
+  MaterialCommunityIcons: () => null,
+}));
+
+jest.mock('../../src/store/useAuthStore', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
 
 describe('LoginScreen', () => {
   const mockLogin = jest.fn();
