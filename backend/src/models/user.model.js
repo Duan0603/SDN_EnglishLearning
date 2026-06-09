@@ -38,6 +38,18 @@ const userSchema = new mongoose.Schema({
     avatar: {
         type: String,
         default: ''
+    },
+    birthday: {
+        type: String,
+        default: ''
+    },
+    phone: {
+        type: String,
+        default: ''
+    },
+    identityNumber: {
+        type: String,
+        default: ''
     }
 }, {
     timestamps: true,

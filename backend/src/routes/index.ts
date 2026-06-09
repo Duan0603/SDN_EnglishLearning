@@ -1,5 +1,3 @@
-// Main API Router — aggregates all versioned routes
-// Architecture: REST endpoints follow kebab-case, prefixed with /api/v1
 import { Router } from 'express';
 import { healthRouter } from './health.routes';
 
@@ -16,5 +14,10 @@ apiRouter.use('/', healthRouter);
 // apiRouter.use('/api/v1/users', userRouter);      // Epic 1, Story 1.2
 
 import { accessRouter } from './access/index';
+import { examRouter } from './exam.routes';
+import { adminRouter } from './admin/index.js';
+
 apiRouter.use('/api/v1/access', accessRouter);
 apiRouter.use('/api/v1/auth', accessRouter);
+apiRouter.use('/api/v1/exams', examRouter);
+apiRouter.use('/api/v1/admin', adminRouter);

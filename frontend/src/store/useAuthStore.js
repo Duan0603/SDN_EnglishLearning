@@ -72,7 +72,7 @@ const useAuthStore = create((set) => ({
       const token = await storage.getItem('userToken');
       if (token) {
         const response = await client.get('/auth/profile');
-        set({ user: response.data, token, isLoading: false, isBootstrapping: false, error: null });
+        set({ user: response.data.metadata, token, isLoading: false, isBootstrapping: false, error: null });
         return;
       }
 

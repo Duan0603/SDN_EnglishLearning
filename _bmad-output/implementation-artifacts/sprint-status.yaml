@@ -100,18 +100,18 @@ development_status:
 # Goal: Admin uploads exams, Students take mock exams, practice, review results
 # FRs covered: FR1, FR2, FR3, FR6 (partial)
 # ==============================================================================
-  epic-2: backlog
+  epic-2: in-progress
 
   # Story 2.1 [BE] Admin Exam Management API (Backend)
-  2-1-admin-exam-management-api-backend: backlog
+  2-1-admin-exam-management-api-backend: done
   # Sub-tasks breakdown:
-  #   [BE] Prisma models: Test, TestSection, Question .............. backlog
-  #   [BE] CRUD API: POST/GET/PUT/DELETE /api/v1/exams ............. backlog
-  #   [BE] Bulk import endpoint for Cambridge answer keys .......... backlog
-  #   [BE] Admin role guard middleware ............................. backlog
+  #   [BE] Prisma models: Test, TestSection, Question .............. done
+  #   [BE] CRUD API: POST/GET/PUT/DELETE /api/v1/exams ............. done
+  #   [BE] Bulk import endpoint for Cambridge answer keys .......... done
+  #   [BE] Admin role guard middleware ............................. done
 
   # Story 2.2 [FE] Admin Exam Management UI (Frontend)
-  2-2-admin-exam-management-ui-frontend: backlog
+  2-2-admin-exam-management-ui-frontend: in-progress
   # Sub-tasks breakdown:
   #   [FE] Admin Dashboard layout & sidebar navigation ............. backlog
   #   [FE] Exam creation form (multi-step: exam → sections → questions) backlog

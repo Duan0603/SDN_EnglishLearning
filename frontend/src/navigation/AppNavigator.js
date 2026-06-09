@@ -8,6 +8,7 @@ import HomeScreen from '../screens/HomeScreen';
 import PracticeScreen from '../screens/PracticeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ExamScreen from '../screens/ExamScreen';
+import AdminScreen from '../screens/AdminScreen';
 import useAuthStore from '../store/useAuthStore';
 
 const Stack = createNativeStackNavigator();
@@ -30,6 +31,7 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
+        <Stack.Screen name="Home" component={HomeScreen} />
         {!user ? (
           // Auth Stack
           <>
@@ -39,10 +41,10 @@ const AppNavigator = () => {
         ) : (
           // Main Stack
           <>
-            <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Practice" component={PracticeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="Exam" component={ExamScreen} />
+            <Stack.Screen name="Admin" component={AdminScreen} />
           </>
         )}
       </Stack.Navigator>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -12,12 +12,28 @@ import {
 } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import useAuthStore from '../store/useAuthStore';
+import AuthModal from './AuthModal';
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
   const isWeb = true;
   const [isUserMenuVisible, setIsUserMenuVisible] = useState(false);
   const [menuAnim] = useState(new Animated.Value(0));
+  const [isAuthModalVisible, setIsAuthModalVisible] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setIsAuthModalVisible(false);
+    }
+  }, [user]);
+
+  const handleProtectedNav = (screen, params = {}) => {
+    if (!user) {
+      setIsAuthModalVisible(true);
+    } else {
+      navigation.navigate(screen, params);
+    }
+  };
 
   const userInitial = user?.fullName?.charAt(0)?.toUpperCase() || 'U';
   const userDisplayName = user?.fullName || 'IELTS Learner';
@@ -25,7 +41,7 @@ const HomeScreen = ({ navigation }) => {
 
   const handleProfilePress = () => {
     toggleUserMenu(false);
-    setTimeout(() => navigation.navigate('Profile'), 150);
+    setTimeout(() => handleProtectedNav('Profile'), 150);
   };
 
   const handleLogoutPress = () => {
@@ -102,10 +118,10 @@ const HomeScreen = ({ navigation }) => {
           style={{ marginHorizontal: 12 }}
           onPress={() =>
             menu === 'Practice'
-              ? navigation.navigate('Practice')
+              ? handleProtectedNav('Practice')
               : menu === 'Home'
               ? null
-              : navigation.navigate('Profile')
+              : handleProtectedNav('Profile')
           }
         >
           <Text
@@ -139,104 +155,132 @@ const HomeScreen = ({ navigation }) => {
       </Svg>
     </TouchableOpacity>
 
-    {/* Avatar */}
-    <View className="relative">
-
+    {/* Avatar or Login Button */}
+    {!user ? (
       <TouchableOpacity
-        onPress={toggleUserMenu}
-        className="w-10 h-10 rounded-full bg-[#00CC99] items-center justify-center"
+        onPress={() => setIsAuthModalVisible(true)}
+        className="bg-[#00CC99] px-5 py-2.5 rounded-xl active:opacity-90"
       >
-        <Text className="text-white font-bold text-base">
-          {userInitial}
-        </Text>
+        <Text className="text-white text-xs font-bold">Log in / Sign up</Text>
       </TouchableOpacity>
-
-      {/* Dropdown */}
-      {isUserMenuVisible && (
-        <Animated.View
-          style={menuAnimatedStyle}
-          className="absolute right-0 top-14 w-72 bg-white rounded-2xl border border-[#E5E7EB] shadow-xl z-50"
+    ) : (
+      <View className="relative">
+        <TouchableOpacity
+          onPress={toggleUserMenu}
+          className="w-10 h-10 rounded-full bg-[#00CC99] items-center justify-center"
         >
+          <Text className="text-white font-bold text-base">
+            {userInitial}
+          </Text>
+        </TouchableOpacity>
 
-          {/* User Card */}
-          <View className="p-4 border-b border-[#F3F4F6]">
-            <View className="flex-row items-center bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl p-3">
-
-              <View className="w-11 h-11 rounded-full bg-[#00CC99] items-center justify-center">
-                <Text className="text-white font-bold">
-                  {userInitial}
-                </Text>
-              </View>
-
-              <View className="ml-3 flex-1">
-                <Text
-                  numberOfLines={1}
-                  className="text-sm font-bold text-[#111827]"
-                >
-                  {userDisplayName}
-                </Text>
-
-                <Text
-                  numberOfLines={1}
-                  className="text-xs text-[#6B7280] mt-1"
-                >
-                  {userEmail}
-                </Text>
+        {/* Dropdown */}
+        {isUserMenuVisible && (
+          <Animated.View
+            style={menuAnimatedStyle}
+            className="absolute right-0 top-14 w-72 bg-white rounded-2xl border border-[#E5E7EB] shadow-xl z-50"
+          >
+            {/* User Card */}
+            <View className="p-4 border-b border-[#F3F4F6]">
+              <View className="flex-row items-center bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl p-3">
+                <View className="w-11 h-11 rounded-full bg-[#00CC99] items-center justify-center">
+                  <Text className="text-white font-bold">
+                    {userInitial}
+                  </Text>
+                </View>
+                <View className="ml-3 flex-1">
+                  <Text
+                    numberOfLines={1}
+                    className="text-sm font-bold text-[#111827]"
+                  >
+                    {userDisplayName}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    className="text-xs text-[#6B7280] mt-1"
+                  >
+                    {userEmail}
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
 
-          {/* Profile */}
-          <TouchableOpacity
-            onPress={handleProfilePress}
-            className="flex-row items-center px-4 py-4"
-          >
-            <Svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#6B7280"
-              strokeWidth="2"
+            {/* Profile */}
+            <TouchableOpacity
+              onPress={handleProfilePress}
+              className="flex-row items-center px-4 py-4"
             >
-              <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <Circle cx="12" cy="7" r="4" />
-            </Svg>
+              <Svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#6B7280"
+                strokeWidth="2"
+              >
+                <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <Circle cx="12" cy="7" r="4" />
+              </Svg>
+              <Text className="ml-3 text-sm font-medium text-[#111827]">
+                Profile
+              </Text>
+            </TouchableOpacity>
 
-            <Text className="ml-3 text-sm font-medium text-[#111827]">
-              Profile
-            </Text>
-          </TouchableOpacity>
+            {user?.role === 'ADMIN' && (
+              <>
+                <View className="h-px bg-[#F3F4F6]" />
+                <TouchableOpacity
+                  onPress={() => {
+                    toggleUserMenu(false);
+                    setTimeout(() => navigation.navigate('Admin'), 150);
+                  }}
+                  className="flex-row items-center px-4 py-4"
+                >
+                  <Svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#00CC99"
+                    strokeWidth="2"
+                  >
+                    <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </Svg>
+                  <Text className="ml-3 text-sm font-medium text-[#005C42] font-bold">
+                    Admin Portal
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
 
-          {/* Divider */}
-          <View className="h-px bg-[#F3F4F6]" />
+            {/* Divider */}
+            <View className="h-px bg-[#F3F4F6]" />
 
-          {/* Logout */}
-          <TouchableOpacity
-            onPress={handleLogoutPress}
-            className="flex-row items-center px-4 py-4"
-          >
-            <Svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#EF4444"
-              strokeWidth="2"
+            {/* Logout */}
+            <TouchableOpacity
+              onPress={handleLogoutPress}
+              className="flex-row items-center px-4 py-4"
             >
-              <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <Path d="M16 17l5-5-5-5" />
-              <Path d="M21 12H9" />
-            </Svg>
-
-            <Text className="ml-3 text-sm font-medium text-[#DC2626]">
-              Logout
-            </Text>
-          </TouchableOpacity>
-
-        </Animated.View>
-      )}
-    </View>
+              <Svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#EF4444"
+                strokeWidth="2"
+              >
+                <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <Path d="M16 17l5-5-5-5" />
+                <Path d="M21 12H9" />
+              </Svg>
+              <Text className="ml-3 text-sm font-medium text-[#DC2626]">
+                Logout
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+      </View>
+    )}
   </View>
 </View>
 
@@ -263,13 +307,13 @@ const HomeScreen = ({ navigation }) => {
               
               <View className="flex-row flex-wrap gap-4">
                 <TouchableOpacity 
-                  onPress={() => navigation.navigate('Exam', { testType: 'Reading' })}
+                  onPress={() => handleProtectedNav('Exam', { testType: 'Reading' })}
                   className="bg-[#00CC99] px-8 py-4.5 rounded-[20px] items-center active:opacity-90 shadow-md shadow-emerald-500/20"
                 >
                   <Text className="text-white text-base font-extrabold">Start Free Trial</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  onPress={() => navigation.navigate('Profile')}
+                  onPress={() => handleProtectedNav('Profile')}
                   className="bg-[#F7F9FA] border border-[#E5E7EB] px-8 py-4.5 rounded-[20px] items-center active:opacity-80"
                 >
                   <Text className="text-[#1E1E1E] text-base font-extrabold">View Progress</Text>
@@ -340,7 +384,7 @@ const HomeScreen = ({ navigation }) => {
                     <Text className="text-lg font-black text-[#1E1E1E]">7.5 - 8.5</Text>
                   </View>
                   <TouchableOpacity 
-                    onPress={() => navigation.navigate('Exam', { testType: 'Reading' })}
+                    onPress={() => handleProtectedNav('Exam', { testType: 'Reading' })}
                     className="bg-[#00CC99] px-5 py-3 rounded-xl active:opacity-90"
                   >
                     <Text className="text-white text-xs font-bold">Enroll Now</Text>
@@ -366,7 +410,7 @@ const HomeScreen = ({ navigation }) => {
                     <Text className="text-lg font-black text-[#1E1E1E]">6.5 - 7.5</Text>
                   </View>
                   <TouchableOpacity 
-                    onPress={() => navigation.navigate('Exam', { testType: 'Reading' })}
+                    onPress={() => handleProtectedNav('Exam', { testType: 'Reading' })}
                     className="bg-[#005C42] px-5 py-3 rounded-xl active:opacity-90"
                   >
                     <Text className="text-white text-xs font-bold">Enroll Now</Text>
@@ -392,7 +436,7 @@ const HomeScreen = ({ navigation }) => {
                     <Text className="text-lg font-black text-[#1E1E1E]">8.0 - 9.0</Text>
                   </View>
                   <TouchableOpacity 
-                    onPress={() => navigation.navigate('Exam', { testType: 'Listening' })}
+                    onPress={() => handleProtectedNav('Exam', { testType: 'Listening' })}
                     className="bg-[#1E1E1E] px-5 py-3 rounded-xl active:opacity-90"
                   >
                     <Text className="text-white text-xs font-bold">Enroll Now</Text>
@@ -478,7 +522,7 @@ const HomeScreen = ({ navigation }) => {
                     Gain exclusive complimentary access to high-fidelity, timed Reading & Listening test mock sessions.
                   </Text>
                   <TouchableOpacity 
-                    onPress={() => navigation.navigate('Exam', { testType: 'Reading' })}
+                    onPress={() => handleProtectedNav('Exam', { testType: 'Reading' })}
                     className="bg-[#1E1E1E] py-4 rounded-[16px] items-center active:opacity-90"
                   >
                     <Text className="text-white text-sm font-bold">Start Free Mock Now</Text>
@@ -492,7 +536,7 @@ const HomeScreen = ({ navigation }) => {
             <View className="flex-row flex-wrap justify-between gap-4 mb-8">
               {/* Reading Card */}
               <TouchableOpacity 
-                onPress={() => navigation.navigate('Exam', { testType: 'Reading' })}
+                onPress={() => handleProtectedNav('Exam', { testType: 'Reading' })}
                 className="w-[48%] lg:w-[23%] bg-white p-5 rounded-[24px] border border-[#E5E7EB] shadow-xs"
               >
                 <View className="w-10 h-10 bg-[#E6F9F5] rounded-full items-center justify-center mb-3">
@@ -509,7 +553,7 @@ const HomeScreen = ({ navigation }) => {
 
               {/* Writing Card */}
               <TouchableOpacity 
-                onPress={() => navigation.navigate('Practice', { screen: 'WritingSubmit' })}
+                onPress={() => handleProtectedNav('Practice', { screen: 'WritingSubmit' })}
                 className="w-[48%] lg:w-[23%] bg-white p-5 rounded-[24px] border border-[#E5E7EB] shadow-xs"
               >
                 <View className="w-10 h-10 bg-[#E6F9F5] rounded-full items-center justify-center mb-3">
@@ -526,7 +570,7 @@ const HomeScreen = ({ navigation }) => {
 
               {/* Listening Card */}
               <TouchableOpacity 
-                onPress={() => navigation.navigate('Exam', { testType: 'Listening' })}
+                onPress={() => handleProtectedNav('Exam', { testType: 'Listening' })}
                 className="w-[48%] lg:w-[23%] bg-white p-5 rounded-[24px] border border-[#E5E7EB] shadow-xs"
               >
                 <View className="w-10 h-10 bg-[#E6F9F5] rounded-full items-center justify-center mb-3">
@@ -543,7 +587,7 @@ const HomeScreen = ({ navigation }) => {
 
               {/* Speaking Card */}
               <TouchableOpacity 
-                onPress={() => navigation.navigate('Practice', { screen: 'SpeakingSubmit' })}
+                onPress={() => handleProtectedNav('Practice', { screen: 'SpeakingSubmit' })}
                 className="w-[48%] lg:w-[23%] bg-white p-5 rounded-[24px] border border-[#E5E7EB] shadow-xs"
               >
                 <View className="w-10 h-10 bg-[#FFF7ED] rounded-full items-center justify-center mb-3">
@@ -576,7 +620,7 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          onPress={() => navigation.navigate('Practice')}
+          onPress={() => handleProtectedNav('Practice')}
           className="items-center py-2 flex-1"
         >
           <Svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2">
@@ -585,7 +629,10 @@ const HomeScreen = ({ navigation }) => {
           <Text className="text-[10px] font-bold text-[#6B7280] mt-1">Practice</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity className="items-center py-2 flex-1">
+        <TouchableOpacity 
+          onPress={() => handleProtectedNav('Profile')}
+          className="items-center py-2 flex-1"
+        >
           <Svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2">
             <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
             <Circle cx="9" cy="7" r="4" />
@@ -595,7 +642,7 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          onPress={() => navigation.navigate('Profile')}
+          onPress={() => handleProtectedNav('Profile')}
           className="items-center py-2 flex-1"
         >
           <Svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2">
@@ -605,6 +652,9 @@ const HomeScreen = ({ navigation }) => {
           <Text className="text-[10px] font-bold text-[#6B7280] mt-1">Profile</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Auth Modal Popup */}
+      <AuthModal visible={isAuthModalVisible} onClose={() => setIsAuthModalVisible(false)} />
     </SafeAreaView>
   );
 };

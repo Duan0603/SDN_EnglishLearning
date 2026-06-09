@@ -45,7 +45,7 @@ export class AccessService {
         })
 
         // 4. Generate tokens
-        const tokens = await createTokenPair({userId: foundUser._id, email: foundUser.email}, publicKey, privateKey)
+        const tokens = await createTokenPair({userId: foundUser._id, email: foundUser.email, role: foundUser.role}, publicKey, privateKey)
 
         // 5. Save tokens
         await KeyTokenService.createKeyToken({
@@ -55,16 +55,16 @@ export class AccessService {
         })
 
         return {
-            user: getInfoData({field: ['_id', 'username', 'fullName', 'email'], object: foundUser}),
+            user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'birthday', 'phone', 'identityNumber'], object: foundUser}),
             tokens
         }
 
     }
 
-    static signUp = async ({username, email, password, fullName}) => {
+    static signUp = async ({username, email, password, fullName, birthday, phone, identityNumber}) => {
         // Validate required fields
-        if (!username || !email || !password || !fullName) {
-            throw new BadRequestError("username, email, password and fullName are required")
+        if (!username || !email || !password || !fullName || !birthday || !phone || !identityNumber) {
+            throw new BadRequestError("username, email, password, fullName, birthday, phone and identityNumber are required")
         }
 
         const holdUserByEmail = await userModel.findOne({email}).lean()
@@ -81,7 +81,14 @@ export class AccessService {
 
         //tao user moi
         const newUser = await userModel.create({
-            username, fullName, email, password: hashedPassword, role: Role.STUDENT
+            username, 
+            fullName, 
+            email, 
+            password: hashedPassword, 
+            role: Role.STUDENT,
+            birthday,
+            phone,
+            identityNumber
         })
 
 
@@ -101,7 +108,7 @@ export class AccessService {
 
             console.log({privateKey, publicKey})
 
-            const tokens = await createTokenPair({userId: newUser._id, email}, publicKey, privateKey);
+            const tokens = await createTokenPair({userId: newUser._id, email, role: newUser.role}, publicKey, privateKey);
 
             const publicKeyString = await KeyTokenService.createKeyToken({
                 userId: newUser._id,
@@ -116,7 +123,7 @@ export class AccessService {
             console.log(`Create Token Success:: `, tokens)
 
             return {
-                user: getInfoData({field: ['_id', 'username', 'fullName', 'email'], object: newUser}),
+                user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'birthday', 'phone', 'identityNumber'], object: newUser}),
                 tokens
             }
 
