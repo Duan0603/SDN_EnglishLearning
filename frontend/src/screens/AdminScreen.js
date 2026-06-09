@@ -510,22 +510,34 @@ const AdminScreen = ({ navigation }) => {
                   />
                 </View>
 
-                {/* Filters */}
-                <View className="flex-row bg-[#F4F7FB] p-1.5 rounded-xl border border-[#E4EAF2]">
-                  {['ALL', 'STUDENT', 'MENTOR', 'PENDING'].map((filter) => {
-                    const isActive = roleFilter === filter;
-                    return (
-                      <TouchableOpacity
-                        key={filter}
-                        onPress={() => setRoleFilter(filter)}
-                        className={`px-4 py-1.5 rounded-lg ${isActive ? 'bg-[#00CC99]' : 'bg-transparent'}`}
-                      >
-                        <Text className={`text-[11px] font-extrabold ${isActive ? 'text-white' : 'text-[#7A8BA3]'}`}>
-                          {filter}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                {/* Filters & Create User */}
+                <View className="flex-row items-center gap-3">
+                  <View className="flex-row bg-[#F4F7FB] p-1.5 rounded-xl border border-[#E4EAF2]">
+                    {['ALL', 'STUDENT', 'MENTOR', 'PENDING'].map((filter) => {
+                      const isActive = roleFilter === filter;
+                      return (
+                        <TouchableOpacity
+                          key={filter}
+                          onPress={() => setRoleFilter(filter)}
+                          className={`px-4 py-1.5 rounded-lg ${isActive ? 'bg-[#00CC99]' : 'bg-transparent'}`}
+                        >
+                          <Text className={`text-[11px] font-extrabold ${isActive ? 'text-white' : 'text-[#7A8BA3]'}`}>
+                            {filter}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <TouchableOpacity 
+                    onPress={() => setShowCreateUserModal(true)}
+                    className="bg-[#00CC99] px-5 py-2.5 rounded-xl active:opacity-90 flex-row items-center shadow-xs"
+                  >
+                    <Svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="3" strokeLinecap="round" className="mr-1.5">
+                      <Path d="M12 5v14M5 12h14" />
+                    </Svg>
+                    <Text className="text-white text-xs font-bold">Create User</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -546,34 +558,84 @@ const AdminScreen = ({ navigation }) => {
                 ) : (
                   filteredUsers.map((item) => (
                     <View key={item.id} className="flex-row items-center border-b border-[#F3F4F6] p-4 last:border-b-0">
+                      
+                      {/* User Details */}
+                      <View className="w-[30%] pr-2">
+                        <Text className="text-sm font-bold text-[#1E1E1E]" numberOfLines={1}>{item.fullName}</Text>
+                        <Text className="text-xs text-[#7A8BA3]" numberOfLines={1}>@{item.username}</Text>
+                      </View>
+
+                      {/* Contact Info */}
+                      <View className="w-[20%] pr-2">
+                        <Text className="text-xs text-[#374151] font-semibold" numberOfLines={1}>{item.email}</Text>
+                        <Text className="text-[11px] text-[#7A8BA3] mt-0.5" numberOfLines={1}>{item.phone || 'N/A'}</Text>
+                      </View>
+
+                      {/* Identity Info */}
+                      <View className="w-[15%] pr-2">
+                        <Text className="text-xs text-[#374151]" numberOfLines={1}>{item.identityNumber || 'N/A'}</Text>
+                        <Text className="text-[10px] text-[#7A8BA3] mt-0.5" numberOfLines={1}>{item.birthday || 'N/A'}</Text>
+                      </View>
+
+                      {/* Role & Status */}
+                      <View className="w-[15%] flex-row items-center gap-1.5">
+                        <View className={`px-2 py-0.5 rounded-full ${
+                          item.role === 'MENTOR' 
+                            ? 'bg-[#EEF2FF]' 
+                            : item.role === 'ADMIN' 
+                            ? 'bg-[#FFF7ED]' 
+                            : 'bg-[#E6F9F5]'
+                        }`}>
+                          <Text className={`text-[10px] font-bold ${
+                            item.role === 'MENTOR' 
+                              ? 'text-[#6366F1]' 
+                              : item.role === 'ADMIN' 
+                              ? 'text-[#F97316]' 
+                              : 'text-[#00CC99]'
+                          }`}>{item.role}</Text>
                         </View>
+                        <View className={`w-2 h-2 rounded-full ${item.status === 'active' ? 'bg-[#00CC99]' : 'bg-red-500'}`} />
                       </View>
 
                       {/* Actions Buttons */}
-                      <View className="w-[20%] flex-row justify-end gap-2">
+                      <View className="w-[20%] flex-row justify-end gap-2 flex-wrap">
                         {item.role === 'MENTOR' && item.status === 'pending' && (
                           <TouchableOpacity 
-                            onPress={() => handleApproveMentor(item.id)}
+                            onPress={() => handleApproveMentor(item)}
                             className="bg-[#00CC99] px-2.5 py-1.5 rounded-xl active:opacity-90"
                           >
                             <Text className="text-white text-[10px] font-extrabold">Approve</Text>
                           </TouchableOpacity>
                         )}
                         {item.role !== 'ADMIN' && (
-                          <TouchableOpacity 
-                            onPress={() => handleToggleUserStatus(item.id, item.status)}
-                            className={`px-2.5 py-1.5 rounded-xl border ${
-                              item.status === 'active' 
-                                ? 'bg-red-50 border-red-200' 
-                                : 'bg-[#E6F9F5] border-[#A7F3D0]'
-                            }`}
-                          >
-                            <Text className={`text-[10px] font-extrabold ${
-                              item.status === 'active' ? 'text-red-600' : 'text-[#005C42]'
-                            }`}>
-                              {item.status === 'active' ? 'Suspend' : 'Activate'}
-                            </Text>
-                          </TouchableOpacity>
+                          <>
+                            <TouchableOpacity 
+                              onPress={() => handleToggleUserStatus(item)}
+                              className={`px-2.5 py-1.5 rounded-xl border ${
+                                item.status === 'active' 
+                                  ? 'bg-red-50 border-red-200' 
+                                  : 'bg-[#E6F9F5] border-[#A7F3D0]'
+                              }`}
+                            >
+                              <Text className={`text-[10px] font-extrabold ${
+                                item.status === 'active' ? 'text-red-600' : 'text-[#005C42]'
+                              }`}>
+                                {item.status === 'active' ? 'Suspend' : 'Activate'}
+                              </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              onPress={() => openEditModal(item)}
+                              className="bg-white border border-[#E5E7EB] px-2.5 py-1.5 rounded-xl active:opacity-85"
+                            >
+                              <Text className="text-[#4B5563] text-[10px] font-extrabold">Edit</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              onPress={() => handleDeleteUser(item)}
+                              className="bg-red-50 border border-red-200 px-2.5 py-1.5 rounded-xl active:opacity-85"
+                            >
+                              <Text className="text-red-600 text-[10px] font-extrabold">Delete</Text>
+                            </TouchableOpacity>
+                          </>
                         )}
                       </View>
 
@@ -668,6 +730,282 @@ const AdminScreen = ({ navigation }) => {
 
         </View>
       </ScrollView>
+
+      {/* CREATE USER MODAL */}
+      <Modal
+        visible={showCreateUserModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCreateUserModal(false)}
+      >
+        <View style={styles.overlay}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }} style={{ width: '100%' }}>
+            <View style={[styles.modalCard, { maxWidth: 600 }]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Create New User</Text>
+                <TouchableOpacity onPress={() => setShowCreateUserModal(false)}>
+                  <Text style={styles.closeText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                {/* Full Name & Username */}
+                <View className="mb-4 flex-row gap-4">
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Full Name</Text>
+                    <TextInput
+                      value={createUserForm.fullName}
+                      onChangeText={(val) => setCreateUserForm(prev => ({ ...prev, fullName: val }))}
+                      placeholder="Nguyen Van A"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Username</Text>
+                    <TextInput
+                      value={createUserForm.username}
+                      onChangeText={(val) => setCreateUserForm(prev => ({ ...prev, username: val }))}
+                      placeholder="username123"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                    />
+                  </View>
+                </View>
+
+                {/* Email & Password */}
+                <View className="mb-4 flex-row gap-4">
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Email</Text>
+                    <TextInput
+                      value={createUserForm.email}
+                      onChangeText={(val) => setCreateUserForm(prev => ({ ...prev, email: val }))}
+                      placeholder="email@example.com"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                      keyboardType="email-address"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Password</Text>
+                    <TextInput
+                      value={createUserForm.password}
+                      onChangeText={(val) => setCreateUserForm(prev => ({ ...prev, password: val }))}
+                      placeholder="••••••••"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                      secureTextEntry
+                    />
+                  </View>
+                </View>
+
+                {/* Phone & Birthday */}
+                <View className="mb-4 flex-row gap-4">
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Phone</Text>
+                    <TextInput
+                      value={createUserForm.phone}
+                      onChangeText={(val) => setCreateUserForm(prev => ({ ...prev, phone: val }))}
+                      placeholder="0912345678"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Birthday</Text>
+                    <TextInput
+                      value={createUserForm.birthday}
+                      onChangeText={(val) => setCreateUserForm(prev => ({ ...prev, birthday: val }))}
+                      placeholder="DD/MM/YYYY"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                    />
+                  </View>
+                </View>
+
+                {/* Identity Number & Role */}
+                <View className="mb-4 flex-row gap-4">
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Identity Number</Text>
+                    <TextInput
+                      value={createUserForm.identityNumber}
+                      onChangeText={(val) => setCreateUserForm(prev => ({ ...prev, identityNumber: val }))}
+                      placeholder="00120200..."
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Role</Text>
+                    <View style={styles.typeSelectorRow}>
+                      {['STUDENT', 'MENTOR', 'ADMIN'].map(r => (
+                        <TouchableOpacity
+                          key={r}
+                          onPress={() => setCreateUserForm(prev => ({ ...prev, role: r }))}
+                          style={[styles.typeSelectBtn, createUserForm.role === r && styles.typeSelectBtnActive]}
+                        >
+                          <Text style={[styles.typeSelectText, createUserForm.role === r && styles.typeSelectTextActive]}>{r}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+
+                <TouchableOpacity 
+                  onPress={handleCreateUser}
+                  disabled={createLoading}
+                  className="bg-[#00CC99] py-3.5 rounded-2xl items-center active:opacity-90 mt-2"
+                >
+                  {createLoading ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text className="text-white text-xs font-extrabold uppercase tracking-wider">Create User</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* EDIT USER MODAL */}
+      <Modal
+        visible={showEditUserModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowEditUserModal(false)}
+      >
+        <View style={styles.overlay}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }} style={{ width: '100%' }}>
+            <View style={[styles.modalCard, { maxWidth: 600 }]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Edit User Info</Text>
+                <TouchableOpacity onPress={() => setShowEditUserModal(false)}>
+                  <Text style={styles.closeText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                {/* Full Name & Username */}
+                <View className="mb-4 flex-row gap-4">
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Full Name</Text>
+                    <TextInput
+                      value={editUserForm.fullName}
+                      onChangeText={(val) => setEditUserForm(prev => ({ ...prev, fullName: val }))}
+                      placeholder="Nguyen Van A"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Username</Text>
+                    <TextInput
+                      value={editUserForm.username}
+                      onChangeText={(val) => setEditUserForm(prev => ({ ...prev, username: val }))}
+                      placeholder="username123"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                    />
+                  </View>
+                </View>
+
+                {/* Email & Password */}
+                <View className="mb-4 flex-row gap-4">
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Email</Text>
+                    <TextInput
+                      value={editUserForm.email}
+                      onChangeText={(val) => setEditUserForm(prev => ({ ...prev, email: val }))}
+                      placeholder="email@example.com"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                      keyboardType="email-address"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Password (leave blank to keep current)</Text>
+                    <TextInput
+                      value={editUserForm.password}
+                      onChangeText={(val) => setEditUserForm(prev => ({ ...prev, password: val }))}
+                      placeholder="••••••••"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                      secureTextEntry
+                    />
+                  </View>
+                </View>
+
+                {/* Phone & Birthday */}
+                <View className="mb-4 flex-row gap-4">
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Phone</Text>
+                    <TextInput
+                      value={editUserForm.phone}
+                      onChangeText={(val) => setEditUserForm(prev => ({ ...prev, phone: val }))}
+                      placeholder="0912345678"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Birthday</Text>
+                    <TextInput
+                      value={editUserForm.birthday}
+                      onChangeText={(val) => setEditUserForm(prev => ({ ...prev, birthday: val }))}
+                      placeholder="DD/MM/YYYY"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                    />
+                  </View>
+                </View>
+
+                {/* Identity Number & Role */}
+                <View className="mb-4 flex-row gap-4">
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Identity Number</Text>
+                    <TextInput
+                      value={editUserForm.identityNumber}
+                      onChangeText={(val) => setEditUserForm(prev => ({ ...prev, identityNumber: val }))}
+                      placeholder="00120200..."
+                      placeholderTextColor="#94A3B8"
+                      style={styles.textInput}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Role</Text>
+                    <View style={styles.typeSelectorRow}>
+                      {['STUDENT', 'MENTOR', 'ADMIN'].map(r => (
+                        <TouchableOpacity
+                          key={r}
+                          onPress={() => setEditUserForm(prev => ({ ...prev, role: r }))}
+                          style={[styles.typeSelectBtn, editUserForm.role === r && styles.typeSelectBtnActive]}
+                        >
+                          <Text style={[styles.typeSelectText, editUserForm.role === r && styles.typeSelectTextActive]}>{r}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+
+                <TouchableOpacity 
+                  onPress={handleUpdateUser}
+                  disabled={editLoading}
+                  className="bg-[#00CC99] py-3.5 rounded-2xl items-center active:opacity-90 mt-2"
+                >
+                  {editLoading ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text className="text-white text-xs font-extrabold uppercase tracking-wider">Save Changes</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
 
       {/* CREATE MOCK EXAM MODAL */}
       <Modal
