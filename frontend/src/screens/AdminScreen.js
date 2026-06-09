@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  TextInput, 
-  SafeAreaView, 
-  useWindowDimensions, 
-  Modal, 
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  SafeAreaView,
+  useWindowDimensions,
+  Modal,
   Alert,
   ActivityIndicator,
   StyleSheet
@@ -222,7 +222,7 @@ const AdminScreen = ({ navigation }) => {
       {/* Header Bar */}
       <View className="flex-row items-center justify-between px-6 h-16 bg-white border-b border-[#E5E7EB]">
         <View className="flex-row items-center">
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => navigation.navigate('Home')}
             className="w-10 h-10 bg-[#F7F9FA] rounded-full items-center justify-center border border-[#E5E7EB] mr-3"
           >
@@ -241,7 +241,7 @@ const AdminScreen = ({ navigation }) => {
       {/* Main Container */}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
         <View className="mx-auto w-full max-w-[1400px] px-6 py-6">
-          
+
           {/* Tab Navigation Switches */}
           <View className="flex-row bg-white p-2 rounded-3xl border border-[#E4EAF2] mb-6 shadow-xs">
             {['dashboard', 'users', 'exams'].map((tab) => {
@@ -474,7 +474,7 @@ const AdminScreen = ({ navigation }) => {
                     <Text style={{ fontSize: 14, fontWeight: '800', color: '#92400E', marginBottom: 12 }}>⚡ Action Required</Text>
                     {[
                       { text: '1 mentor awaiting credential review', cta: 'Review', onPress: () => { setActiveTab('users'); setRoleFilter('PENDING'); } },
-                      { text: '3 student disputes unresolved', cta: 'View', onPress: () => {} },
+                      { text: '3 student disputes unresolved', cta: 'View', onPress: () => { } },
                     ].map((a, i) => (
                       <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: i === 0 ? 10 : 0 }}>
                         <Text style={{ fontSize: 10, color: '#B45309', flex: 1, marginRight: 8 }}>{a.text}</Text>
@@ -493,7 +493,7 @@ const AdminScreen = ({ navigation }) => {
           {/* USERS MANAGEMENT VIEW */}
           {activeTab === 'users' && (
             <View className="bg-white p-6 rounded-[28px] border border-[#E4EAF2] shadow-xs">
-              
+
               {/* Header with Search and Role Filter Tabs */}
               <View className="flex-row flex-wrap items-center justify-between gap-4 mb-6">
                 <View className="flex-1 min-w-[280px] flex-row items-center bg-[#F4F7FB] border border-[#E4EAF2] rounded-2xl px-4 py-2">
@@ -529,7 +529,7 @@ const AdminScreen = ({ navigation }) => {
                     })}
                   </View>
 
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setShowCreateUserModal(true)}
                     className="bg-[#00CC99] px-5 py-2.5 rounded-xl active:opacity-90 flex-row items-center shadow-xs"
                   >
@@ -544,7 +544,7 @@ const AdminScreen = ({ navigation }) => {
               {/* Users list table */}
               <View className="border border-[#E4EAF2] rounded-2xl overflow-hidden">
                 <View className="flex-row bg-[#F9FAFB] border-b border-[#E4EAF2] p-4">
-                  <Text className="w-[30%] text-xs font-bold text-[#7A8BA3]">User Details</Text>
+                  <Text className="w-[30%] text-xs font-bold text-[#7A8BA3]">Users Details</Text>
                   <Text className="w-[20%] text-xs font-bold text-[#7A8BA3]">Contact Info</Text>
                   <Text className="w-[15%] text-xs font-bold text-[#7A8BA3]">Identity Info</Text>
                   <Text className="w-[15%] text-xs font-bold text-[#7A8BA3]">Role & Status</Text>
@@ -558,7 +558,7 @@ const AdminScreen = ({ navigation }) => {
                 ) : (
                   filteredUsers.map((item) => (
                     <View key={item.id} className="flex-row items-center border-b border-[#F3F4F6] p-4 last:border-b-0">
-                      
+
                       {/* User Details */}
                       <View className="w-[30%] pr-2">
                         <Text className="text-sm font-bold text-[#1E1E1E]" numberOfLines={1}>{item.fullName}</Text>
@@ -579,20 +579,18 @@ const AdminScreen = ({ navigation }) => {
 
                       {/* Role & Status */}
                       <View className="w-[15%] flex-row items-center gap-1.5">
-                        <View className={`px-2 py-0.5 rounded-full ${
-                          item.role === 'MENTOR' 
-                            ? 'bg-[#EEF2FF]' 
-                            : item.role === 'ADMIN' 
-                            ? 'bg-[#FFF7ED]' 
-                            : 'bg-[#E6F9F5]'
-                        }`}>
-                          <Text className={`text-[10px] font-bold ${
-                            item.role === 'MENTOR' 
-                              ? 'text-[#6366F1]' 
-                              : item.role === 'ADMIN' 
-                              ? 'text-[#F97316]' 
-                              : 'text-[#00CC99]'
-                          }`}>{item.role}</Text>
+                        <View className={`px-2 py-0.5 rounded-full ${item.role === 'MENTOR'
+                            ? 'bg-[#EEF2FF]'
+                            : item.role === 'ADMIN'
+                              ? 'bg-[#FFF7ED]'
+                              : 'bg-[#E6F9F5]'
+                          }`}>
+                          <Text className={`text-[10px] font-bold ${item.role === 'MENTOR'
+                              ? 'text-[#6366F1]'
+                              : item.role === 'ADMIN'
+                                ? 'text-[#F97316]'
+                                : 'text-[#00CC99]'
+                            }`}>{item.role}</Text>
                         </View>
                         <View className={`w-2 h-2 rounded-full ${item.status === 'active' ? 'bg-[#00CC99]' : 'bg-red-500'}`} />
                       </View>
@@ -600,7 +598,7 @@ const AdminScreen = ({ navigation }) => {
                       {/* Actions Buttons */}
                       <View className="w-[20%] flex-row justify-end gap-2 flex-wrap">
                         {item.role === 'MENTOR' && item.status === 'pending' && (
-                          <TouchableOpacity 
+                          <TouchableOpacity
                             onPress={() => handleApproveMentor(item)}
                             className="bg-[#00CC99] px-2.5 py-1.5 rounded-xl active:opacity-90"
                           >
@@ -609,27 +607,25 @@ const AdminScreen = ({ navigation }) => {
                         )}
                         {item.role !== 'ADMIN' && (
                           <>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                               onPress={() => handleToggleUserStatus(item)}
-                              className={`px-2.5 py-1.5 rounded-xl border ${
-                                item.status === 'active' 
-                                  ? 'bg-red-50 border-red-200' 
+                              className={`px-2.5 py-1.5 rounded-xl border ${item.status === 'active'
+                                  ? 'bg-red-50 border-red-200'
                                   : 'bg-[#E6F9F5] border-[#A7F3D0]'
-                              }`}
+                                }`}
                             >
-                              <Text className={`text-[10px] font-extrabold ${
-                                item.status === 'active' ? 'text-red-600' : 'text-[#005C42]'
-                              }`}>
+                              <Text className={`text-[10px] font-extrabold ${item.status === 'active' ? 'text-red-600' : 'text-[#005C42]'
+                                }`}>
                                 {item.status === 'active' ? 'Suspend' : 'Activate'}
                               </Text>
                             </TouchableOpacity>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                               onPress={() => openEditModal(item)}
                               className="bg-white border border-[#E5E7EB] px-2.5 py-1.5 rounded-xl active:opacity-85"
                             >
                               <Text className="text-[#4B5563] text-[10px] font-extrabold">Edit</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                               onPress={() => handleDeleteUser(item)}
                               className="bg-red-50 border border-red-200 px-2.5 py-1.5 rounded-xl active:opacity-85"
                             >
@@ -650,7 +646,7 @@ const AdminScreen = ({ navigation }) => {
           {/* EXAMS MANAGEMENT VIEW */}
           {activeTab === 'exams' && (
             <View className="bg-white p-6 rounded-[28px] border border-[#E4EAF2] shadow-xs">
-              
+
               {/* Header with Search and Create button */}
               <View className="flex-row flex-wrap items-center justify-between gap-4 mb-6">
                 <View className="flex-1 min-w-[280px] flex-row items-center bg-[#F4F7FB] border border-[#E4EAF2] rounded-2xl px-4 py-2">
@@ -667,7 +663,7 @@ const AdminScreen = ({ navigation }) => {
                   />
                 </View>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setShowCreateExamModal(true)}
                   className="bg-[#00CC99] px-5 py-3 rounded-2xl active:opacity-90 flex-row items-center shadow-xs"
                 >
@@ -693,21 +689,21 @@ const AdminScreen = ({ navigation }) => {
                         </View>
                         <Text className="text-xs text-[#9CA3AF] font-bold font-mono">{item.duration} Mins</Text>
                       </View>
-                      
+
                       <Text className="text-base font-black text-[#1E1E1E] leading-6 mb-2" numberOfLines={2}>
                         {item.title}
                       </Text>
-                      
+
                       <View className="flex-row items-center justify-between border-t border-[#E5E7EB]/50 pt-3 mt-3">
                         <Text className="text-xs text-[#7A8BA3] font-semibold">{item.questionsCount} Questions</Text>
-                        
+
                         <View className="flex-row gap-2">
-                          <TouchableOpacity 
+                          <TouchableOpacity
                             className="bg-white border border-[#E5E7EB] px-3 py-1.5 rounded-xl active:opacity-85"
                           >
                             <Text className="text-[#4B5563] text-[10px] font-extrabold">Edit Test</Text>
                           </TouchableOpacity>
-                          <TouchableOpacity 
+                          <TouchableOpacity
                             onPress={() => {
                               Alert.alert('Delete Exam', `Are you sure you want to delete ${item.title}?`, [
                                 { text: 'Cancel', style: 'cancel' },
@@ -852,7 +848,7 @@ const AdminScreen = ({ navigation }) => {
                   </View>
                 </View>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={handleCreateUser}
                   disabled={createLoading}
                   className="bg-[#00CC99] py-3.5 rounded-2xl items-center active:opacity-90 mt-2"
@@ -990,7 +986,7 @@ const AdminScreen = ({ navigation }) => {
                   </View>
                 </View>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={handleUpdateUser}
                   disabled={editLoading}
                   className="bg-[#00CC99] py-3.5 rounded-2xl items-center active:opacity-90 mt-2"
@@ -1016,7 +1012,7 @@ const AdminScreen = ({ navigation }) => {
       >
         <View style={styles.overlay}>
           <View style={styles.modalCard}>
-            
+
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Create Mock Test</Text>
               <TouchableOpacity onPress={() => setShowCreateExamModal(false)}>
@@ -1063,7 +1059,7 @@ const AdminScreen = ({ navigation }) => {
                     style={styles.textInput}
                   />
                 </View>
-                
+
                 <View className="flex-1">
                   <Text className="mb-1 text-[11px] font-bold text-[#7A8BA3] uppercase tracking-wider">Total Questions</Text>
                   <TextInput
@@ -1075,7 +1071,7 @@ const AdminScreen = ({ navigation }) => {
                 </View>
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleCreateExamSubmit}
                 className="bg-[#00CC99] py-3.5 rounded-2xl items-center active:opacity-90 mt-2"
               >
