@@ -42,6 +42,9 @@ model User {
   fullName           String?
   role               Role                 @default(STUDENT)
   avatar             String?
+  birthday           String?
+  phone              String?
+  identityNumber     String?
   status             String               @default("active") // active, inactive
   verify             Boolean              @default(false)
   createdAt          DateTime             @default(now())

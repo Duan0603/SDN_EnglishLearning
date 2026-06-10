@@ -9,10 +9,10 @@ const getBaseURL = () => {
   }
   // Tự động nhận diện URL API dựa trên nền tảng
   if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:3017/api/v1'; // Android Emulator
+    return 'http://10.0.2.2:5000/api/v1'; // Android Emulator
   }
   // Web và iOS Simulator đều có thể dùng localhost
-  return 'http://localhost:3017/api/v1';
+  return 'http://localhost:5000/api/v1';
 };
 
 const client = axios.create({

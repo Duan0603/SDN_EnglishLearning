@@ -53,4 +53,27 @@ export class AccessController {
             metadata: delKey
         }).send(res)
     }
+
+    static getProfile = async (req, res, next) => {
+        const { prisma } = await import("../config/prisma.config.js");
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.userId }
+        });
+
+        if (!user) {
+            throw new Error("User not found");
+        }
+
+        new OK({
+            message: "Get profile success!",
+            metadata: {
+                _id: user.id,
+                username: user.username,
+                fullName: user.fullName,
+                email: user.email,
+                role: user.role,
+                avatar: user.avatar
+            }
+        }).send(res)
+    }
 }
