@@ -14,6 +14,8 @@ import {
   Platform,
   Alert
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuthStore from '../store/useAuthStore';
 import Svg, { Path, Circle, Rect, Line, Defs, LinearGradient } from 'react-native-svg';
 import Animated, {
   useSharedValue,
@@ -728,6 +730,8 @@ const PracticeScreen = ({ navigation, route }) => {
   const [graphFilter, setGraphFilter] = useState('last10');
   const { width: screenWidth } = useWindowDimensions();
 
+  const { token } = useAuthStore();
+
   // Reading Exam States
   const [readingTimeLeft, setReadingTimeLeft] = useState(3600); // 60 minutes
   const [readingAnswers, setReadingAnswers] = useState({
@@ -822,14 +826,94 @@ const PracticeScreen = ({ navigation, route }) => {
   };
 
   // Submit functions
-  const handleReadingSubmit = () => {
-    setShowSubmitModal(false);
-    setActiveTab('ReadingAnalysis');
+  const handleReadingSubmit = async () => {
+    try {
+      const payload = {
+        timeTaken: 3600 - readingTimeLeft,
+        answers: [
+          { questionId: 'q1', studentAnswer: readingAnswers.q1 },
+          { questionId: 'q2', studentAnswer: readingAnswers.q2 },
+          { questionId: 'q3', studentAnswer: readingAnswers.q3 },
+          { questionId: 'q4', studentAnswer: readingAnswers.q4 },
+          { questionId: 'q5', studentAnswer: readingAnswers.q5 }
+        ]
+      };
+
+      const EXAM_ID = '64f1a2b3c4d5e6f7g8h9i0j1'; // Dummy Exam ID for reading
+      const response = await fetch(`http://localhost:5000/api/v1/exams/${EXAM_ID}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      
+      if (response.ok || response.status === 201) {
+        await AsyncStorage.removeItem('practice_reading_progress');
+        setShowSubmitModal(false);
+        setActiveTab('ReadingAnalysis');
+      } else {
+        Alert.alert('Lỗi nộp bài', data.message || 'Có lỗi xảy ra');
+        // Fallback cho UI Test
+        await AsyncStorage.removeItem('practice_reading_progress');
+        setShowSubmitModal(false);
+        setActiveTab('ReadingAnalysis');
+      }
+    } catch (error) {
+      console.log(error);
+      Alert.alert('Lỗi kết nối', 'Không thể kết nối đến server nộp bài');
+      // Fallback cho UI Test
+      await AsyncStorage.removeItem('practice_reading_progress');
+      setShowSubmitModal(false);
+      setActiveTab('ReadingAnalysis');
+    }
   };
 
-  const handleListeningSubmit = () => {
-    setShowSubmitModal(false);
-    setActiveTab('ReadingAnalysis');
+  const handleListeningSubmit = async () => {
+    try {
+      const payload = {
+        timeTaken: 1800 - listeningTimeLeft,
+        answers: [
+          { questionId: 'q1', studentAnswer: listeningAnswers.q1 },
+          { questionId: 'q2', studentAnswer: listeningAnswers.q2 },
+          { questionId: 'q3', studentAnswer: listeningAnswers.q3 },
+          { questionId: 'q4', studentAnswer: listeningAnswers.q4 },
+          { questionId: 'q5', studentAnswer: listeningAnswers.q5 }
+        ]
+      };
+
+      const EXAM_ID = '64f1a2b3c4d5e6f7g8h9i0j1'; 
+      const response = await fetch(`http://localhost:5000/api/v1/exams/${EXAM_ID}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      
+      if (response.ok || response.status === 201) {
+        await AsyncStorage.removeItem('practice_listening_progress');
+        setShowSubmitModal(false);
+        setActiveTab('ReadingAnalysis');
+      } else {
+        Alert.alert('Lỗi nộp bài', data.message || 'Có lỗi xảy ra');
+        // Fallback cho UI Test
+        await AsyncStorage.removeItem('practice_listening_progress');
+        setShowSubmitModal(false);
+        setActiveTab('ReadingAnalysis');
+      }
+    } catch (error) {
+      console.log(error);
+      Alert.alert('Lỗi kết nối', 'Không thể kết nối đến server nộp bài');
+      // Fallback cho UI Test
+      await AsyncStorage.removeItem('practice_listening_progress');
+      setShowSubmitModal(false);
+      setActiveTab('ReadingAnalysis');
+    }
   };
 
   const handleReadingAutoSubmit = () => {
@@ -845,6 +929,31 @@ const PracticeScreen = ({ navigation, route }) => {
   };
 
   // Timers Runners
+  // Sync Reading with LocalStorage
+  useEffect(() => {
+    const loadReading = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('practice_reading_progress');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setReadingAnswers(parsed.answers);
+          setReadingTimeLeft(parsed.timeLeft);
+        }
+      } catch(e) {}
+    };
+    loadReading();
+  }, []);
+
+  useEffect(() => {
+    const saveReading = async () => {
+      try {
+        await AsyncStorage.setItem('practice_reading_progress', JSON.stringify({ answers: readingAnswers, timeLeft: readingTimeLeft }));
+      } catch(e) {}
+    };
+    const t = setTimeout(saveReading, 3000);
+    return () => clearTimeout(t);
+  }, [readingAnswers, readingTimeLeft]);
+
   useEffect(() => {
     if (activeTab !== 'ReadingAI') return;
     const timer = setInterval(() => {
@@ -859,6 +968,31 @@ const PracticeScreen = ({ navigation, route }) => {
     }, 1000);
     return () => clearInterval(timer);
   }, [activeTab]);
+
+  // Sync Listening with LocalStorage
+  useEffect(() => {
+    const loadListening = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('practice_listening_progress');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setListeningAnswers(parsed.answers);
+          setListeningTimeLeft(parsed.timeLeft);
+        }
+      } catch(e) {}
+    };
+    loadListening();
+  }, []);
+
+  useEffect(() => {
+    const saveListening = async () => {
+      try {
+        await AsyncStorage.setItem('practice_listening_progress', JSON.stringify({ answers: listeningAnswers, timeLeft: listeningTimeLeft }));
+      } catch(e) {}
+    };
+    const t = setTimeout(saveListening, 3000);
+    return () => clearTimeout(t);
+  }, [listeningAnswers, listeningTimeLeft]);
 
   useEffect(() => {
     if (activeTab !== 'ListeningAI') return;

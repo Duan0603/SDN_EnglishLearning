@@ -12,6 +12,8 @@ import {
   Alert,
   useWindowDimensions
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuthStore from '../store/useAuthStore';
 import Svg, { Path, Circle } from 'react-native-svg';
 import Animated, {
   useSharedValue,
@@ -424,6 +426,40 @@ const ExamScreen = ({ route, navigation }) => {
   const [selectedWord, setSelectedWord] = useState(null);
   const [showVocabModal, setShowVocabModal] = useState(false);
 
+  const { token } = useAuthStore();
+
+  // 1. TẢI DỮ LIỆU CŨ khi người dùng vào màn hình
+  useEffect(() => {
+    const loadSavedProgress = async () => {
+      try {
+        const savedData = await AsyncStorage.getItem(`exam_progress_${testType}`);
+        if (savedData) {
+          const parsed = JSON.parse(savedData);
+          setAnswers(parsed.answers);
+          setTimeLeft(parsed.timeLeft);
+        }
+      } catch (e) {
+        console.log('Lỗi tải dữ liệu cũ:', e);
+      }
+    };
+    loadSavedProgress();
+  }, [testType]);
+
+  // 2. LƯU DỮ LIỆU MỚI mỗi khi `answers` hoặc `timeLeft` thay đổi
+  useEffect(() => {
+    const saveProgress = async () => {
+      try {
+        const dataToSave = JSON.stringify({ answers, timeLeft });
+        await AsyncStorage.setItem(`exam_progress_${testType}`, dataToSave);
+      } catch (e) {
+        console.log('Lỗi lưu dữ liệu:', e);
+      }
+    };
+    
+    const saveTimer = setTimeout(saveProgress, 3000); 
+    return () => clearTimeout(saveTimer);
+  }, [answers, timeLeft, testType]);
+
   // Timer runner
   useEffect(() => {
     const timer = setInterval(() => {
@@ -445,12 +481,63 @@ const ExamScreen = ({ route, navigation }) => {
     ]);
   };
 
-  const handleSubmit = () => {
-    setShowSubmitModal(false);
-    navigation.navigate('Practice', { 
-      screen: testType === 'Reading' ? 'ReadingAnalysis' : 'WritingAI',
-      score: testType === 'Reading' ? '8.5' : 'Grading'
-    });
+  const handleSubmit = async () => {
+    try {
+      const payload = {
+        timeTaken: initialTime - timeLeft,
+        answers: [
+          { questionId: 'q1', studentAnswer: answers.q1 },
+          { questionId: 'q2', studentAnswer: answers.q2 },
+          { questionId: 'q3', studentAnswer: answers.q3 },
+          { questionId: 'q4', studentAnswer: answers.q4 },
+          { questionId: 'q5', studentAnswer: answers.q5 }
+        ]
+      };
+
+      const EXAM_ID = '64f1a2b3c4d5e6f7g8h9i0j1'; // Dummy exam ID
+
+      const response = await fetch(`http://localhost:5000/api/v1/exams/${EXAM_ID}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      const responseData = await response.json();
+
+      if (response.ok || response.status === 201) {
+        await AsyncStorage.removeItem(`exam_progress_${testType}`);
+        setShowSubmitModal(false);
+        
+        navigation.navigate('Practice', { 
+          screen: testType === 'Reading' ? 'ReadingAnalysis' : 'WritingAI',
+          score: responseData?.data?.bandScore || '8.5'
+        });
+      } else {
+        Alert.alert('Lỗi nộp bài', responseData.message || 'Có lỗi xảy ra');
+        
+        // Fallback cho FE test (nếu server không chạy)
+        await AsyncStorage.removeItem(`exam_progress_${testType}`);
+        setShowSubmitModal(false);
+        navigation.navigate('Practice', { 
+          screen: testType === 'Reading' ? 'ReadingAnalysis' : 'WritingAI',
+          score: '8.5'
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Lỗi kết nối', 'Không thể kết nối đến server nộp bài');
+      
+      // Fallback
+      await AsyncStorage.removeItem(`exam_progress_${testType}`);
+      setShowSubmitModal(false);
+      navigation.navigate('Practice', { 
+        screen: testType === 'Reading' ? 'ReadingAnalysis' : 'WritingAI',
+        score: '8.5'
+      });
+    }
   };
 
   const handleWordPress = (word, definition, ipa) => {
