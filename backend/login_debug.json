@@ -1,0 +1,11 @@
+{
+    "email": "admin@sdn.com",
+    "passwordLength": 11,
+    "timestamp": "2026-06-10T13:13:10.029Z",
+    "userFound": true,
+    "foundUserEmail": "admin@sdn.com",
+    "foundUserPasswordHash": "$2a$10$8kjQ13WC7Oq5jDxKWpMpj.r.I9xWmqyLFlkVZH/FxmZSrDZEYmUVW",
+    "passwordMatch": true,
+    "tokensGenerated": true,
+    "tokensSaved": true
+}

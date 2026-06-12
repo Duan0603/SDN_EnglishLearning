@@ -307,7 +307,7 @@ const HomeScreen = ({ navigation }) => {
               
               <View className="flex-row flex-wrap gap-4">
                 <TouchableOpacity 
-                  onPress={() => handleProtectedNav('Exam', { testType: 'Reading' })}
+                  onPress={() => handleProtectedNav('Practice', { screen: 'ReadingAI' })}
                   className="bg-[#00CC99] px-8 py-4.5 rounded-[20px] items-center active:opacity-90 shadow-md shadow-emerald-500/20"
                 >
                   <Text className="text-white text-base font-extrabold">Start Free Trial</Text>
@@ -384,7 +384,7 @@ const HomeScreen = ({ navigation }) => {
                     <Text className="text-lg font-black text-[#1E1E1E]">7.5 - 8.5</Text>
                   </View>
                   <TouchableOpacity 
-                    onPress={() => handleProtectedNav('Exam', { testType: 'Reading' })}
+                    onPress={() => handleProtectedNav('Practice', { screen: 'ReadingAI' })}
                     className="bg-[#00CC99] px-5 py-3 rounded-xl active:opacity-90"
                   >
                     <Text className="text-white text-xs font-bold">Enroll Now</Text>
@@ -410,7 +410,7 @@ const HomeScreen = ({ navigation }) => {
                     <Text className="text-lg font-black text-[#1E1E1E]">6.5 - 7.5</Text>
                   </View>
                   <TouchableOpacity 
-                    onPress={() => handleProtectedNav('Exam', { testType: 'Reading' })}
+                    onPress={() => handleProtectedNav('Practice', { screen: 'ReadingAI' })}
                     className="bg-[#005C42] px-5 py-3 rounded-xl active:opacity-90"
                   >
                     <Text className="text-white text-xs font-bold">Enroll Now</Text>
@@ -436,7 +436,7 @@ const HomeScreen = ({ navigation }) => {
                     <Text className="text-lg font-black text-[#1E1E1E]">8.0 - 9.0</Text>
                   </View>
                   <TouchableOpacity 
-                    onPress={() => handleProtectedNav('Exam', { testType: 'Listening' })}
+                    onPress={() => handleProtectedNav('Practice', { screen: 'ListeningAI' })}
                     className="bg-[#1E1E1E] px-5 py-3 rounded-xl active:opacity-90"
                   >
                     <Text className="text-white text-xs font-bold">Enroll Now</Text>
@@ -522,7 +522,7 @@ const HomeScreen = ({ navigation }) => {
                     Gain exclusive complimentary access to high-fidelity, timed Reading & Listening test mock sessions.
                   </Text>
                   <TouchableOpacity 
-                    onPress={() => handleProtectedNav('Exam', { testType: 'Reading' })}
+                    onPress={() => handleProtectedNav('Practice', { screen: 'ReadingAI' })}
                     className="bg-[#1E1E1E] py-4 rounded-[16px] items-center active:opacity-90"
                   >
                     <Text className="text-white text-sm font-bold">Start Free Mock Now</Text>
@@ -536,7 +536,7 @@ const HomeScreen = ({ navigation }) => {
             <View className="flex-row flex-wrap justify-between gap-4 mb-8">
               {/* Reading Card */}
               <TouchableOpacity 
-                onPress={() => handleProtectedNav('Exam', { testType: 'Reading' })}
+                onPress={() => handleProtectedNav('Practice', { screen: 'ReadingAI' })}
                 className="w-[48%] lg:w-[23%] bg-white p-5 rounded-[24px] border border-[#E5E7EB] shadow-xs"
               >
                 <View className="w-10 h-10 bg-[#E6F9F5] rounded-full items-center justify-center mb-3">
@@ -570,7 +570,7 @@ const HomeScreen = ({ navigation }) => {
 
               {/* Listening Card */}
               <TouchableOpacity 
-                onPress={() => handleProtectedNav('Exam', { testType: 'Listening' })}
+                onPress={() => handleProtectedNav('Practice', { screen: 'ListeningAI' })}
                 className="w-[48%] lg:w-[23%] bg-white p-5 rounded-[24px] border border-[#E5E7EB] shadow-xs"
               >
                 <View className="w-10 h-10 bg-[#E6F9F5] rounded-full items-center justify-center mb-3">
