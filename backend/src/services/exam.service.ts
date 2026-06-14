@@ -119,6 +119,94 @@ export class ExamService {
   }
 
   /**
+   * Submits an exam, calculates correct answers, and computes the band score.
+   */
+  static async submitExam(userId: string, testId: string, answers: { questionId: string; userAnswer: string }[], timeTaken: number) {
+    const test = await prisma.test.findUnique({
+      where: { id: testId },
+      include: {
+        sections: {
+          include: {
+            questions: true,
+          },
+        },
+      },
+    });
+
+    if (!test) {
+      throw new Error('Test not found.');
+    }
+
+    // Flatten all questions into a map for quick lookup
+    const questionsMap = new Map();
+    let totalQuestions = 0;
+    test.sections.forEach(sec => {
+      sec.questions.forEach(q => {
+        questionsMap.set(q.id, q);
+        totalQuestions++;
+      });
+    });
+
+    let correctCount = 0;
+    const gradedAnswers = answers.map(ans => {
+      const q = questionsMap.get(ans.questionId);
+      let isCorrect = false;
+      if (q) {
+        if (q.answer.trim().toLowerCase() === ans.userAnswer.trim().toLowerCase()) {
+          isCorrect = true;
+          correctCount++;
+        }
+      }
+      return {
+        ...ans,
+        isCorrect,
+        correctAnswer: q?.answer,
+        explanation: q?.explanation
+      };
+    });
+
+    let bandScore = 0;
+    const scaledScore = totalQuestions > 0 ? (correctCount / totalQuestions) * 40 : 0;
+
+    if (scaledScore >= 39) bandScore = 9.0;
+    else if (scaledScore >= 37) bandScore = 8.5;
+    else if (scaledScore >= 35) bandScore = 8.0;
+    else if (scaledScore >= 33) bandScore = 7.5;
+    else if (scaledScore >= 30) bandScore = 7.0;
+    else if (scaledScore >= 27) bandScore = 6.5;
+    else if (scaledScore >= 23) bandScore = 6.0;
+    else if (scaledScore >= 19) bandScore = 5.5;
+    else if (scaledScore >= 15) bandScore = 5.0;
+    else if (scaledScore >= 13) bandScore = 4.5;
+    else if (scaledScore >= 10) bandScore = 4.0;
+    else if (scaledScore >= 8) bandScore = 3.5;
+    else if (scaledScore >= 6) bandScore = 3.0;
+    else if (scaledScore >= 4) bandScore = 2.5;
+    else if (scaledScore >= 2) bandScore = 2.0;
+    else if (scaledScore >= 1) bandScore = 1.0;
+    else bandScore = 0.0;
+
+    const result = await prisma.testResult.create({
+      data: {
+        userId,
+        testId,
+        answers: gradedAnswers,
+        correctCount,
+        bandScore,
+        timeTaken,
+      },
+    });
+
+    return {
+      resultId: result.id,
+      gradedAnswers,
+      correctCount,
+      totalQuestions,
+      bandScore,
+    };
+  }
+
+  /**
    * Updates an existing exam, replacing all sections and questions transactionally if provided.
    */
   static async updateExam(id: string, data: any) {

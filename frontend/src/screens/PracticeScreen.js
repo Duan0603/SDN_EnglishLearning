@@ -14,6 +14,8 @@ import {
   Platform,
   Alert
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuthStore from '../store/useAuthStore';
 import Svg, { Path, Circle, Rect, Line, Defs, LinearGradient } from 'react-native-svg';
 import Animated, {
   useSharedValue,
@@ -728,6 +730,8 @@ const PracticeScreen = ({ navigation, route }) => {
   const [graphFilter, setGraphFilter] = useState('last10');
   const { width: screenWidth } = useWindowDimensions();
 
+  const { token } = useAuthStore();
+
   // Reading Exam States
   const [readingTimeLeft, setReadingTimeLeft] = useState(3600); // 60 minutes
   const [readingAnswers, setReadingAnswers] = useState({
@@ -822,14 +826,94 @@ const PracticeScreen = ({ navigation, route }) => {
   };
 
   // Submit functions
-  const handleReadingSubmit = () => {
-    setShowSubmitModal(false);
-    setActiveTab('ReadingAnalysis');
+  const handleReadingSubmit = async () => {
+    try {
+      const payload = {
+        timeTaken: 3600 - readingTimeLeft,
+        answers: [
+          { questionId: 'q1', studentAnswer: readingAnswers.q1 },
+          { questionId: 'q2', studentAnswer: readingAnswers.q2 },
+          { questionId: 'q3', studentAnswer: readingAnswers.q3 },
+          { questionId: 'q4', studentAnswer: readingAnswers.q4 },
+          { questionId: 'q5', studentAnswer: readingAnswers.q5 }
+        ]
+      };
+
+      const EXAM_ID = '64f1a2b3c4d5e6f7g8h9i0j1'; // Dummy Exam ID for reading
+      const response = await fetch(`http://localhost:5000/api/v1/exams/${EXAM_ID}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      
+      if (response.ok || response.status === 201) {
+        await AsyncStorage.removeItem('practice_reading_progress');
+        setShowSubmitModal(false);
+        setActiveTab('ReadingAnalysis');
+      } else {
+        Alert.alert('Lỗi nộp bài', data.message || 'Có lỗi xảy ra');
+        // Fallback cho UI Test
+        await AsyncStorage.removeItem('practice_reading_progress');
+        setShowSubmitModal(false);
+        setActiveTab('ReadingAnalysis');
+      }
+    } catch (error) {
+      console.log(error);
+      Alert.alert('Lỗi kết nối', 'Không thể kết nối đến server nộp bài');
+      // Fallback cho UI Test
+      await AsyncStorage.removeItem('practice_reading_progress');
+      setShowSubmitModal(false);
+      setActiveTab('ReadingAnalysis');
+    }
   };
 
-  const handleListeningSubmit = () => {
-    setShowSubmitModal(false);
-    setActiveTab('ReadingAnalysis');
+  const handleListeningSubmit = async () => {
+    try {
+      const payload = {
+        timeTaken: 1800 - listeningTimeLeft,
+        answers: [
+          { questionId: 'q1', studentAnswer: listeningAnswers.q1 },
+          { questionId: 'q2', studentAnswer: listeningAnswers.q2 },
+          { questionId: 'q3', studentAnswer: listeningAnswers.q3 },
+          { questionId: 'q4', studentAnswer: listeningAnswers.q4 },
+          { questionId: 'q5', studentAnswer: listeningAnswers.q5 }
+        ]
+      };
+
+      const EXAM_ID = '64f1a2b3c4d5e6f7g8h9i0j1'; 
+      const response = await fetch(`http://localhost:5000/api/v1/exams/${EXAM_ID}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      
+      if (response.ok || response.status === 201) {
+        await AsyncStorage.removeItem('practice_listening_progress');
+        setShowSubmitModal(false);
+        setActiveTab('ReadingAnalysis');
+      } else {
+        Alert.alert('Lỗi nộp bài', data.message || 'Có lỗi xảy ra');
+        // Fallback cho UI Test
+        await AsyncStorage.removeItem('practice_listening_progress');
+        setShowSubmitModal(false);
+        setActiveTab('ReadingAnalysis');
+      }
+    } catch (error) {
+      console.log(error);
+      Alert.alert('Lỗi kết nối', 'Không thể kết nối đến server nộp bài');
+      // Fallback cho UI Test
+      await AsyncStorage.removeItem('practice_listening_progress');
+      setShowSubmitModal(false);
+      setActiveTab('ReadingAnalysis');
+    }
   };
 
   const handleReadingAutoSubmit = () => {
@@ -845,6 +929,31 @@ const PracticeScreen = ({ navigation, route }) => {
   };
 
   // Timers Runners
+  // Sync Reading with LocalStorage
+  useEffect(() => {
+    const loadReading = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('practice_reading_progress');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setReadingAnswers(parsed.answers);
+          setReadingTimeLeft(parsed.timeLeft);
+        }
+      } catch(e) {}
+    };
+    loadReading();
+  }, []);
+
+  useEffect(() => {
+    const saveReading = async () => {
+      try {
+        await AsyncStorage.setItem('practice_reading_progress', JSON.stringify({ answers: readingAnswers, timeLeft: readingTimeLeft }));
+      } catch(e) {}
+    };
+    const t = setTimeout(saveReading, 3000);
+    return () => clearTimeout(t);
+  }, [readingAnswers, readingTimeLeft]);
+
   useEffect(() => {
     if (activeTab !== 'ReadingAI') return;
     const timer = setInterval(() => {
@@ -859,6 +968,31 @@ const PracticeScreen = ({ navigation, route }) => {
     }, 1000);
     return () => clearInterval(timer);
   }, [activeTab]);
+
+  // Sync Listening with LocalStorage
+  useEffect(() => {
+    const loadListening = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('practice_listening_progress');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setListeningAnswers(parsed.answers);
+          setListeningTimeLeft(parsed.timeLeft);
+        }
+      } catch(e) {}
+    };
+    loadListening();
+  }, []);
+
+  useEffect(() => {
+    const saveListening = async () => {
+      try {
+        await AsyncStorage.setItem('practice_listening_progress', JSON.stringify({ answers: listeningAnswers, timeLeft: listeningTimeLeft }));
+      } catch(e) {}
+    };
+    const t = setTimeout(saveListening, 3000);
+    return () => clearTimeout(t);
+  }, [listeningAnswers, listeningTimeLeft]);
 
   useEffect(() => {
     if (activeTab !== 'ListeningAI') return;
@@ -1761,6 +1895,69 @@ const PracticeScreen = ({ navigation, route }) => {
         </ScrollView>
       )}
 
+      {activeTab === 'ListeningPractice' && (
+        <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+          <View className="mb-6">
+            <View className="bg-[#E6F9F5] px-3.5 py-1 rounded-full self-start mb-2.5 border border-[#A7F3D0]">
+              <Text className="text-[#005C42] text-[10px] font-extrabold uppercase tracking-widest">🎧 Practice Mode</Text>
+            </View>
+            <Text className="text-3xl font-black text-[#1E1E1E] tracking-tight">Listening Practice</Text>
+            <Text className="text-sm text-[#6B7280] mt-1.5 leading-5">
+              Focus on specific parts. You can pause the timer and toggle transcripts to read along while listening.
+            </Text>
+          </View>
+
+          {/* Section Selector */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row space-x-2 mb-6">
+            {['Part 1', 'Part 2', 'Part 3', 'Part 4'].map((part, idx) => (
+              <TouchableOpacity key={idx} className={`px-4 py-2 rounded-xl border ${idx === 0 ? 'bg-[#1E1E1E] border-[#1E1E1E]' : 'bg-white border-[#E5E7EB]'}`}>
+                <Text className={`font-bold text-sm ${idx === 0 ? 'text-white' : 'text-[#1E1E1E]'}`}>{part}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Audio Player Card */}
+          <View className="bg-white rounded-[32px] border border-[#E5E7EB] p-5 shadow-xs mb-6">
+            <View className="flex-row justify-between items-center mb-4">
+               <View className="flex-row items-center">
+                 <TouchableOpacity className="w-12 h-12 bg-[#00CC99] rounded-full items-center justify-center mr-3">
+                   <Svg width="16" height="16" viewBox="0 0 24 24" fill="white"><Path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></Svg>
+                 </TouchableOpacity>
+                 <View>
+                   <Text className="text-sm font-bold text-[#1E1E1E]">A Conversation about a job</Text>
+                   <Text className="text-xs text-[#9CA3AF]">01:45 / 04:30</Text>
+                 </View>
+               </View>
+               {/* Timer pausable */}
+               <TouchableOpacity className="bg-[#FFF7ED] border border-[#FED7AA] px-3 py-1.5 rounded-lg flex-row items-center">
+                 <Text className="text-[#C2410C] font-mono text-xs font-bold mr-1">15:00</Text>
+                 <Svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C2410C" strokeWidth="2.5"><Path d="M10 9v6m4-6v6" strokeLinecap="round"/></Svg>
+               </TouchableOpacity>
+            </View>
+            <View className="w-full h-1.5 bg-[#F3F4F6] rounded-full overflow-hidden">
+               <View className="h-full bg-[#00CC99] w-1/3 rounded-full" />
+            </View>
+          </View>
+
+          {/* Transcript Section */}
+          <View className="bg-white rounded-[32px] border border-[#E5E7EB] p-6 shadow-xs mb-10">
+            <View className="flex-row justify-between items-center mb-4 border-b border-[#F3F4F6] pb-4">
+              <Text className="text-base font-extrabold text-[#1E1E1E]">Transcript Sync</Text>
+              <TouchableOpacity className="bg-[#F7F9FA] px-3 py-1.5 border border-[#E5E7EB] rounded-full">
+                <Text className="text-xs font-bold text-[#6B7280]">Hide Transcript</Text>
+              </TouchableOpacity>
+            </View>
+            <Text className="text-sm leading-8 text-[#4B5563] font-medium">
+              <Text className="font-bold text-[#1E1E1E]">Manager: </Text>
+              Good morning. Please take a seat. So, you're applying for the position of...
+              {"\n"}
+              <Text className="font-bold text-[#1E1E1E]">Applicant: </Text>
+              <Text className="bg-[#E6F9F5] text-[#005C42] font-semibold px-1 rounded">Yes, the Assistant Manager position.</Text> I have brought my resume as requested.
+            </Text>
+          </View>
+        </ScrollView>
+      )}
+
       {activeTab === 'ReadingAnalysis' && (
         <ScrollView className="flex-1 px-6 pt-6" style={{ backgroundColor: 'transparent' }} showsVerticalScrollIndicator={false}>
           {/* Header section with clean analytics tags */}
@@ -1957,6 +2154,65 @@ const PracticeScreen = ({ navigation, route }) => {
             >
               <Text className="text-white text-sm font-black font-sans">Practice More</Text>
             </AnimatedButton>
+          </View>
+
+          {/* Graded Result & Detailed Explanations */}
+          <Text className="text-xl font-bold text-[#1E1E1E] mb-4 tracking-tight border-t border-[#E5E7EB] pt-6">Detailed Question Review</Text>
+          
+          <View className="space-y-4 mb-12">
+            {[
+              { 
+                qNum: 1,
+                qText: "What is the main driver behind the creative city movement?",
+                userAnswer: "B", 
+                correctAnswer: "B", 
+                isCorrect: true, 
+                explanation: "Paragraph A states: 'It represents a fundamental shift in how urban economies operate... cities now compete to attract highly skilled workers.'",
+                paraphrase: "shift in urban economies -> driver behind creative city"
+              },
+              { 
+                qNum: 2,
+                qText: "Rising property prices are causing long-term residents to leave.",
+                userAnswer: "NOT GIVEN", 
+                correctAnswer: "TRUE", 
+                isCorrect: false, 
+                explanation: "Paragraph C explicitly mentions 'skyrocketing property values, forcing out long-term residents'. Therefore it is TRUE.",
+                paraphrase: "forcing out long-term residents -> causing residents to leave"
+              }
+            ].map((item, idx) => (
+              <View key={idx} className={`bg-white rounded-[24px] border ${item.isCorrect ? 'border-[#A7F3D0]' : 'border-[#FECACA]'} p-5 shadow-xs`}>
+                <View className="flex-row items-start mb-3">
+                  <View className={`${item.isCorrect ? 'bg-[#E6F9F5]' : 'bg-[#FEF2F2]'} w-8 h-8 rounded-full items-center justify-center mr-3 mt-0.5`}>
+                    <Text className={`text-sm font-extrabold ${item.isCorrect ? 'text-[#005C42]' : 'text-[#B91C1C]'}`}>Q{item.qNum}</Text>
+                  </View>
+                  <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">{item.qText}</Text>
+                </View>
+
+                <View className="flex-row space-x-2 mb-3">
+                  <View className="flex-1 bg-[#F7F9FA] p-3 rounded-xl border border-[#E5E7EB]">
+                    <Text className="text-[10px] text-[#9CA3AF] font-bold uppercase mb-1">Your Answer</Text>
+                    <Text className={`text-sm font-black ${item.isCorrect ? 'text-[#00CC99]' : 'text-red-500'}`}>{item.userAnswer} {item.isCorrect ? '✓' : '✗'}</Text>
+                  </View>
+                  {!item.isCorrect && (
+                    <View className="flex-1 bg-[#E6F9F5] p-3 rounded-xl border border-[#A7F3D0]">
+                      <Text className="text-[10px] text-[#005C42] font-bold uppercase mb-1">Correct Answer</Text>
+                      <Text className="text-sm font-black text-[#00CC99]">{item.correctAnswer}</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Explanation with Paraphrase highlights */}
+                <View className="bg-[#F9FAFB] p-4 rounded-xl border border-[#E5E7EB]">
+                  <Text className="text-xs font-bold text-[#6B7280] mb-1">Explanation:</Text>
+                  <Text className="text-sm text-[#4B5563] leading-6 font-medium">{item.explanation}</Text>
+                  
+                  <View className="mt-3 pt-3 border-t border-[#E5E7EB]">
+                    <Text className="text-xs font-bold text-[#6B7280] mb-1">Paraphrasing recognized:</Text>
+                    <Text className="text-xs font-bold text-[#1E1E1E] bg-[#FEF3C7] self-start px-2 py-0.5 rounded">{item.paraphrase}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
           </View>
         </ScrollView>
       )}
