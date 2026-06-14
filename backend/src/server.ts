@@ -1,6 +1,8 @@
 // Server Entry Point
 // Starts HTTP server, connects to DB, and handles graceful shutdown
+import http from 'http';
 import { createApp } from './app';
+import { initSockets } from './sockets';
 import { config } from './config/env.config';
 import { prisma } from './config/prisma.config';
 import { getRedisClient } from './config/redis.config';
@@ -26,7 +28,12 @@ const startServer = async () => {
   }
 
   const app = createApp();
-  const server = app.listen(config.port, () => {
+  const httpServer = http.createServer(app);
+
+  // Initialize Socket.io
+  initSockets(httpServer);
+
+  httpServer.listen(config.port, () => {
     console.log(`[Server] Running on port: ${config.port} (${config.nodeEnv})`);
   });
 
