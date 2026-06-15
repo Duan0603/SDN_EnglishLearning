@@ -1,233 +1,333 @@
-import React, { useState } from 'react';
-import { View, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { TextInput, Button, HelperText } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Text, StyleSheet, Alert, BackHandler, Image } from 'react-native';
+import { TextInput, Button, HelperText, Checkbox } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AntDesign, Feather } from '@expo/vector-icons';
 import useAuthStore from '../store/useAuthStore';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
 
-WebBrowser.maybeCompleteAuthSession();
-
-// Validation Rules based on AI Prompt
-const validateName = (text) => text.trim().length >= 2;
+// Validation Rules
 const validatePhone = (text) => /^(03|05|07|08|09)\d{8}$/.test(text.replace(/\s+/g, ''));
 const validateEmail = (text) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text.trim());
-const validatePassword = (text) => text.length >= 10 && /[A-Za-z]/.test(text) && /[\d\W]/.test(text);
 
-// Custom Validated Input Component
-const ValidatedInput = ({
-  label, value, onChangeText, icon, isValid, errorMessage, 
-  secureTextEntry, keyboardType, autoCapitalize, isPassword,
-  ...props
-}) => {
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  
-  const getOutlineColor = () => {
-    if (isValid === true) return '#10B981';
-    if (isValid === false) return '#EF4444';
-    return '#E5E7EB';
-  };
-
-  const getActiveOutlineColor = () => {
-    if (isValid === true) return '#10B981';
-    if (isValid === false) return '#EF4444';
-    return '#6366F1'; // Indigo for focus
-  };
-
-  return (
-    <View style={{ marginBottom: 16 }}>
-      <TextInput
-        mode="outlined"
-        label={label}
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        secureTextEntry={isPassword ? !isPasswordVisible : false}
-        outlineColor={getOutlineColor()}
-        activeOutlineColor={getActiveOutlineColor()}
-        error={isValid === false}
-        style={{ backgroundColor: isValid === false ? 'rgba(254, 226, 226, 0.5)' : 'rgba(255, 255, 255, 0.7)', fontSize: 16 }}
-        theme={{ roundness: 16, colors: { error: '#EF4444', primary: '#6366F1' } }}
-        left={
-          <TextInput.Icon 
-            icon={() => <Feather name={icon} size={20} color={isValid === false ? '#EF4444' : isValid === true ? '#10B981' : '#9CA3AF'} />} 
-          />
-        }
-        right={
-          <TextInput.Icon
-            icon={() => (
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                {isPassword && (
-                  <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)} style={{ marginRight: isValid !== null ? 12 : 0 }}>
-                    <Feather name={isPasswordVisible ? 'eye-off' : 'eye'} size={20} color="#9CA3AF" />
-                  </TouchableOpacity>
-                )}
-                {isValid === true && <AntDesign name="checkcircle" size={18} color="#10B981" />}
-                {isValid === false && <AntDesign name="closecircle" size={18} color="#EF4444" />}
-              </View>
-            )}
-          />
-        }
-        {...props}
-      />
-      {isValid === false && errorMessage ? (
-        <HelperText type="error" visible={true} style={{ fontFamily: 'Outfit_500Medium', color: '#EF4444', marginTop: -4, paddingLeft: 0 }}>
-          {errorMessage}
-        </HelperText>
-      ) : null}
-    </View>
-  );
+// Mock API for availability check
+const checkAvailability = async (field, value) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // Mock logic: some specific values are "taken"
+      if (field === 'email' && value === 'test@test.com') resolve(false);
+      if (field === 'phone' && value === '0912345678') resolve(false);
+      if (field === 'username' && value === 'admin') resolve(false);
+      resolve(true);
+    }, 400);
+  });
 };
+
+const PasswordCriteria = ({ text, isValid, isEmpty }) => (
+  <View style={styles.criteriaRow}>
+    {!isEmpty && isValid ? (
+      <AntDesign name="checkcircle" size={16} color="#00c495" />
+    ) : !isEmpty && !isValid ? (
+      <AntDesign name="closecircle" size={16} color="#EF4444" />
+    ) : (
+      <Feather name="circle" size={16} color="#9CA3AF" />
+    )}
+    <Text style={[styles.criteriaText, { color: !isEmpty && isValid ? '#00c495' : !isEmpty && !isValid ? '#EF4444' : '#6B7280' }]}>
+      {text}
+    </Text>
+  </View>
+);
 
 const RegisterScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const { register, googleLogin, isLoading, error: authError } = useAuthStore();
+  const { register, isLoading } = useAuthStore();
 
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Validators
-  const isNameValid = name.length === 0 ? null : validateName(name);
-  const isPhoneValid = phone.length === 0 ? null : validatePhone(phone);
-  const isEmailValid = email.length === 0 ? null : validateEmail(email);
-  const isPasswordValid = password.length === 0 ? null : validatePassword(password);
+  const [isRobot, setIsRobot] = useState(false); // mock recaptcha: false means IS a robot, checked means NOT a robot
+  const [agreeTerms, setAgreeTerms] = useState(false);
 
-  const isFormValid = isNameValid && isPhoneValid && isEmailValid && isPasswordValid;
+  // Error States from onBlur
+  const [usernameError, setUsernameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
 
-  // Google OAuth
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
-    webClientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
-    ...(Platform.OS === 'web' && { redirectUri: 'http://localhost:8081' })
-  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  React.useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
-      googleLogin(id_token);
+  // Password real-time validation
+  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasLength = password.length >= 10;
+  const hasNumberOrSpecial = /[\d\W]/.test(password);
+  const isPasswordValid = hasLetter && hasLength && hasNumberOrSpecial;
+
+  // Confirm password check
+  const isConfirmValid = confirmPassword.length > 0 && confirmPassword === password;
+
+  // BackHandler Interceptor
+  useEffect(() => {
+    const hasData = username || phone || email || password || confirmPassword;
+    const backAction = () => {
+      if (hasData) {
+        Alert.alert(
+          'Cảnh báo',
+          'Bạn có chắc chắn muốn thoát? Các thông tin bạn vừa nhập sẽ bị mất.',
+          [
+            { text: 'Hủy', style: 'cancel', onPress: () => {} },
+            { text: 'Thoát', style: 'destructive', onPress: () => navigation.goBack() },
+          ]
+        );
+        return true;
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [username, phone, email, password, confirmPassword, navigation]);
+
+  // onBlur Handlers
+  const handleBlurUsername = async () => {
+    if (!username.trim()) return;
+    const isAvail = await checkAvailability('username', username.trim());
+    setUsernameError(isAvail ? '' : 'Tên đã tồn tại');
+  };
+
+  const handleBlurPhone = async () => {
+    if (!phone.trim()) return;
+    if (!validatePhone(phone)) {
+      setPhoneError('Vui lòng nhập đúng SĐT Việt Nam (VD: 09... có 10 số)');
+      return;
     }
-  }, [response]);
+    const isAvail = await checkAvailability('phone', phone.trim());
+    setPhoneError(isAvail ? '' : 'Số điện thoại đã được sử dụng');
+  };
 
-  const handleRegister = () => {
-    if (isFormValid) {
-      register({
-        username: name.trim(),
+  const handleBlurEmail = async () => {
+    if (!email.trim()) return;
+    if (!validateEmail(email)) {
+      setEmailError('Định dạng email chưa chính xác');
+      return;
+    }
+    const isAvail = await checkAvailability('email', email.trim());
+    setEmailError(isAvail ? '' : 'Email đã tồn tại');
+  };
+
+  const handleSubmit = async () => {
+    // Check missing fields
+    if (!username || !phone || !email || !password || !confirmPassword) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ các thông tin yêu cầu');
+      return;
+    }
+
+    // Check Format Errors
+    if (usernameError || phoneError || emailError || !isPasswordValid || !isConfirmValid) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đúng các thông tin yêu cầu');
+      return;
+    }
+
+    // Check Checkboxes
+    if (!isRobot) {
+      Alert.alert('Lỗi', 'Vui lòng xác thực bạn không phải là robot');
+      return;
+    }
+    if (!agreeTerms) {
+      Alert.alert('Lỗi', 'Vui lòng đồng ý điều khoản dịch vụ & chính sách bảo mật');
+      return;
+    }
+
+    // Register Call
+    try {
+      await register({
+        username: username.trim(),
         email: email.trim(),
         password,
         phone: phone.trim(),
       });
+      // Success
+      Alert.alert('Thành công', 'Đăng ký thành công! Vui lòng đăng nhập.', [
+        {
+          text: 'OK',
+          onPress: () => {
+            setUsername('');
+            setPhone('');
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+            setIsRobot(false);
+            setAgreeTerms(false);
+            navigation.navigate('Login');
+          }
+        }
+      ]);
+    } catch (error) {
+      Alert.alert('Lỗi', 'Đăng ký thất bại, vui lòng thử lại sau.');
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* Decorative Background Elements */}
-      <View style={styles.blob1} />
-      <View style={styles.blob2} />
-
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 20 }} keyboardShouldPersistTaps="handled">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           
-          <View style={[styles.glassCard, { marginTop: insets.top + 40, marginBottom: insets.bottom + 20 }]}>
-            
-            <View style={{ alignItems: 'center', marginBottom: 32 }}>
-              <View style={styles.iconContainer}>
-                <Feather name="zap" size={28} color="#FFFFFF" />
-              </View>
-              <Text style={styles.title}>Tạo tài khoản</Text>
-              <Text style={styles.subtitle}>Bắt đầu hành trình của bạn</Text>
+          <View style={[styles.header, { marginTop: insets.top + 20 }]}>
+            <Text style={styles.title}>Tạo tài khoản</Text>
+            <Text style={styles.subtitle}>Đăng ký để trải nghiệm ứng dụng</Text>
+          </View>
+
+          <View style={styles.form}>
+            {/* Username */}
+            <View style={styles.inputWrapper}>
+              <TextInput
+                mode="outlined"
+                label="Tên người dùng"
+                value={username}
+                onChangeText={(txt) => { setUsername(txt); setUsernameError(''); }}
+                onBlur={handleBlurUsername}
+                error={!!usernameError}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#00c495"
+                style={styles.input}
+                theme={{ roundness: 12 }}
+              />
+              {!!usernameError && <HelperText type="error" visible={true}>{usernameError}</HelperText>}
             </View>
 
-            {!!authError && (
-              <View style={styles.errorContainer}>
-                <AntDesign name="closecircle" size={20} color="#DC2626" />
-                <Text style={styles.errorText}>{authError}</Text>
+            {/* Phone */}
+            <View style={styles.inputWrapper}>
+              <TextInput
+                mode="outlined"
+                label="Số điện thoại"
+                value={phone}
+                onChangeText={(txt) => { setPhone(txt); setPhoneError(''); }}
+                onBlur={handleBlurPhone}
+                keyboardType="numeric"
+                error={!!phoneError}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#00c495"
+                style={styles.input}
+                theme={{ roundness: 12 }}
+              />
+              {!!phoneError && <HelperText type="error" visible={true}>{phoneError}</HelperText>}
+            </View>
+
+            {/* Email */}
+            <View style={styles.inputWrapper}>
+              <TextInput
+                mode="outlined"
+                label="Email"
+                value={email}
+                onChangeText={(txt) => { setEmail(txt); setEmailError(''); }}
+                onBlur={handleBlurEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                error={!!emailError}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#00c495"
+                style={styles.input}
+                theme={{ roundness: 12 }}
+              />
+              {!!emailError && <HelperText type="error" visible={true}>{emailError}</HelperText>}
+            </View>
+
+            {/* Password */}
+            <View style={styles.inputWrapper}>
+              <TextInput
+                mode="outlined"
+                label="Mật khẩu"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#00c495"
+                style={styles.input}
+                theme={{ roundness: 12 }}
+                right={
+                  <TextInput.Icon
+                    icon={() => (
+                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                        <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color="#9CA3AF" />
+                      </TouchableOpacity>
+                    )}
+                  />
+                }
+              />
+              {/* Password Criteria */}
+              <View style={styles.criteriaContainer}>
+                <PasswordCriteria text="Có chữ cái" isValid={hasLetter} isEmpty={password.length === 0} />
+                <PasswordCriteria text="Tối thiểu 10 ký tự" isValid={hasLength} isEmpty={password.length === 0} />
+                <PasswordCriteria text="Có chữ số hoặc ký tự đặc biệt" isValid={hasNumberOrSpecial} isEmpty={password.length === 0} />
               </View>
-            )}
+            </View>
 
-            <ValidatedInput
-              label="Tên người dùng"
-              placeholder="Nhập họ và tên"
-              value={name}
-              onChangeText={setName}
-              icon="user"
-              isValid={isNameValid}
-              errorMessage="Tên phải có ít nhất 2 ký tự."
-              autoCapitalize="words"
-            />
+            {/* Confirm Password */}
+            <View style={styles.inputWrapper}>
+              <TextInput
+                mode="outlined"
+                label="Xác nhận mật khẩu"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#00c495"
+                style={styles.input}
+                theme={{ roundness: 12 }}
+                right={
+                  <TextInput.Icon
+                    icon={() => (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                          <Feather name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#9CA3AF" />
+                        </TouchableOpacity>
+                        {isConfirmValid && <AntDesign name="checkcircle" size={20} color="#00c495" />}
+                      </View>
+                    )}
+                  />
+                }
+              />
+              {confirmPassword.length > 0 && !isConfirmValid && (
+                <HelperText type="error" visible={true}>Mật khẩu không khớp.</HelperText>
+              )}
+            </View>
 
-            <ValidatedInput
-              label="Số điện thoại"
-              placeholder="VD: 0912345678"
-              value={phone}
-              onChangeText={setPhone}
-              icon="phone"
-              isValid={isPhoneValid}
-              errorMessage="Vui lòng nhập đúng SĐT Việt Nam (VD: 09...)"
-              keyboardType="numeric"
-            />
+            {/* Checkboxes */}
+            <View style={styles.checkboxSection}>
+              {/* Recaptcha Mock */}
+              <TouchableOpacity activeOpacity={0.8} onPress={() => setIsRobot(!isRobot)} style={styles.recaptchaWrapper}>
+                <View style={styles.recaptchaContent}>
+                  <Checkbox.Android status={isRobot ? 'checked' : 'unchecked'} color="#00c495" />
+                  <Text style={styles.recaptchaText}>Tôi không phải là người máy</Text>
+                </View>
+                <Image source={{ uri: 'https://www.gstatic.com/recaptcha/api2/logo_48.png' }} style={{ width: 32, height: 32 }} />
+              </TouchableOpacity>
 
-            <ValidatedInput
-              label="Địa chỉ Email"
-              placeholder="name@example.com"
-              value={email}
-              onChangeText={setEmail}
-              icon="mail"
-              isValid={isEmailValid}
-              errorMessage="Email không hợp lệ."
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+              {/* Terms */}
+              <TouchableOpacity activeOpacity={0.8} onPress={() => setAgreeTerms(!agreeTerms)} style={styles.termsWrapper}>
+                <Checkbox.Android status={agreeTerms ? 'checked' : 'unchecked'} color="#00c495" />
+                <Text style={styles.termsText}>
+                  Tôi đồng ý với <Text style={styles.linkText}>Điều khoản dịch vụ</Text> & <Text style={styles.linkText}>Chính sách bảo mật</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-            <ValidatedInput
-              label="Mật khẩu"
-              placeholder="Tối thiểu 10 ký tự"
-              value={password}
-              onChangeText={setPassword}
-              icon="lock"
-              isValid={isPasswordValid}
-              errorMessage="Tối thiểu 10 ký tự, gồm 1 chữ cái và 1 số/ký tự đặc biệt."
-              isPassword={true}
-            />
-
-            <Button 
-              mode="contained" 
-              onPress={handleRegister}
+            {/* Submit Button */}
+            <Button
+              mode="contained"
               loading={isLoading}
-              disabled={!isFormValid || isLoading}
-              contentStyle={{ height: 56 }}
-              labelStyle={{ fontSize: 18, fontFamily: 'Outfit_700Bold' }}
-              style={[styles.submitBtn, { backgroundColor: isFormValid ? '#6366F1' : '#E5E7EB' }]}
-              textColor={isFormValid ? '#FFFFFF' : '#9CA3AF'}
+              onPress={handleSubmit}
+              contentStyle={styles.btnContent}
+              labelStyle={styles.btnLabel}
+              style={styles.submitBtn}
             >
-              Đăng ký ngay
+              Tạo Tài Khoản
             </Button>
-
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Hoặc kết nối với</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <Button 
-              mode="outlined" 
-              onPress={() => promptAsync()}
-              disabled={!request || isLoading}
-              icon={() => <AntDesign name="google" size={20} color="#DB4437" />}
-              contentStyle={{ height: 56 }}
-              labelStyle={{ fontSize: 16, color: '#374151', fontFamily: 'Outfit_500Medium' }}
-              style={styles.googleBtn}
-            >
-              Google Account
-            </Button>
-
-            <TouchableOpacity onPress={() => navigation.navigate('Login')} style={{ marginTop: 24, alignItems: 'center' }}>
+            
+            <TouchableOpacity onPress={() => navigation.navigate('Login')} style={{ marginTop: 20, alignItems: 'center' }}>
               <Text style={{ color: '#6B7280', fontFamily: 'Outfit_500Medium', fontSize: 16 }}>
-                Đã có tài khoản? <Text style={{ color: '#6366F1', fontFamily: 'Outfit_700Bold' }}>Đăng nhập ngay</Text>
+                Đã có tài khoản? <Text style={{ color: '#00c495', fontFamily: 'Outfit_700Bold' }}>Đăng nhập</Text>
               </Text>
             </TouchableOpacity>
 
@@ -241,105 +341,105 @@ const RegisterScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EEF2FF', // light indigo background
+    backgroundColor: '#FFFFFF',
   },
-  blob1: {
-    position: 'absolute',
-    top: -50,
-    right: -50,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: '#C7D2FE',
-    opacity: 0.5,
-  },
-  blob2: {
-    position: 'absolute',
-    bottom: -50,
-    left: -50,
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: '#E0E7FF',
-    opacity: 0.6,
-  },
-  glassCard: {
-    marginHorizontal: 16,
-    padding: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderRadius: 32,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-  },
-  iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    backgroundColor: '#6366F1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  title: {
-    color: '#111827',
-    fontFamily: 'Outfit_700Bold',
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: '#6B7280',
-    fontFamily: 'Outfit_500Medium',
-    fontSize: 16,
-  },
-  errorContainer: {
-    backgroundColor: '#FEE2E2',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  errorText: {
-    color: '#DC2626',
-    fontFamily: 'Outfit_500Medium',
-    marginLeft: 8,
-    flex: 1,
-  },
-  submitBtn: {
-    borderRadius: 16,
-    marginTop: 8,
-    elevation: 0,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 32,
+  header: {
+    paddingHorizontal: 24,
     marginBottom: 24,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
+  title: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 32,
+    color: '#111827',
   },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#9CA3AF',
+  subtitle: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 8,
+  },
+  form: {
+    paddingHorizontal: 24,
+  },
+  inputWrapper: {
+    marginBottom: 16,
+  },
+  input: {
+    backgroundColor: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: 'Outfit_400Regular',
+  },
+  criteriaContainer: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+    gap: 4,
+  },
+  criteriaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  criteriaText: {
+    marginLeft: 8,
+    fontSize: 13,
     fontFamily: 'Outfit_500Medium',
   },
-  googleBtn: {
-    borderRadius: 16,
+  checkboxSection: {
+    marginTop: 8,
+    marginBottom: 24,
+    gap: 16,
+  },
+  recaptchaWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FAFAFA',
+    borderWidth: 1,
     borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  recaptchaContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recaptchaText: {
+    marginLeft: 8,
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 15,
+    color: '#374151',
+  },
+  termsWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 24,
+  },
+  termsText: {
+    marginLeft: 8,
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 20,
+  },
+  linkText: {
+    color: '#00c495',
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  submitBtn: {
+    borderRadius: 12,
+    backgroundColor: '#00c495',
+  },
+  btnContent: {
+    height: 56,
+  },
+  btnLabel: {
+    fontSize: 18,
+    fontFamily: 'Outfit_700Bold',
+    color: '#FFFFFF',
   }
 });
 
