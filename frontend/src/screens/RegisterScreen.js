@@ -282,7 +282,13 @@ const RegisterScreen = ({ navigation }) => {
                         <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
                           <Feather name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#9CA3AF" />
                         </TouchableOpacity>
-                        {isConfirmValid && <AntDesign name="checkcircle" size={20} color="#00c495" />}
+                        {confirmPassword.length > 0 ? (
+                          isConfirmValid ? (
+                            <AntDesign name="checkcircle" size={20} color="#00c495" />
+                          ) : (
+                            <AntDesign name="closecircle" size={20} color="#EF4444" />
+                          )
+                        ) : null}
                       </View>
                     )}
                   />
@@ -325,7 +331,7 @@ const RegisterScreen = ({ navigation }) => {
               Tạo Tài Khoản
             </Button>
             
-            <TouchableOpacity onPress={() => navigation.navigate('Login')} style={{ marginTop: 20, alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')} style={{ marginTop: 24, marginBottom: 12, alignItems: 'center' }}>
               <Text style={{ color: '#6B7280', fontFamily: 'Outfit_500Medium', fontSize: 16 }}>
                 Đã có tài khoản? <Text style={{ color: '#00c495', fontFamily: 'Outfit_700Bold' }}>Đăng nhập</Text>
               </Text>
