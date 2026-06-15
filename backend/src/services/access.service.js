@@ -64,20 +64,25 @@ export class AccessService {
 
     }
 
-    static signUp = async ({username, email, password, fullName, birthday, phone, identityNumber}) => {
+    static signUp = async ({username, email, password, phone}) => {
         // Validate required fields
-        if (!username || !email || !password || !fullName || !birthday || !phone || !identityNumber) {
-            throw new BadRequestError("username, email, password, fullName, birthday, phone and identityNumber are required")
+        if (!username || !email || !password || !phone) {
+            throw new BadRequestError("username, email, password and phone are required")
         }
 
         const holdUserByEmail = await userModel.findOne({email}).lean()
         if (holdUserByEmail) {
-            throw new BadRequestError("User with this email already registered")
+            throw new BadRequestError("Email đã tồn tại")
         }
 
         const holdUserByUsername = await userModel.findOne({username}).lean()
         if (holdUserByUsername) {
-            throw new BadRequestError("Username already taken")
+            throw new BadRequestError("Tên đã tồn tại")
+        }
+        
+        const holdUserByPhone = await userModel.findOne({phone}).lean()
+        if (holdUserByPhone) {
+            throw new BadRequestError("Số điện thoại đã được sử dụng")
         }
 
         const hashedPassword = await bcrypt.hash(password, 10)
@@ -85,13 +90,11 @@ export class AccessService {
         //tao user moi
         const newUser = await userModel.create({
             username, 
-            fullName, 
+            fullName: username, 
             email, 
             password: hashedPassword, 
             role: Role.STUDENT,
-            birthday,
-            phone,
-            identityNumber
+            phone
         })
 
 
@@ -126,7 +129,7 @@ export class AccessService {
             console.log(`Create Token Success:: `, tokens)
 
             return {
-                user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'birthday', 'phone', 'identityNumber'], object: newUser}),
+                user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'phone'], object: newUser}),
                 tokens
             }
 
