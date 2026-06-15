@@ -11,6 +11,7 @@ examRouter.use(authentication as any);
 // Read-only endpoints: open to STUDENT, MENTOR, and ADMIN
 examRouter.get('/', ExamController.getExams);
 examRouter.get('/:id', ExamController.getExamById);
+examRouter.post('/:id/submit', ExamController.submitExam);
 
 // Write/Mutate endpoints: restricted to ADMIN only
 examRouter.post('/', roleGuard(['ADMIN']), ExamController.createExam);

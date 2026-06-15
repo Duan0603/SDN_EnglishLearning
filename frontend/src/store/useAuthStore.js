@@ -60,6 +60,23 @@ const useAuthStore = create((set) => ({
     }
   },
 
+  googleLogin: async (idToken) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await client.post('/auth/google-login', { idToken });
+      const { metadata } = response.data;
+      const token = metadata.tokens.accessToken;
+      const user = metadata.user;
+      
+      await storage.setItem('userToken', token);
+      set({ user, token, isLoading: false, isBootstrapping: false });
+    } catch (error) {
+      set({ 
+        error: error.response?.data?.message || 'Google Login failed', 
+        isLoading: false 
+      });
+    }
+  },
   logout: async () => {
     try {
       await client.post('/auth/logout');

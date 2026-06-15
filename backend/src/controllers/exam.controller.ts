@@ -65,6 +65,34 @@ export class ExamController {
   }
 
   /**
+   * POST /api/v1/exams/:id/submit
+   * Submit exam answers for grading.
+   */
+  static async submitExam(req: any, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { answers, timeTaken } = req.body;
+      const userId = req.user?.userId || req.user?.id || req.user?._id;
+
+      if (!userId) {
+        return next(new ApiError('Unauthorized', 401));
+      }
+
+      if (!answers || !Array.isArray(answers)) {
+        return next(new ApiError('Invalid answers payload', 400));
+      }
+
+      const result = await ExamService.submitExam(userId, id, answers, timeTaken || 0);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      next(new ApiError(error.message || 'Failed to submit exam.', 400));
+    }
+  }
+
+  /**
    * PUT /api/v1/exams/:id
    * Fully update/replace an exam and its nested content.
    */

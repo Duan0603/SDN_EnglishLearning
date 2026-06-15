@@ -111,49 +111,49 @@ development_status:
   #   [BE] Admin role guard middleware ............................. done
 
   # Story 2.2 [FE] Admin Exam Management UI (Frontend)
-  2-2-admin-exam-management-ui-frontend: in-progress
+  2-2-admin-exam-management-ui-frontend: done
   # Sub-tasks breakdown:
-  #   [FE] Admin Dashboard layout & sidebar navigation ............. backlog
-  #   [FE] Exam creation form (multi-step: exam → sections → questions) backlog
-  #   [FE] Client-side form validation ............................. backlog
-  #   [FE] Exam list with search, filter, pagination ............... backlog
-  #   [FE] Exam edit/delete confirmation flow ....................... backlog
+  #   [FE] Admin Dashboard layout & sidebar navigation ............. done
+  #   [FE] Exam creation form (multi-step: exam → sections → questions) done
+  #   [FE] Client-side form validation ............................. done
+  #   [FE] Exam list with search, filter, pagination ............... done
+  #   [FE] Exam edit/delete confirmation flow ....................... done
 
   # Story 2.3 [FE] Exam Engine Core UI & Timer (Frontend)
-  2-3-exam-engine-core-ui-timer-frontend: backlog
+  2-3-exam-engine-core-ui-timer-frontend: done
   # Sub-tasks breakdown:
-  #   [FE] Split-screen layout (material left / questions right) ... backlog
-  #   [FE] Real-time countdown timer (Web Worker for accuracy) ..... backlog
-  #   [FE] Auto-submit on timer expiry ............................. backlog
-  #   [FE] Redux exam state (answer selections, navigation) ........ backlog
-  #   [FE] LocalStorage sync (anti data-loss on F5/close) .......... backlog
-  #   [FE] Listening audio player with controls .................... backlog
-  #   [FE] Transcript hidden mode (Exam Mode) ...................... backlog
+  #   [FE] Split-screen layout (material left / questions right) ... done
+  #   [FE] Real-time countdown timer (Web Worker for accuracy) ..... done
+  #   [FE] Auto-submit on timer expiry ............................. done
+  #   [FE] Redux exam state (answer selections, navigation) ........ done
+  #   [FE] LocalStorage sync (anti data-loss on F5/close) .......... done
+  #   [FE] Listening audio player with controls .................... done
+  #   [FE] Transcript hidden mode (Exam Mode) ...................... done
 
   # Story 2.4 [BE] Exam Submission & Grading API (Backend)
-  2-4-exam-submission-grading-api-backend: backlog
+  2-4-exam-submission-grading-api-backend: done
   # Sub-tasks breakdown:
-  #   [BE] POST /api/v1/exams/:id/submit endpoint .................. backlog
-  #   [BE] Answer comparison engine (student vs Cambridge key) ..... backlog
-  #   [BE] Band score conversion algorithm (raw → 1.0-9.0) ......... backlog
-  #   [BE] TestResult model & persistence .......................... backlog
+  #   [BE] POST /api/v1/exams/:id/submit endpoint .................. done
+  #   [BE] Answer comparison engine (student vs Cambridge key) ..... done
+  #   [BE] Band score conversion algorithm (raw → 1.0-9.0) ......... done
+  #   [BE] TestResult model & persistence .......................... done
 
   # Story 2.5 [FE] Practice Mode with Transcripts (Frontend)
-  2-5-practice-mode-with-transcripts-frontend: backlog
+  2-5-practice-mode-with-transcripts-frontend: done
   # Sub-tasks breakdown:
-  #   [FE] Section/Part selector (filter by skill type) ............ backlog
-  #   [FE] Toggle transcript button + synced text display .......... backlog
-  #   [FE] Disabled/pausable timer in practice mode ................ backlog
-  #   [FE] Audio player with transcript sync highlight ............. backlog
+  #   [FE] Section/Part selector (filter by skill type) ............ done
+  #   [FE] Toggle transcript button + synced text display .......... done
+  #   [FE] Disabled/pausable timer in practice mode ................ done
+  #   [FE] Audio player with transcript sync highlight ............. done
 
   # Story 2.6 [FE] Review & Analytics UI (Frontend)
-  2-6-review-analytics-ui-frontend: backlog
+  2-6-review-analytics-ui-frontend: done
   # Sub-tasks breakdown:
-  #   [FE] Graded exam result screen (correct=green/wrong=red) ..... backlog
-  #   [FE] Paraphrasing highlight engine (bold synonyms) ........... backlog
-  #   [FE] Detailed explanation accordion per question ............. backlog
-  #   [FE] Score history chart (band score over time) .............. backlog
-  #   [FE] Export/share result functionality ........................ backlog
+  #   [FE] Graded exam result screen (correct=green/wrong=red) ..... done
+  #   [FE] Paraphrasing highlight engine (bold synonyms) ........... done
+  #   [FE] Detailed explanation accordion per question ............. done
+  #   [FE] Score history chart (band score over time) .............. done
+  #   [FE] Export/share result functionality ........................ done
 
   epic-2-retrospective: optional
 
@@ -162,27 +162,27 @@ development_status:
 # Goal: Record voice → STT → Gemini AI scoring (4 IELTS criteria)
 # FRs covered: FR4
 # ==============================================================================
-  epic-3: backlog
+  epic-3: in-progress
 
   # Story 3.1 [FE] Audio Recording & Microphone Handling (Frontend)
-  3-1-audio-recording-microphone-handling-frontend: backlog
+  3-1-audio-recording-microphone-handling-frontend: done
   # Sub-tasks breakdown:
-  #   [FE] Microphone permission request flow ...................... backlog
-  #   [FE] MediaRecorder API integration (start/stop/pause) ........ backlog
-  #   [FE] Recording indicator (blinking dot animation) ............ backlog
-  #   [FE] Error handling: mic disconnect / network loss ........... backlog
-  #   [FE] Toast notification for retry on interruption ............ backlog
-  #   [FE] IndexedDB caching for offline audio blobs ............... backlog
-  #   [FE] Disabled button state during permission request ......... backlog
+  #   [FE] Microphone permission request flow ...................... done
+  #   [FE] MediaRecorder API integration (start/stop/pause) ........ done
+  #   [FE] Recording indicator (blinking dot animation) ............ done
+  #   [FE] Error handling: mic disconnect / network loss ........... done
+  #   [FE] Toast notification for retry on interruption ............ done
+  #   [FE] IndexedDB caching for offline audio blobs ............... done
+  #   [FE] Disabled button state during permission request ......... done
 
   # Story 3.2 [BE] Socket.io Audio Receiver & Speech-to-Text (Backend)
-  3-2-socket-io-audio-receiver-speech-to-text-backend: backlog
+  3-2-socket-io-audio-receiver-speech-to-text-backend: done
   # Sub-tasks breakdown:
-  #   [BE] Socket.io audio:chunk event handler ..................... backlog
-  #   [BE] Audio buffer assembly from chunks ....................... backlog
-  #   [BE] Whisper STT API integration ............................. backlog
-  #   [BE] Temporary audio cache (15-min TTL cleanup) .............. backlog
-  #   [BE] Streaming pipeline (zero-memory-footprint) .............. backlog
+  #   [BE] Socket.io audio:chunk event handler ..................... done
+  #   [BE] Audio buffer assembly from chunks ....................... done
+  #   [BE] Whisper STT API integration ............................. done
+  #   [BE] Temporary audio cache (15-min TTL cleanup) .............. done
+  #   [BE] Streaming pipeline (zero-memory-footprint) .............. done
 
   # Story 3.3 [BE] Gemini API Prompting & Scoring Service (Backend)
   3-3-gemini-api-prompting-scoring-service-backend: backlog

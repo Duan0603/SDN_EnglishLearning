@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entity-Relationship Diagram - SDN English Learning</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-card: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --border-color: #e2e8f0;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --entity-border: #000000;
+      --entity-bg: #ffffff;
+      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--text-primary);
+    }
+
+    .brand span {
+      background-color: #dbeafe;
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background-color: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .btn-primary {
+      background-color: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .main-container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      height: calc(100vh - 69px);
+      position: relative;
+    }
+
+    @media (max-width: 1024px) {
+      .main-container {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      .sidebar {
+        border-left: none !important;
+        border-top: 1px solid var(--border-color);
+        height: auto !important;
+      }
+    }
+
+    .canvas-container {
+      position: relative;
+      background-color: #ffffff;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .sidebar {
+      background-color: var(--bg-card);
+      border-left: 1px solid var(--border-color);
+      padding: 1.5rem;
+      overflow-y: auto;
+      height: 100%;
+    }
+
+    .sidebar h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .info-card {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .info-card h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+    }
+
+    .info-card p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.50rem;
+      font-size: 0.85rem;
+    }
+
+    .legend-box {
+      width: 20px;
+      height: 20px;
+      border: 1px solid #333;
+    }
+
+    .legend-box.entity {
+      background-color: #ffffff;
+    }
+
+    .legend-box.relation {
+      background-color: #f9f9f9;
+      border-radius: 5px;
+    }
+
+    .legend-line {
+      width: 20px;
+      height: 2px;
+      background-color: #333;
+      position: relative;
+    }
+
+    /* Diagram Styles custom mapping to look like classic ER */
+    .mermaid {
+      width: 100%;
+      height: auto;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Entity and Relation CSS Styling overrides for Mermaid output */
+    .node rect {
+      fill: var(--entity-bg) !important;
+      stroke: var(--entity-border) !important;
+      stroke-width: 1.5px !important;
+    }
+    
+    .node.relation rect, .node.relation polygon, .node.relation circle {
+      fill: #f8fafc !important;
+      stroke: #475569 !important;
+      stroke-width: 1.2px !important;
+      rx: 10px !important;
+      ry: 10px !important;
+    }
+
+    .edgePath .path {
+      stroke: #334155 !important;
+      stroke-width: 1.5px !important;
+    }
+
+    .edgeLabel rect {
+      fill: #ffffff !important;
+      opacity: 0.9;
+    }
+
+    .edgeLabel span {
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      color: #0f172a !important;
+    }
+
+    .entity-label-container {
+      font-family: var(--font-sans);
+      padding: 4px;
+      min-width: 160px;
+    }
+
+    .entity-title {
+      font-weight: 700;
+      font-size: 13px;
+      text-align: center;
+      padding-bottom: 6px;
+      border-bottom: 1.5px solid #000000;
+      margin-bottom: 6px;
+      color: #000000;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .entity-attributes {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      text-align: left;
+      line-height: 1.4;
+      color: #1e293b;
+    }
+
+    .relation-label-container {
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: 11px;
+      text-align: center;
+      padding: 4px 12px;
+      color: #334155;
+    }
+
+    .hint {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background-color: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 0.5rem;
+      color: #1e40af;
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+  </style>
+
+  <!-- Include Mermaid.js -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent);">
+        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5z"></path>
+        <path d="M6 6h10"></path>
+        <path d="M6 10h10"></path>
+      </svg>
+      <h1>Entity-Relationship Diagram</h1>
+      <span>IELTS Core Platform</span>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="window.print()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+        Print / Save PDF
+      </button>
+      <button class="btn btn-primary" id="btnExportSVG">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Export SVG
+      </button>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <!-- Diagram Canvas Area -->
+    <div class="canvas-container" id="canvasContainer">
+      <div class="mermaid" id="mermaidDiagram">
+        graph LR
+          %% Node Styling Declarations
+          classDef entity fill:#FFFFFF,stroke:#000000,stroke-width:1.5px,rx:0px,ry:0px;
+          classDef relation fill:#F8FAFC,stroke:#475569,stroke-width:1.2px,rx:12px,ry:12px;
+
+          %% Entities (Rectangular boxes with a top header and attribute lines)
+          User["<div class='entity-label-container'><div class='entity-title'>User</div><div class='entity-attributes'>id (PK)<br/>email<br/>username<br/>password<br/>fullName<br/>role (Enum)<br/>avatar<br/>status<br/>verify<br/>createdAt<br/>updatedAt</div></div>"]:::entity
+          
+          KeyToken["<div class='entity-label-container'><div class='entity-title'>KeyToken</div><div class='entity-attributes'>id (PK)<br/>userId (FK)<br/>publicKey<br/>refreshToken[]<br/>refreshTokensUsed[]<br/>createdAt<br/>updatedAt</div></div>"]:::entity
+          
+          Availability["<div class='entity-label-container'><div class='entity-title'>Availability</div><div class='entity-attributes'>id (PK)<br/>mentorId (FK)<br/>startTime<br/>endTime<br/>isBooked<br/>createdAt<br/>updatedAt</div></div>"]:::entity
+          
+          Booking["<div class='entity-label-container'><div class='entity-title'>Booking</div><div class='entity-attributes'>id (PK)<br/>studentId (FK)<br/>mentorId (FK)<br/>availabilityId (FK)<br/>startTime<br/>endTime<br/>status (Enum)<br/>notes<br/>mentorNotes<br/>createdAt<br/>updatedAt</div></div>"]:::entity
+          
+          Test["<div class='entity-label-container'><div class='entity-title'>Test</div><div class='entity-attributes'>id (PK)<br/>title<br/>description<br/>type (Enum)<br/>duration<br/>createdAt<br/>updatedAt</div></div>"]:::entity
+          
+          TestSection["<div class='entity-label-container'><div class='entity-title'>TestSection</div><div class='entity-attributes'>id (PK)<br/>testId (FK)<br/>sectionOrder<br/>title<br/>passageText<br/>audioUrl<br/>images[]<br/>createdAt<br/>updatedAt</div></div>"]:::entity
+          
+          Question["<div class='entity-label-container'><div class='entity-title'>Question</div><div class='entity-attributes'>id (PK)<br/>sectionId (FK)<br/>questionNumber<br/>type (Enum)<br/>content<br/>options (JSON)<br/>answer<br/>explanation<br/>createdAt<br/>updatedAt</div></div>"]:::entity
+          
+          TestResult["<div class='entity-label-container'><div class='entity-title'>TestResult</div><div class='entity-attributes'>id (PK)<br/>userId (FK)<br/>testId (FK)<br/>answers (JSON)<br/>correctCount<br/>bandScore<br/>timeTaken<br/>createdAt</div></div>"]:::entity
+          
+          WritingSubmission["<div class='entity-label-container'><div class='entity-title'>WritingSubmission</div><div class='entity-attributes'>id (PK)<br/>userId (FK)<br/>testId (FK)<br/>prompt<br/>essayText<br/>bandScore<br/>taskAchievement<br/>coherenceCohesion<br/>lexicalResource<br/>grammarAccuracy<br/>aiFeedback (JSON)<br/>createdAt</div></div>"]:::entity
+          
+          SpeakingSubmission["<div class='entity-label-container'><div class='entity-title'>SpeakingSubmission</div><div class='entity-attributes'>id (PK)<br/>userId (FK)<br/>testId (FK)<br/>prompt<br/>audioUrl<br/>transcription<br/>bandScore<br/>fluencyCoherence<br/>lexicalResource<br/>grammarAccuracy<br/>pronunciation<br/>aiFeedback (JSON)<br/>createdAt</div></div>"]:::entity
+
+          %% Relationships (Rounded rectangles)
+          Authenticate["<div class='relation-label-container'>Authenticate</div>"]:::relation
+          DefineAvailability["<div class='relation-label-container'>Define</div>"]:::relation
+          BookStudent["<div class='relation-label-container'>Booked By</div>"]:::relation
+          BookMentor["<div class='relation-label-container'>Assigned To</div>"]:::relation
+          BookSlot["<div class='relation-label-container'>Refers To</div>"]:::relation
+          TestHasSections["<div class='relation-label-container'>Contain</div>"]:::relation
+          SectionHasQuestions["<div class='relation-label-container'>Has</div>"]:::relation
+          TakeTest["<div class='relation-label-container'>Attempt</div>"]:::relation
+          ResultOfTest["<div class='relation-label-container'>Result Of</div>"]:::relation
+          UserSubmitWriting["<div class='relation-label-container'>Submit Writing</div>"]:::relation
+          WritingAssociated["<div class='relation-label-container'>Associated With</div>"]:::relation
+          UserSubmitSpeaking["<div class='relation-label-container'>Submit Speaking</div>"]:::relation
+          SpeakingAssociated["<div class='relation-label-container'>Associated With</div>"]:::relation
+
+          %% Connections with Cardinalities
+          User -- "1-1" --- Authenticate
+          Authenticate --- "1-n" --> KeyToken
+
+          User -- "1-1" --- DefineAvailability
+          DefineAvailability --- "1-n" --> Availability
+
+          User -- "1-1" --- BookStudent
+          BookStudent --- "1-n" --> Booking
+
+          User -- "1-1" --- BookMentor
+          BookMentor --- "1-n" --> Booking
+
+          Availability -- "1-1" --- BookSlot
+          BookSlot --- "1-1" --> Booking
+
+          Test -- "1-1" --- TestHasSections
+          TestHasSections --- "1-n" --> TestSection
+
+          TestSection -- "1-1" --- SectionHasQuestions
+          SectionHasQuestions --- "1-n" --> Question
+
+          User -- "1-1" --- TakeTest
+          TakeTest --- "1-n" --> TestResult
+
+          Test -- "1-1" --- ResultOfTest
+          ResultOfTest --- "1-n" --> TestResult
+
+          User -- "1-1" --- UserSubmitWriting
+          UserSubmitWriting --- "1-n" --> WritingSubmission
+
+          Test -- "1-1" --- WritingAssociated
+          WritingAssociated --- "1-n" --> WritingSubmission
+
+          User -- "1-1" --- UserSubmitSpeaking
+          UserSubmitSpeaking --- "1-n" --> SpeakingSubmission
+
+          Test -- "1-1" --- SpeakingAssociated
+          SpeakingAssociated --- "1-n" --> SpeakingSubmission
+      </div>
+    </div>
+
+    <!-- Sidebar Panel -->
+    <div class="sidebar">
+      <h2>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        Diagram Details
+      </h2>
+      
+      <div class="info-card">
+        <h3>Notation Legend</h3>
+        <div class="legend-item">
+          <div class="legend-box entity"></div>
+          <div><strong>Entity:</strong> Rectangular block with a bold title separated by a horizontal line, listing the attributes.</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-box relation"></div>
+          <div><strong>Relationship:</strong> Rounded rectangular block representing the relation connector.</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line"></div>
+          <div><strong>Cardinality:</strong> `1-1` (One-to-One), `1-n` (One-to-Many).</div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <h3>Core Workflows</h3>
+        <p><strong>Booking Flow:</strong> Students book available slots defined by Mentors. The relationship creates a `Booking` instance linking Student, Mentor, and a unique `Availability` slot.</p>
+        <p style="margin-top:0.5rem;"><strong>Exam & AI Grading Flow:</strong> A user takes a `Test` (divided into `TestSections` containing `Questions`). Results are logged in `TestResult` (automated key check), `WritingSubmission`, or `SpeakingSubmission` (processed via STT and evaluated by OpenAI/Gemini AI API).</p>
+      </div>
+
+      <div class="hint">
+        <strong>Tip:</strong> Click "Export SVG" to save the high-resolution vector format, or press "Print / Save PDF" to export the diagram page.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Mermaid
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: 'loose',
+      theme: 'neutral',
+      flowchart: {
+        htmlLabels: true,
+        useWidth: true
+      }
+    });
+
+    // Handle SVG Export
+    document.getElementById('btnExportSVG').addEventListener('click', () => {
+      const svgElement = document.querySelector('.mermaid svg');
+      if (!svgElement) {
+        alert('Diagram not rendered yet. Please wait a moment.');
+        return;
+      }
+
+      // Clone SVG
+      const svgClone = svgElement.cloneNode(true);
+      
+      // Inject CSS Styles for correct fonts & visual representation
+      const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+      styleElement.textContent = `
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=JetBrains+Mono&display=swap');
+        text { font-family: 'Outfit', sans-serif !important; }
+        .entity-label-container { font-family: 'Outfit', sans-serif; padding: 4px; min-width: 160px; background: #fff; border: 1.5px solid #000; }
+        .entity-title { font-weight: 700; font-size: 13px; text-align: center; padding-bottom: 6px; border-bottom: 1.5px solid #000; margin-bottom: 6px; text-transform: uppercase; }
+        .entity-attributes { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-align: left; line-height: 1.4; }
+        .relation-label-container { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 11px; text-align: center; padding: 4px 12px; }
+      `;
+      svgClone.insertBefore(styleElement, svgClone.firstChild);
+
+      const svgString = new XMLSerializer().serializeToString(svgClone);
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const svgUrl = URL.createObjectURL(svgBlob);
+      
+      const downloadLink = document.createElement('a');
+      downloadLink.href = svgUrl;
+      downloadLink.download = 'SDN_EnglishLearning_Entity_Diagram.svg';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(svgUrl);
+    });
+  </script>
+</body>
+</html>

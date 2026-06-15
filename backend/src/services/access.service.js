@@ -6,6 +6,9 @@ import {Role} from "../data/data.js";
 import { createTokenPair } from "../auth/authUtils.js";
 import {KeyTokenService} from "./keyToken.service.js";
 import {getInfoData} from "../ultils/index.js";
+import { OAuth2Client } from "google-auth-library";
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export class AccessService {
     static logout = async (keyStore) => {
@@ -61,20 +64,25 @@ export class AccessService {
 
     }
 
-    static signUp = async ({username, email, password, fullName, birthday, phone, identityNumber}) => {
+    static signUp = async ({username, email, password, phone}) => {
         // Validate required fields
-        if (!username || !email || !password || !fullName || !birthday || !phone || !identityNumber) {
-            throw new BadRequestError("username, email, password, fullName, birthday, phone and identityNumber are required")
+        if (!username || !email || !password || !phone) {
+            throw new BadRequestError("username, email, password and phone are required")
         }
 
         const holdUserByEmail = await userModel.findOne({email}).lean()
         if (holdUserByEmail) {
-            throw new BadRequestError("User with this email already registered")
+            throw new BadRequestError("Email đã tồn tại")
         }
 
         const holdUserByUsername = await userModel.findOne({username}).lean()
         if (holdUserByUsername) {
-            throw new BadRequestError("Username already taken")
+            throw new BadRequestError("Tên đã tồn tại")
+        }
+        
+        const holdUserByPhone = await userModel.findOne({phone}).lean()
+        if (holdUserByPhone) {
+            throw new BadRequestError("Số điện thoại đã được sử dụng")
         }
 
         const hashedPassword = await bcrypt.hash(password, 10)
@@ -82,13 +90,11 @@ export class AccessService {
         //tao user moi
         const newUser = await userModel.create({
             username, 
-            fullName, 
+            fullName: username, 
             email, 
             password: hashedPassword, 
             role: Role.STUDENT,
-            birthday,
-            phone,
-            identityNumber
+            phone
         })
 
 
@@ -123,7 +129,7 @@ export class AccessService {
             console.log(`Create Token Success:: `, tokens)
 
             return {
-                user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'birthday', 'phone', 'identityNumber'], object: newUser}),
+                user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'phone'], object: newUser}),
                 tokens
             }
 
@@ -133,5 +139,53 @@ export class AccessService {
             user: null,
             tokens: null
         }
+    }
+
+    static googleLogin = async ({ idToken }) => {
+        // 1. Verify token
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+        const { email, name, picture, sub } = payload;
+
+        if (!email) {
+            throw new BadRequestError("Google token does not contain email");
+        }
+
+        // 2. Find or create user
+        let user = await userModel.findOne({ email }).lean();
+        if (!user) {
+            const hashedPassword = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+            user = await userModel.create({
+                username: email.split('@')[0] + '_' + sub.substring(0, 5),
+                fullName: name || '',
+                email: email,
+                password: hashedPassword,
+                role: Role.STUDENT,
+                avatar: picture || ''
+            });
+        }
+
+        // 3. Create tokens
+        const {privateKey, publicKey} = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 4096,
+            publicKeyEncoding: { type: 'pkcs1', format: 'pem' },
+            privateKeyEncoding: { type: 'pkcs1', format: 'pem' }
+        });
+
+        const tokens = await createTokenPair({userId: user._id, email: user.email, role: user.role}, publicKey, privateKey);
+
+        await KeyTokenService.createKeyToken({
+            userId: user._id,
+            publicKey,
+            refreshToken: tokens.refreshToken
+        });
+
+        return {
+            user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'birthday', 'phone', 'identityNumber', 'avatar'], object: user}),
+            tokens
+        };
     }
 }
