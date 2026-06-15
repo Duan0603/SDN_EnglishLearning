@@ -1,5 +1,6 @@
 import {Created, OK} from "../core/success.response.js";
 import {AccessService} from "../services/access.service.js";
+import userModel from "../models/user.model.js";
 export class AccessController {
     static signUp = async (req, res, next) => {
         const metadata = await AccessService.signUp(req.body);
@@ -55,10 +56,7 @@ export class AccessController {
     }
 
     static getProfile = async (req, res, next) => {
-        const { prisma } = await import("../config/prisma.config.js");
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.userId }
-        });
+        const user = await userModel.findById(req.user.userId).lean();
 
         if (!user) {
             throw new Error("User not found");
@@ -67,7 +65,7 @@ export class AccessController {
         new OK({
             message: "Get profile success!",
             metadata: {
-                _id: user.id,
+                _id: user._id,
                 username: user.username,
                 fullName: user.fullName,
                 email: user.email,

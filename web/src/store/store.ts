@@ -3,14 +3,11 @@
 // This middleware will be fully implemented in Story 1.4 (Socket.io Infrastructure)
 import { configureStore } from '@reduxjs/toolkit'
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux'
-
-// Feature slices (to be added as Epics progress)
-// import authReducer from '../features/auth/authSlice'    // Story 1.3
-// import examReducer from '../features/exam/examSlice'    // Epic 2
+import authReducer from '../features/auth/authSlice'
 
 export const store = configureStore({
   reducer: {
-    // auth: authReducer,      // Epic 1, Story 1.3
+    auth: authReducer,
     // exam: examReducer,      // Epic 2
   },
   middleware: (getDefaultMiddleware) =>

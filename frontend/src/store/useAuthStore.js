@@ -9,12 +9,16 @@ const useAuthStore = create((set) => ({
   isBootstrapping: true,
   error: null,
 
-  setSession: (user, token) => {
+  setSession: async (user, token) => {
+    const userId = user._id || user.id;
+    await storage.setItem('userToken', token);
+    await storage.setItem('userId', userId);
     set({ user, token, isLoading: false, isBootstrapping: false, error: null });
   },
 
   clearSession: async () => {
     await storage.deleteItem('userToken');
+    await storage.deleteItem('userId');
     set({ user: null, token: null, isLoading: false, isBootstrapping: false, error: null });
   },
 
@@ -27,6 +31,7 @@ const useAuthStore = create((set) => ({
       const user = metadata.user;
       
       await storage.setItem('userToken', token);
+      await storage.setItem('userId', user._id || user.id);
       set({ user, token, isLoading: false, isBootstrapping: false });
     } catch (error) {
       set({ 
@@ -45,6 +50,7 @@ const useAuthStore = create((set) => ({
       const user = metadata.user;
       
       await storage.setItem('userToken', token);
+      await storage.setItem('userId', user._id || user.id);
       set({ user, token, isLoading: false, isBootstrapping: false });
     } catch (error) {
       set({ 
@@ -54,7 +60,6 @@ const useAuthStore = create((set) => ({
     }
   },
 
-
   logout: async () => {
     try {
       await client.post('/auth/logout');
@@ -62,6 +67,7 @@ const useAuthStore = create((set) => ({
       // Continue clearing local auth state even if the remote session is already gone.
     } finally {
       await storage.deleteItem('userToken');
+      await storage.deleteItem('userId');
       set({ user: null, token: null, isLoading: false, isBootstrapping: false, error: null });
     }
   },
@@ -70,7 +76,8 @@ const useAuthStore = create((set) => ({
     set({ isBootstrapping: true });
     try {
       const token = await storage.getItem('userToken');
-      if (token) {
+      const userId = await storage.getItem('userId');
+      if (token && userId) {
         const response = await client.get('/auth/profile');
         set({ user: response.data.metadata, token, isLoading: false, isBootstrapping: false, error: null });
         return;
@@ -79,6 +86,7 @@ const useAuthStore = create((set) => ({
       set({ user: null, token: null, isLoading: false, isBootstrapping: false, error: null });
     } catch (error) {
       await storage.deleteItem('userToken');
+      await storage.deleteItem('userId');
       set({ user: null, token: null, isLoading: false, isBootstrapping: false, error: null });
     }
   }

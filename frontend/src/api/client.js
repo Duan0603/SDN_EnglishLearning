@@ -26,8 +26,12 @@ const client = axios.create({
 // Interceptor để thêm token vào header (sử dụng storage an toàn cho cả Web và Mobile)
 client.interceptors.request.use(async (config) => {
   const token = await storage.getItem('userToken');
+  const userId = await storage.getItem('userId');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  if (userId) {
+    config.headers['x-client-id'] = userId;
   }
   return config;
 }, (error) => {
