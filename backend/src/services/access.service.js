@@ -6,6 +6,9 @@ import {Role} from "../data/data.js";
 import { createTokenPair } from "../auth/authUtils.js";
 import {KeyTokenService} from "./keyToken.service.js";
 import {getInfoData} from "../ultils/index.js";
+import { OAuth2Client } from "google-auth-library";
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export class AccessService {
     static logout = async (keyStore) => {
@@ -133,5 +136,53 @@ export class AccessService {
             user: null,
             tokens: null
         }
+    }
+
+    static googleLogin = async ({ idToken }) => {
+        // 1. Verify token
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+        const { email, name, picture, sub } = payload;
+
+        if (!email) {
+            throw new BadRequestError("Google token does not contain email");
+        }
+
+        // 2. Find or create user
+        let user = await userModel.findOne({ email }).lean();
+        if (!user) {
+            const hashedPassword = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+            user = await userModel.create({
+                username: email.split('@')[0] + '_' + sub.substring(0, 5),
+                fullName: name || '',
+                email: email,
+                password: hashedPassword,
+                role: Role.STUDENT,
+                avatar: picture || ''
+            });
+        }
+
+        // 3. Create tokens
+        const {privateKey, publicKey} = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 4096,
+            publicKeyEncoding: { type: 'pkcs1', format: 'pem' },
+            privateKeyEncoding: { type: 'pkcs1', format: 'pem' }
+        });
+
+        const tokens = await createTokenPair({userId: user._id, email: user.email, role: user.role}, publicKey, privateKey);
+
+        await KeyTokenService.createKeyToken({
+            userId: user._id,
+            publicKey,
+            refreshToken: tokens.refreshToken
+        });
+
+        return {
+            user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'birthday', 'phone', 'identityNumber', 'avatar'], object: user}),
+            tokens
+        };
     }
 }
