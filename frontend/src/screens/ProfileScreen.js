@@ -15,7 +15,6 @@ import useAuthStore from '../store/useAuthStore';
 const ProfileScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 900;
 
   const profileName = user?.fullName || user?.name || 'Nguyễn Minh Anh';
   const profileEmail = user?.email || 'minhanh@gmail.com';
@@ -60,7 +59,7 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const InputField = ({ label, value, onChangeText, keyboardType = 'default', autoCapitalize = 'sentences' }) => (
-    <View className={isDesktop ? 'w-[48.5%] mb-5' : 'w-full mb-5'}>
+    <View className="w-full mb-5">
       <Text className="mb-2 text-[13px] font-medium uppercase tracking-[0.08em] text-[#7A8BA3]">
         {label}
       </Text>
@@ -78,9 +77,10 @@ const ProfileScreen = ({ navigation }) => {
   return (
     <SafeAreaView className="flex-1 bg-[#F4F7FB]">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, paddingVertical: 18 }}>
-        <View className="mx-auto w-full max-w-[1400px] px-4 pb-8 md:px-6">
+        <View className="mx-auto w-full px-4 pb-8">
           <TouchableOpacity
             onPress={() => navigation.navigate('Home')}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             style={{ zIndex: 50, elevation: 8 }}
             className="mb-4 self-start flex-row items-center gap-2 rounded-full border border-white/70 bg-white px-4 py-2 shadow-lg"
           >
@@ -106,7 +106,7 @@ const ProfileScreen = ({ navigation }) => {
               <View className="absolute right-10 top-6 h-20 w-20 rounded-full bg-white/15" />
               <View className="absolute right-16 top-11 h-9 w-9 rounded-full bg-white/10" />
 
-              <View className="absolute bottom-0 left-0 right-0 px-5 pb-5 md:px-6">
+              <View className="absolute bottom-0 left-0 right-0 px-5 pb-5">
                 <View className="flex-row items-end justify-between">
                   <View className="flex-row items-end">
                     <View className="relative">
@@ -120,7 +120,7 @@ const ProfileScreen = ({ navigation }) => {
                       </View>
                     </View>
 
-                    <View className="ml-4 max-w-[520px] pb-2">
+                    <View className="ml-4 pb-2">
                       <Text className="text-[31px] font-extrabold leading-tight text-[#162033]">
                         {profileName}
                       </Text>
@@ -133,20 +133,9 @@ const ProfileScreen = ({ navigation }) => {
                       </View>
                     </View>
                   </View>
-
-                  <View className="hidden md:flex-row md:items-end md:gap-3">
-                    <View className="rounded-[18px] bg-[#E7FBF4]/95 px-6 py-4">
-                      <Text className="text-[14px] text-[#6D7D95]">Band hiện tại</Text>
-                      <Text className="mt-1 text-[34px] font-semibold leading-none text-[#12B889]">6.75</Text>
-                    </View>
-                    <View className="rounded-[18px] border-2 border-dashed border-[#B0E8DE] bg-white/75 px-6 py-4">
-                      <Text className="text-[14px] text-[#6D7D95]">Mục tiêu</Text>
-                      <Text className="mt-1 text-[34px] font-semibold leading-none text-[#151A24]">7.5</Text>
-                    </View>
-                  </View>
                 </View>
 
-                <View className="mt-4 flex-row justify-end gap-3 md:hidden">
+                <View className="mt-4 flex-row justify-end gap-3">
                   <View className="rounded-[18px] bg-[#E7FBF4]/95 px-5 py-3">
                     <Text className="text-[12px] text-[#6D7D95]">Band hiện tại</Text>
                     <Text className="mt-1 text-[28px] font-semibold leading-none text-[#12B889]">6.75</Text>
@@ -159,10 +148,10 @@ const ProfileScreen = ({ navigation }) => {
               </View>
             </View>
 
-            <View className="border-t border-[#EAF0F5] bg-white px-4 py-5 md:px-6">
-              <View className="flex-row flex-wrap justify-between gap-y-5 md:flex-nowrap">
+            <View className="border-t border-[#EAF0F5] bg-white px-4 py-5">
+              <View className="flex-row flex-wrap justify-between gap-y-5">
                 {stats.map((item) => (
-                  <View key={item.label} className="w-1/2 items-center md:w-[24%]">
+                  <View key={item.label} className="w-1/2 items-center">
                     <View className="mb-2 h-8 w-8 items-center justify-center rounded-full bg-[#F8FAFC]">
                       <Text style={{ color: item.color }} className="text-[15px]">
                         {item.icon}
@@ -177,13 +166,14 @@ const ProfileScreen = ({ navigation }) => {
           </View>
 
           <View className="mt-8 rounded-[22px] border border-[#E4EAF2] bg-white p-2 shadow-[0_10px_26px_rgba(15,23,42,0.05)]">
-            <View className="flex-row flex-wrap gap-2 md:flex-nowrap">
+            <View className="flex-row flex-wrap gap-2">
               {tabs.map((tab) => {
                 const isActive = tab.key === activeTab;
                 return (
                   <TouchableOpacity
                     key={tab.key}
                     onPress={() => setActiveTab(tab.key)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     className={`h-[46px] flex-1 items-center justify-center rounded-[18px] ${isActive ? 'bg-[#12BC8A]' : 'bg-transparent'}`}
                   >
                     <Text className={`text-[16px] font-medium ${isActive ? 'text-white' : 'text-[#7A8BA3]'}`}>
@@ -195,7 +185,7 @@ const ProfileScreen = ({ navigation }) => {
             </View>
           </View>
 
-          <View className="mt-8 rounded-[24px] border border-[#E4EAF2] bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)] md:p-6">
+          <View className="mt-8 rounded-[24px] border border-[#E4EAF2] bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
             <Text className="text-[22px] font-bold text-[#111827]">Thông tin cá nhân</Text>
 
             <View className="mt-6 flex-row flex-wrap justify-between">
@@ -245,6 +235,7 @@ const ProfileScreen = ({ navigation }) => {
             <View className="mt-1 flex-row flex-wrap items-center gap-3">
               <TouchableOpacity
                 onPress={handleSave}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 className="h-[48px] items-center justify-center rounded-[18px] bg-[#0DBB86] px-7 shadow-sm"
               >
                 <Text className="text-[16px] font-semibold text-white">Lưu thay đổi</Text>
@@ -252,6 +243,7 @@ const ProfileScreen = ({ navigation }) => {
 
               <TouchableOpacity
                 onPress={logout}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 className="h-[48px] items-center justify-center rounded-[18px] border border-[#F3C7C7] bg-[#FFF5F5] px-6"
               >
                 <Text className="text-[16px] font-semibold text-[#D14343]">Đăng xuất</Text>

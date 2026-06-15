@@ -14,6 +14,10 @@ import {
 import { TextInput, Button } from 'react-native-paper';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import useAuthStore from '../store/useAuthStore';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const AuthModal = ({ visible, onClose }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -32,8 +36,22 @@ const AuthModal = ({ visible, onClose }) => {
   const [isNotRobot, setIsNotRobot] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   
+  const validationErrorRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const [validationError, setValidationError] = useState('');
-  const { login, register, isLoading, error } = useAuthStore();
+  const { login, register, googleLogin, isLoading, error } = useAuthStore();
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
+    webClientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
+  });
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      googleLogin(id_token);
+      if (onClose) onClose();
+    }
+  }, [response]);
 
   // Reset fields & errors when switching tab or modal visibility changes
   useEffect(() => {
@@ -404,7 +422,11 @@ const AuthModal = ({ visible, onClose }) => {
 
                   {/* Mock Social Buttons */}
                   <View style={styles.socialContainer}>
-                    <TouchableOpacity style={styles.socialButton}>
+                    <TouchableOpacity 
+                      style={styles.socialButton}
+                      onPress={() => promptAsync()}
+                      disabled={!request || isLoading}
+                    >
                       <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                         <Path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                         <Path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>

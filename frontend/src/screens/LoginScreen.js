@@ -3,17 +3,37 @@ import { View, KeyboardAvoidingView, Platform, TouchableOpacity, ScrollView } fr
 import { TextInput, Button, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import useAuthStore from '../store/useAuthStore';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isLoading, error } = useAuthStore();
+  const { login, googleLogin, isLoading, error } = useAuthStore();
   const insets = useSafeAreaInsets();
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
+    webClientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
+  });
+
+  React.useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      googleLogin(id_token);
+    }
+  }, [response]);
 
   const handleLogin = () => {
     login(email, password);
+  };
+
+  const handleGoogleLogin = () => {
+    promptAsync();
   };
 
   return (
@@ -79,7 +99,7 @@ const LoginScreen = ({ navigation }) => {
                   activeUnderlineColor="#00D1A0"
                   underlineColor="#E5E7EB"
                 />
-                <TouchableOpacity style={{ alignSelf: 'flex-end', marginTop: 12 }}>
+                <TouchableOpacity hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }} style={{ alignSelf: 'flex-end', marginTop: 12 }}>
                   <Text style={{ color: '#00D1A0', fontFamily: 'Outfit_500Medium' }}>Forgot password?</Text>
                 </TouchableOpacity>
               </View>
@@ -108,9 +128,21 @@ const LoginScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('Register')}
               contentStyle={{ height: 56 }}
               labelStyle={{ fontSize: 18, color: '#737373', fontFamily: 'Outfit_500Medium' }}
-              style={{ borderRadius: 12, borderColor: '#E5E7EB' }}
+              style={{ borderRadius: 12, borderColor: '#E5E7EB', marginBottom: 16 }}
             >
               Sign up
+            </Button>
+
+            <Button 
+              mode="outlined" 
+              onPress={handleGoogleLogin}
+              disabled={!request || isLoading}
+              icon={() => <AntDesign name="google" size={20} color="#DB4437" />}
+              contentStyle={{ height: 56 }}
+              labelStyle={{ fontSize: 18, color: '#374151', fontFamily: 'Outfit_500Medium' }}
+              style={{ borderRadius: 12, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}
+            >
+              Continue with Google
             </Button>
           </View>
         </KeyboardAvoidingView>
