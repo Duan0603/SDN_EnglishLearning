@@ -19,7 +19,6 @@ import adminUserService from '../api/adminUser.service';
 const AdminScreen = ({ navigation }) => {
   const { user } = useAuthStore();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 900;
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
@@ -240,7 +239,7 @@ const AdminScreen = ({ navigation }) => {
 
       {/* Main Container */}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="mx-auto w-full max-w-[1400px] px-6 py-6">
+        <View className="mx-auto w-full px-6 py-6">
 
           {/* Tab Navigation Switches */}
           <View className="flex-row bg-white p-2 rounded-3xl border border-[#E4EAF2] mb-6 shadow-xs">
@@ -280,13 +279,12 @@ const AdminScreen = ({ navigation }) => {
                   { icon: '🔥', value: '73%', label: 'Avg. Completion Rate', change: '+5% vs last month', changeUp: true, accent: '#EF4444', bg: '#FEF2F2' },
                 ].map((stat, i) => (
                   <View key={i} style={{
-                    width: isDesktop ? 'calc(25% - 12px)' : '47%',
+                    width: '47%',
                     backgroundColor: '#FFFFFF',
                     borderRadius: 20,
                     borderWidth: 1,
                     borderColor: '#E4EAF2',
                     padding: 20,
-                    flex: isDesktop ? undefined : undefined,
                   }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                       <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: stat.bg, alignItems: 'center', justifyContent: 'center' }}>
@@ -306,7 +304,7 @@ const AdminScreen = ({ navigation }) => {
               </View>
 
               {/* === ROW 2: Revenue Chart + Bookings Breakdown === */}
-              <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16, marginBottom: 20 }}>
+              <View style={{ flexDirection: 'column', gap: 16, marginBottom: 20 }}>
 
                 {/* Revenue Bar Chart (manual SVG bars) */}
                 <View style={{ flex: 2, backgroundColor: '#FFFFFF', borderRadius: 24, borderWidth: 1, borderColor: '#E4EAF2', padding: 24 }}>
@@ -414,7 +412,7 @@ const AdminScreen = ({ navigation }) => {
               </View>
 
               {/* === ROW 3: Activity Feed + System Health === */}
-              <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16, marginBottom: 20 }}>
+              <View style={{ flexDirection: 'column', gap: 16, marginBottom: 20 }}>
 
                 {/* Recent Activity Timeline */}
                 <View style={{ flex: 2, backgroundColor: '#FFFFFF', borderRadius: 24, borderWidth: 1, borderColor: '#E4EAF2', padding: 24 }}>
@@ -682,7 +680,7 @@ const AdminScreen = ({ navigation }) => {
                   </View>
                 ) : (
                   filteredExams.map((item) => (
-                    <View key={item.id} className="w-full md:w-[48.5%] bg-[#F8FAFC] border border-[#E4EAF2] p-5 rounded-[24px]">
+                    <View key={item.id} className="w-full bg-[#F8FAFC] border border-[#E4EAF2] p-5 rounded-[24px]">
                       <View className="flex-row justify-between items-start mb-3">
                         <View className="bg-[#E6F9F5] px-2.5 py-0.5 rounded-full border border-[#A7F3D0]">
                           <Text className="text-[10px] font-extrabold text-[#005C42]">{item.type}</Text>

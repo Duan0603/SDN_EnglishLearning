@@ -4,14 +4,31 @@ import { TextInput, Button, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import useAuthStore from '../store/useAuthStore';
+import { AntDesign } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const RegisterScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState('');
-  const { register, isLoading, error } = useAuthStore();
+  const { register, googleLogin, isLoading, error } = useAuthStore();
   const insets = useSafeAreaInsets();
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
+    webClientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
+  });
+
+  React.useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      googleLogin(id_token);
+    }
+  }, [response]);
 
   const handleRegister = () => {
     if (!fullName.trim()) {
@@ -44,6 +61,10 @@ const RegisterScreen = ({ navigation }) => {
   const clearErrors = () => {
     if (validationError) setValidationError('');
     if (error) useAuthStore.setState({ error: null });
+  };
+
+  const handleGoogleRegister = () => {
+    promptAsync();
   };
 
   return (
@@ -157,9 +178,21 @@ const RegisterScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('Login')}
               contentStyle={{ height: 56 }}
               labelStyle={{ fontSize: 18, color: '#737373', fontFamily: 'Outfit_500Medium' }}
-              style={{ borderRadius: 12, borderColor: '#E5E7EB' }}
+              style={{ borderRadius: 12, borderColor: '#E5E7EB', marginBottom: 16 }}
             >
               Log in
+            </Button>
+
+            <Button 
+              mode="outlined" 
+              onPress={handleGoogleRegister}
+              disabled={!request || isLoading}
+              icon={() => <AntDesign name="google" size={20} color="#DB4437" />}
+              contentStyle={{ height: 56 }}
+              labelStyle={{ fontSize: 18, color: '#374151', fontFamily: 'Outfit_500Medium' }}
+              style={{ borderRadius: 12, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}
+            >
+              Sign up with Google
             </Button>
           </View>
         </KeyboardAvoidingView>

@@ -12,10 +12,14 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAuthStore from '../store/useAuthStore';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
+import { socket } from '../utils/socket';
 import Svg, { Path, Circle, Rect, Line, Defs, LinearGradient } from 'react-native-svg';
 import Animated, {
   useSharedValue,
@@ -304,6 +308,7 @@ const SlidingSegmentedControl = ({ activeTab, setActiveTab, screenWidth }) => {
       
       <TouchableOpacity 
         onPress={() => setActiveTab('passage')}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         className="flex-1 py-3 items-center z-10 rounded-xl"
         activeOpacity={0.8}
       >
@@ -314,6 +319,7 @@ const SlidingSegmentedControl = ({ activeTab, setActiveTab, screenWidth }) => {
       
       <TouchableOpacity 
         onPress={() => setActiveTab('questions')}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         className="flex-1 py-3 items-center z-10 rounded-xl"
         activeOpacity={0.8}
       >
@@ -392,6 +398,7 @@ const AnimatedOption = ({ optionKey, text, isSelected, onPress }) => {
     <Animated.View style={animatedCardStyle} className="border rounded-2xl mb-2.5 overflow-hidden shadow-xs">
       <TouchableOpacity
         onPress={onPress}
+        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
         className="flex-row items-center p-4 active:opacity-90"
         activeOpacity={0.9}
       >
@@ -445,6 +452,7 @@ const SlidingTFNG = ({ selectedValue, onSelect, screenWidth }) => {
         <TouchableOpacity
           key={choice}
           onPress={() => onSelect(choice)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           className="flex-1 py-3 items-center z-10"
           activeOpacity={0.8}
         >
@@ -538,6 +546,7 @@ const AnimatedButton = ({ onPress, children, className, style, activeScale = 0.9
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={onPress}
+        hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         className="w-full h-full items-center justify-center flex-row"
       >
         {children}
@@ -585,6 +594,7 @@ const SlidingHeaderTabs = ({ activeTab, setActiveTab }) => {
         <TouchableOpacity
           key={tab.id}
           onPress={() => setActiveTab(tab.id)}
+          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
           style={{ width: 84, height: 32 }}
           className="items-center justify-center z-10"
           activeOpacity={0.8}
@@ -627,6 +637,7 @@ const SlidingGraphFilter = ({ graphFilter, setGraphFilter }) => {
       
       <TouchableOpacity
         onPress={() => setGraphFilter('last10')}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         className="w-[68px] py-1.5 items-center justify-center z-10"
         activeOpacity={0.8}
       >
@@ -637,6 +648,7 @@ const SlidingGraphFilter = ({ graphFilter, setGraphFilter }) => {
 
       <TouchableOpacity
         onPress={() => setGraphFilter('allTime')}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         className="w-[68px] py-1.5 items-center justify-center z-10"
         activeOpacity={0.8}
       >
@@ -1044,6 +1056,34 @@ const PracticeScreen = ({ navigation, route }) => {
   const [speakingText, setSpeakingText] = useState("");
   const recordingTimer = useRef(null);
 
+  // Real recording states
+  const [permissionResponse, requestPermission] = Audio.usePermissions();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [expoRecording, setExpoRecording] = useState(null);
+
+  // Connect socket and handle transcript
+  useEffect(() => {
+    if (!socket.connected) {
+      socket.connect();
+    }
+    
+    socket.on('audio:transcript', (data) => {
+      setIsProcessing(false);
+      if (data.success) {
+        setSpeakingText(data.transcript);
+        setShowSpeakingResult(true); // show results after getting transcript
+      } else {
+        Alert.alert('Error', data.error || 'Failed to process audio');
+        setSpeakingText("Failed to transcribe audio.");
+        setShowSpeakingResult(true);
+      }
+    });
+
+    return () => {
+      socket.off('audio:transcript');
+    };
+  }, []);
+
   // Animation cho sóng âm Speaking
   const waveAnim1 = useRef(new RNAnimated.Value(10)).current;
   const waveAnim2 = useRef(new RNAnimated.Value(15)).current;
@@ -1083,14 +1123,7 @@ const PracticeScreen = ({ navigation, route }) => {
       anims.forEach(a => a.start());
 
       recordingTimer.current = setInterval(() => {
-        setRecordingSeconds(prev => {
-          const nextSec = prev + 1;
-          // Mô phỏng text Whisper nhận diện theo thời gian thực
-          if (nextSec === 2) setSpeakingText("Describe a memorable... a memorable event in your life...");
-          if (nextSec === 5) setSpeakingText("Describe a memorable event in your life. I would like to talking about...");
-          if (nextSec === 8) setSpeakingText("Describe a memorable event in your life. I would like to talking about my graduation day. It was extremely... beautiful day and I feel very proud...");
-          return nextSec;
-        });
+        setRecordingSeconds(prev => prev + 1);
       }, 1000);
     } else {
       clearInterval(recordingTimer.current);
@@ -1104,15 +1137,66 @@ const PracticeScreen = ({ navigation, route }) => {
     return () => clearInterval(recordingTimer.current);
   }, [isRecording]);
 
-  const handleStartRecording = () => {
-    setShowSpeakingResult(false);
-    setSpeakingText("");
-    setIsRecording(true);
+  const handleStartRecording = async () => {
+    try {
+      if (!permissionResponse || permissionResponse.status !== 'granted') {
+        const res = await requestPermission();
+        if (res.status !== 'granted') {
+          Alert.alert('Permission Denied', 'Microphone permission is required.');
+          return;
+        }
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      socket.emit('audio:start');
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      
+      setExpoRecording(recording);
+      
+      setShowSpeakingResult(false);
+      setSpeakingText("");
+      setIsRecording(true);
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Failed to start recording');
+    }
   };
 
-  const handleStopRecording = () => {
+  const handleStopRecording = async () => {
     setIsRecording(false);
-    setShowSpeakingResult(true);
+    setIsProcessing(true);
+    setSpeakingText("Transcribing audio through Whisper API...");
+
+    try {
+      if (expoRecording) {
+        await expoRecording.stopAndUnloadAsync();
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+        
+        const uri = expoRecording.getURI();
+        await AsyncStorage.setItem('@audio_cache', uri);
+        
+        const fileBase64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        
+        socket.emit('audio:chunk', fileBase64);
+        socket.emit('audio:stop');
+        setExpoRecording(null);
+      } else {
+        setIsProcessing(false);
+        setShowSpeakingResult(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsProcessing(false);
+      Alert.alert('Error', 'Failed to stop recording');
+    }
   };
 
   const handleWritingAnalyze = () => {
@@ -1792,6 +1876,12 @@ const PracticeScreen = ({ navigation, route }) => {
                   <View className="w-6 h-6 bg-white rounded-md" />
                 </TouchableOpacity>
               </View>
+            ) : isProcessing ? (
+              <View className="items-center py-6">
+                <ActivityIndicator size="large" color="#00CC99" />
+                <Text className="text-base font-extrabold text-[#1E1E1E] mt-4">Transcribing Audio...</Text>
+                <Text className="text-xs text-[#6B7280] mt-1">Whisper AI is analyzing your pronunciation</Text>
+              </View>
             ) : (
               <View className="items-center py-6">
                 <TouchableOpacity 
@@ -1859,11 +1949,7 @@ const PracticeScreen = ({ navigation, route }) => {
                 {/* Paragraph with highlighting */}
                 <View className="p-4 bg-[#F7F9FA] rounded-2xl border border-[#E5E7EB] flex-row flex-wrap">
                   <Text className="text-sm font-semibold text-[#1E1E1E] leading-7">
-                    I would like to{" "}
-                    <Text className="text-red-500 bg-red-100 px-1 py-0.5 rounded font-black border border-red-200">talking</Text>
-                    {" "}about my graduation day. It was an{" "}
-                    <Text className="text-red-500 bg-red-100 px-1 py-0.5 rounded font-black border border-red-200">extremely</Text>
-                    {" "}beautiful day.
+                    {speakingText || "No transcript available. Please try recording again."}
                   </Text>
                 </View>
 
