@@ -21,6 +21,7 @@ const RegisterScreen = ({ navigation }) => {
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
     webClientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
+    ...(Platform.OS === 'web' && { redirectUri: 'http://localhost:8081' })
   });
 
   React.useEffect(() => {
