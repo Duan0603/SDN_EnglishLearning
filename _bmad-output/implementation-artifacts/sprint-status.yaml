@@ -185,13 +185,13 @@ development_status:
   #   [BE] Streaming pipeline (zero-memory-footprint) .............. done
 
   # Story 3.3 [BE] Gemini API Prompting & Scoring Service (Backend)
-  3-3-gemini-api-prompting-scoring-service-backend: backlog
+  3-3-gemini-api-prompting-scoring-service-backend: done
   # Sub-tasks breakdown:
-  #   [BE] Gemini API client wrapper ............................... backlog
-  #   [BE] Specialized IELTS scoring prompt template ............... backlog
-  #   [BE] Response parser (structured JSON extraction) ............ backlog
-  #   [BE] Performance optimization (<7s end-to-end) ............... backlog
-  #   [BE] SpeakingSubmission model & persistence .................. backlog
+  #   [BE] Gemini API client wrapper ............................... done
+  #   [BE] Specialized IELTS scoring prompt template ............... done
+  #   [BE] Response parser (structured JSON extraction) ............ done
+  #   [BE] Performance optimization (<7s end-to-end) ............... done
+  #   [BE] SpeakingSubmission model & persistence .................. done
 
   # Story 3.4 [FE] Speaking Assessment Results UI (Frontend)
   3-4-speaking-assessment-results-ui-frontend: backlog
