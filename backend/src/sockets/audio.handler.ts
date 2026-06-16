@@ -3,6 +3,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { STTService } from '../services/stt.service';
+import { GeminiService } from '../services/gemini.service';
+import SpeakingSubmission from '../models/speakingSubmission.model.js';
 
 const TEMP_DIR = path.join(__dirname, '../../temp-audio');
 fs.ensureDirSync(TEMP_DIR);
@@ -28,18 +30,46 @@ export const registerAudioHandlers = (io: Server, socket: Socket) => {
     }
   });
 
-  socket.on('audio:stop', async () => {
+  socket.on('audio:stop', async (payload?: { userId?: string, testId?: string, prompt?: string }) => {
     if (fileStream) {
       fileStream.end();
       fileStream = null;
       console.log(`[Audio] Finished receiving audio at ${currentFilePath}`);
       
       try {
+        // 1. STT Phase
         const transcript = await STTService.transcribeAudio(currentFilePath);
         socket.emit('audio:transcript', { success: true, transcript });
+        
+        // 2. Gemini Scoring Phase
+        if (transcript && transcript.trim().length > 0) {
+          const scoreData = await GeminiService.scoreSpeaking(transcript, payload?.prompt);
+          socket.emit('audio:score', { success: true, score: scoreData });
+          
+          // 3. Save to DB
+          if (payload?.userId) {
+            const submission = new SpeakingSubmission({
+              userId: payload.userId,
+              testId: payload.testId || null,
+              prompt: payload.prompt || '',
+              audioUrl: 'local-temp', // In real app, upload to S3/Cloudinary first
+              transcription: transcript,
+              bandScore: scoreData.bandScore,
+              fluencyCoherence: scoreData.fluencyCoherence,
+              lexicalResource: scoreData.lexicalResource,
+              grammarAccuracy: scoreData.grammarAccuracy,
+              pronunciation: scoreData.pronunciation,
+              aiFeedback: scoreData.aiFeedback
+            });
+            await submission.save();
+            console.log(`[Audio] Saved speaking submission for user ${payload.userId}`);
+          }
+        } else {
+          socket.emit('audio:score', { success: false, error: 'Transcript is empty, cannot score' });
+        }
       } catch (error) {
-        console.error('[Audio] STT Error:', error);
-        socket.emit('audio:transcript', { success: false, error: 'Failed to transcribe audio' });
+        console.error('[Audio] Process Error:', error);
+        socket.emit('audio:error', { success: false, error: 'Failed to process audio' });
       } finally {
         // Cleanup after STT or after 15 mins
         setTimeout(() => {
@@ -49,3 +79,4 @@ export const registerAudioHandlers = (io: Server, socket: Socket) => {
     }
   });
 };
+
