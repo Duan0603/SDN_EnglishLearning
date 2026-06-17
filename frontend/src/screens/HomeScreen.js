@@ -4,13 +4,14 @@ import {
   Text, 
   ScrollView, 
   TouchableOpacity, 
-  SafeAreaView,
   Image,
   Pressable,
   Animated,
   Easing,
+  Platform,
   Dimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import useAuthStore from '../store/useAuthStore';
 import AuthModal from './AuthModal';
@@ -19,6 +20,7 @@ const { width } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
+  const isWeb = Platform.OS === 'web';
   const [isUserMenuVisible, setIsUserMenuVisible] = useState(false);
   const [menuAnim] = useState(new Animated.Value(0));
   const [isAuthModalVisible, setIsAuthModalVisible] = useState(false);
@@ -303,15 +305,75 @@ const HomeScreen = ({ navigation }) => {
                 <Text className="text-4xl font-black text-[#00CC99] leading-none">7.5</Text>
               </View>
             </View>
-            {/* Chart Simulation */}
-            <View className="flex-row justify-between items-end h-24 px-1">
-              {[{ day: 'M', h: 30, v: '6.0' }, { day: 'T', h: 50, v: '7.0' }, { day: 'W', h: 40, v: '6.5' }, { day: 'T', h: 60, v: '7.5' }, { day: 'F', h: 45, v: '7.0' }, { day: 'S', h: 75, v: '8.0' }].map((item, i) => (
-                <View key={i} className="items-center flex-1">
-                  <View className="bg-[#E6F9F5] px-1 py-0.5 rounded mb-1.5"><Text className="text-[8px] font-bold text-[#005C42]">{item.v}</Text></View>
-                  <View style={{ height: item.h }} className="w-5 bg-gradient-to-t from-[#A7F3D0] to-[#00CC99] rounded-t-md mb-1.5" />
-                  <Text className="text-[9px] font-bold text-[#9CA3AF]">{item.day}</Text>
+            <View className="flex-col lg:flex-row gap-6">
+              {/* Dashboard Left: Band Projection Chart */}
+              <View className="w-full lg:flex-[1.8] bg-white p-6 rounded-[32px] border border-[#E5E7EB] shadow-xs">
+                <View className="flex-row justify-between items-start mb-6">
+                  <View>
+                    <Text className="text-xs font-bold text-[#9CA3AF] uppercase tracking-wider">Performance Forecast</Text>
+                    <Text className="text-[28px] font-bold text-[#1E1E1E] tracking-tight mt-1">Total Band Projection</Text>
+                  </View>
+                  <View className="flex-row items-baseline">
+                    <Text className="text-[52px] font-black text-[#00CC99] tracking-tighter leading-none">7.5</Text>
+                    <Text className="text-xs font-bold text-[#6B7280] ml-2">Target:{"\n"}8.0</Text>
+                  </View>
                 </View>
-              ))}
+
+                {/* SVG Line Chart for High Premium Aesthetic */}
+                <View className="flex-row justify-between items-end h-32 mt-4 px-2">
+                  {[
+                    { day: 'Mon', height: 'h-10', val: '6.0' },
+                    { day: 'Tue', height: 'h-16', val: '7.0' },
+                    { day: 'Wed', height: 'h-12', val: '6.5' },
+                    { day: 'Thu', height: 'h-20', val: '7.5' },
+                    { day: 'Fri', height: 'h-14', val: '7.0' },
+                    { day: 'Sat', height: 'h-24', val: '8.0' },
+                  ].map((item, index) => (
+                    <View key={index} className="items-center flex-1">
+                      <View className="bg-[#E6F9F5] px-1.5 py-0.5 rounded-md mb-2">
+                        <Text className="text-[8px] font-bold text-[#005C42]">{item.val}</Text>
+                      </View>
+                      <View className={`w-6 ${item.height} bg-[#00CC99] rounded-t-xl mb-2`} />
+                      <Text className="text-[10px] font-bold text-[#9CA3AF]">{item.day}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* Dashboard Right: Quick Stats & Subscriptions */}
+              <View className="w-full lg:flex-[1.2] space-y-6">
+                {/* Skill Power */}
+                <View className="bg-[#005C42] p-6 rounded-[28px] flex-row justify-between items-center shadow-md shadow-emerald-500/10">
+                  <View>
+                    <Text className="text-xs font-bold text-white/80 uppercase tracking-wider">Overall Skill Power</Text>
+                    <Text className="text-2xl font-black text-white mt-1.5">8.0 Mock Avg.</Text>
+                  </View>
+                  <View className="w-12 h-12 bg-white/20 rounded-full items-center justify-center">
+                    <Svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="2.5">
+                      <Path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                    </Svg>
+                  </View>
+                </View>
+
+                {/* Free Mock Test Banner */}
+                <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] shadow-xs relative overflow-hidden">
+                  <View className="bg-[#E6F9F5] px-3.5 py-1 rounded-full self-start mb-4 border border-[#A7F3D0]">
+                    <Text className="text-[#005C42] text-[10px] font-extrabold uppercase tracking-widest">⚡ FREE PASS</Text>
+                  </View>
+                  <Text className="text-xl font-bold text-[#1E1E1E] mb-2 tracking-tight">
+                    Unlimited Practice Simulations
+                  </Text>
+                  <Text className="text-sm text-[#6B7280] mb-6 leading-6">
+                    Gain exclusive complimentary access to high-fidelity, timed Reading & Listening test mock sessions.
+                  </Text>
+                  <TouchableOpacity 
+                    onPress={() => handleProtectedNav('Practice', { screen: 'ReadingAI' })}
+                    className="bg-[#1E1E1E] py-4 rounded-[16px] items-center active:opacity-90"
+                  >
+                    <Text className="text-white text-sm font-bold">Start Free Mock Now</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           </View>
 
@@ -338,6 +400,7 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+
 
       {/* Auth Modal Popup */}
       <AuthModal visible={isAuthModalVisible} onClose={() => setIsAuthModalVisible(false)} />

@@ -10,9 +10,11 @@ const useAuthStore = create((set) => ({
   error: null,
 
   setSession: async (user, token) => {
-    const userId = user._id || user.id;
-    await storage.setItem('userToken', token);
-    await storage.setItem('userId', userId);
+    if (token) await storage.setItem('userToken', token);
+    if (user) {
+      const userId = user._id || user.id;
+      await storage.setItem('userId', userId);
+    }
     set({ user, token, isLoading: false, isBootstrapping: false, error: null });
   },
 
@@ -96,7 +98,9 @@ const useAuthStore = create((set) => ({
       const userId = await storage.getItem('userId');
       if (token && userId) {
         const response = await client.get('/auth/profile');
-        set({ user: response.data.metadata, token, isLoading: false, isBootstrapping: false, error: null });
+        const user = response.data.metadata;
+        await storage.setItem('userId', user._id || user.id);
+        set({ user, token, isLoading: false, isBootstrapping: false, error: null });
         return;
       }
 

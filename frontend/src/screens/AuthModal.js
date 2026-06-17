@@ -467,7 +467,14 @@ const styles = StyleSheet.create({
   keyboardView: {
     width: '95%',
     maxWidth: 900,
-    maxHeight: '90%',
+    ...Platform.select({
+      web: {
+        maxHeight: '90%',
+      },
+      default: {
+        height: '80%',
+      }
+    })
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
@@ -478,7 +485,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 24,
     elevation: 10,
-    maxHeight: '100%',
+    ...Platform.select({
+      web: {
+        maxHeight: '100%',
+      },
+      default: {
+        flex: 1,
+      }
+    })
   },
   splitLayout: {
     flexDirection: 'row',
@@ -564,8 +578,15 @@ const styles = StyleSheet.create({
   },
   formPanel: {
     flex: 1.3,
-    padding: 36,
     position: 'relative',
+    ...Platform.select({
+      web: {
+        padding: 36,
+      },
+      default: {
+        padding: 24,
+      }
+    })
   },
   closeIconButton: {
     position: 'absolute',

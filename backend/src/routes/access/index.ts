@@ -20,4 +20,5 @@ accessRouter.use(authentication);
 // Access routes (logout, refresh token, etc.)
 accessRouter.post('/logout', asyncHandler(AccessController.logout));
 accessRouter.get('/profile', asyncHandler(AccessController.getProfile));
+accessRouter.patch('/profile', asyncHandler(AccessController.updateProfile));
 

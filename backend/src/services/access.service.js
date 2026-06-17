@@ -64,7 +64,7 @@ export class AccessService {
 
     }
 
-    static signUp = async ({username, email, password, phone}) => {
+    static signUp = async ({username, email, password, fullName, birthday = '', phone, identityNumber = '', role = 'STUDENT'}) => {
         // Validate required fields
         if (!username || !email || !password || !phone) {
             throw new BadRequestError("username, email, password and phone are required")
@@ -86,15 +86,20 @@ export class AccessService {
         }
 
         const hashedPassword = await bcrypt.hash(password, 10)
+        const status = role === 'MENTOR' ? 'pending' : 'active';
 
         //tao user moi
         const newUser = await userModel.create({
             username, 
-            fullName: username, 
+            fullName: fullName || username, 
             email, 
             password: hashedPassword, 
-            role: Role.STUDENT,
-            phone
+            role: role,
+            status: status,
+            verify: false,
+            birthday,
+            phone,
+            identityNumber
         })
 
 

@@ -39,13 +39,15 @@ const PasswordCriteria = ({ text, isValid, isEmpty }) => (
 
 const RegisterScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const { register, isLoading } = useAuthStore();
+  const { register, isLoading, error } = useAuthStore();
 
   const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState('STUDENT');
+  const [validationError, setValidationError] = useState('');
 
   const [isRobot, setIsRobot] = useState(false); // mock recaptcha: false means IS a robot, checked means NOT a robot
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -146,6 +148,8 @@ const RegisterScreen = ({ navigation }) => {
         email: email.trim(),
         password,
         phone: phone.trim(),
+        role: role,
+        fullName: username.trim(),
       });
       // Success
       Alert.alert('Thành công', 'Đăng ký thành công! Vui lòng đăng nhập.', [
@@ -179,6 +183,49 @@ const RegisterScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.form}>
+            {/* Role Selector */}
+            <Text style={{ fontFamily: 'Outfit_500Medium', color: '#374151', marginBottom: 8, fontSize: 15 }}>Tôi muốn đăng ký làm:</Text>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+              <TouchableOpacity
+                onPress={() => setRole('STUDENT')}
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: role === 'STUDENT' ? '#00c495' : '#E5E7EB',
+                  backgroundColor: role === 'STUDENT' ? '#E6F9F5' : 'transparent',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontFamily: 'Outfit_700Bold', color: role === 'STUDENT' ? '#005C42' : '#737373' }}>Học viên</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setRole('MENTOR')}
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: role === 'MENTOR' ? '#00c495' : '#E5E7EB',
+                  backgroundColor: role === 'MENTOR' ? '#E6F9F5' : 'transparent',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontFamily: 'Outfit_700Bold', color: role === 'MENTOR' ? '#005C42' : '#737373' }}>Giáo viên</Text>
+              </TouchableOpacity>
+            </View>
+
+            {!!(error || validationError) && (
+              <View style={{ backgroundColor: '#FEE2E2', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+                <Text style={{ color: '#DC2626', textAlign: 'center', fontFamily: 'Outfit_500Medium' }}>
+                  {validationError || error}
+                </Text>
+              </View>
+            )}
+
             {/* Username */}
             <View style={styles.inputWrapper}>
               <TextInput

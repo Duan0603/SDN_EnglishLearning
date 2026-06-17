@@ -13,7 +13,7 @@ import PracticeScreen from '../screens/PracticeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ExamScreen from '../screens/ExamScreen';
 import AdminScreen from '../screens/AdminScreen';
-
+import MentorsScreen from '../screens/MentorsScreen';
 import useAuthStore from '../store/useAuthStore';
 
 const Stack = createNativeStackNavigator();
@@ -69,12 +69,7 @@ const MainTabNavigator = () => {
       />
       <Tab.Screen 
         name="Mentors" 
-        component={ProfileScreen} 
-        listeners={{
-          tabPress: e => {
-            // Placeholder: Navigate to Mentor screen or show coming soon
-          },
-        }}
+        component={MentorsScreen} 
         options={{
           tabBarIcon: ({ color }) => (
             <Svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
@@ -132,6 +127,7 @@ const AppNavigator = () => {
             <Stack.Screen name="Main" component={MainTabNavigator} />
             <Stack.Screen name="Exam" component={ExamScreen} />
             <Stack.Screen name="Admin" component={AdminScreen} />
+            <Stack.Screen name="Mentors" component={MentorsScreen} />
           </>
         )}
       </Stack.Navigator>

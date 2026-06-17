@@ -4,7 +4,6 @@ import {
   Text, 
   ScrollView, 
   TouchableOpacity, 
-  SafeAreaView,
   TextInput,
   Animated as RNAnimated,
   Easing,
@@ -15,12 +14,12 @@ import {
   Alert,
   ActivityIndicator
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import useAuthStore from '../store/useAuthStore';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import { socket } from '../utils/socket';
-import Svg, { Path, Circle, Rect, Line, Defs, LinearGradient } from 'react-native-svg';
+import Svg, { Path, Circle, Rect, Line, Defs, LinearGradient, Stop } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -2074,8 +2073,8 @@ const PracticeScreen = ({ navigation, route }) => {
               <Svg width="100%" height="110" viewBox="0 0 300 110">
                 <Defs>
                   <LinearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#00CC99" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#00CC99" stopOpacity="0.0" />
+                    <Stop offset="0%" stopColor="#00CC99" stopOpacity="0.25" />
+                    <Stop offset="100%" stopColor="#00CC99" stopOpacity="0.0" />
                   </LinearGradient>
                 </Defs>
 
