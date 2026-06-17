@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import AppNavigator from './src/navigation/AppNavigator';
 import "./global.css";
@@ -51,10 +52,13 @@ export default function App() {
   }
 
   return (
-    <PaperProvider theme={theme}>
-      <AppNavigator />
-      <StatusBar style="auto" />
-      <Toast />
-    </PaperProvider>
+    <SafeAreaProvider>
+      <PaperProvider theme={theme}>
+        <AppNavigator />
+        <StatusBar style="auto" />
+        <Toast />
+      </PaperProvider>
+    </SafeAreaProvider>
   );
 }
+

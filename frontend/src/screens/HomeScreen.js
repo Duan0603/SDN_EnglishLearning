@@ -4,19 +4,20 @@ import {
   Text, 
   ScrollView, 
   TouchableOpacity, 
-  SafeAreaView,
   Image,
   Pressable,
   Animated,
-  Easing
+  Easing,
+  Platform
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import useAuthStore from '../store/useAuthStore';
 import AuthModal from './AuthModal';
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
-  const isWeb = true;
+  const isWeb = Platform.OS === 'web';
   const [isUserMenuVisible, setIsUserMenuVisible] = useState(false);
   const [menuAnim] = useState(new Animated.Value(0));
   const [isAuthModalVisible, setIsAuthModalVisible] = useState(false);
@@ -119,6 +120,8 @@ const HomeScreen = ({ navigation }) => {
           onPress={() =>
             menu === 'Practice'
               ? handleProtectedNav('Practice')
+              : menu === 'Mentors'
+              ? handleProtectedNav('Mentors')
               : menu === 'Home'
               ? null
               : handleProtectedNav('Profile')
@@ -365,9 +368,9 @@ const HomeScreen = ({ navigation }) => {
               </Text>
             </View>
             {/* Course Cards Grid */}
-            <View className="flex-row flex-wrap justify-between gap-6">
+            <View className="flex-col lg:flex-row gap-6">
               {/* Course 1: IELTS Academic */}
-              <View className="flex-1 min-w-[300px] bg-[#FAFAFA] rounded-[32px] border border-[#E5E7EB] p-8 hover:border-[#00CC99]/30 transition-all shadow-xs relative overflow-hidden">
+              <View className="flex-1 bg-[#FAFAFA] rounded-[32px] border border-[#E5E7EB] p-8 hover:border-[#00CC99]/30 transition-all shadow-xs relative overflow-hidden">
                 <View className="absolute top-0 right-0 w-24 h-24 bg-[#E6F9F5] rounded-bl-[48px] items-center justify-center">
                   <Text className="text-2xl">🎓</Text>
                 </View>
@@ -393,7 +396,7 @@ const HomeScreen = ({ navigation }) => {
               </View>
 
               {/* Course 2: General Training */}
-              <View className="flex-1 min-w-[300px] bg-[#FAFAFA] rounded-[32px] border border-[#E5E7EB] p-8 hover:border-[#005C42]/30 transition-all shadow-xs relative overflow-hidden">
+              <View className="flex-1 bg-[#FAFAFA] rounded-[32px] border border-[#E5E7EB] p-8 hover:border-[#005C42]/30 transition-all shadow-xs relative overflow-hidden">
                 <View className="absolute top-0 right-0 w-24 h-24 bg-[#E6F9F5] rounded-bl-[48px] items-center justify-center">
                   <Text className="text-2xl">💼</Text>
                 </View>
@@ -419,7 +422,7 @@ const HomeScreen = ({ navigation }) => {
               </View>
 
               {/* Course 3: Speaking Masterclass */}
-              <View className="flex-1 min-w-[300px] bg-[#FAFAFA] rounded-[32px] border border-[#E5E7EB] p-8 hover:border-[#F97316]/30 transition-all shadow-xs relative overflow-hidden">
+              <View className="flex-1 bg-[#FAFAFA] rounded-[32px] border border-[#E5E7EB] p-8 hover:border-[#F97316]/30 transition-all shadow-xs relative overflow-hidden">
                 <View className="absolute top-0 right-0 w-24 h-24 bg-[#FFF7ED] rounded-bl-[48px] items-center justify-center">
                   <Text className="text-2xl">🎙️</Text>
                 </View>
@@ -460,7 +463,7 @@ const HomeScreen = ({ navigation }) => {
               </View>
             </View>
 
-            <View className="flex-col lg:flex-row gap-6 items-start">
+            <View className="flex-col lg:flex-row gap-6">
               {/* Dashboard Left: Band Projection Chart */}
               <View className="w-full lg:flex-[1.8] bg-white p-6 rounded-[32px] border border-[#E5E7EB] shadow-xs">
                 <View className="flex-row justify-between items-start mb-6">
@@ -488,7 +491,7 @@ const HomeScreen = ({ navigation }) => {
                       <View className="bg-[#E6F9F5] px-1.5 py-0.5 rounded-md mb-2">
                         <Text className="text-[8px] font-bold text-[#005C42]">{item.val}</Text>
                       </View>
-                      <View className={`w-7.5 ${item.height} bg-gradient-to-t from-[#A7F3D0] to-[#00CC99] rounded-t-xl mb-2`} />
+                      <View className={`w-6 ${item.height} bg-[#00CC99] rounded-t-xl mb-2`} />
                       <Text className="text-[10px] font-bold text-[#9CA3AF]">{item.day}</Text>
                     </View>
                   ))}
@@ -498,7 +501,7 @@ const HomeScreen = ({ navigation }) => {
               {/* Dashboard Right: Quick Stats & Subscriptions */}
               <View className="w-full lg:flex-[1.2] space-y-6">
                 {/* Skill Power */}
-                <View className="bg-gradient-to-r from-[#005C42] to-[#00CC99] p-6 rounded-[28px] flex-row justify-between items-center shadow-md shadow-emerald-500/10">
+                <View className="bg-[#005C42] p-6 rounded-[28px] flex-row justify-between items-center shadow-md shadow-emerald-500/10">
                   <View>
                     <Text className="text-xs font-bold text-white/80 uppercase tracking-wider">Overall Skill Power</Text>
                     <Text className="text-2xl font-black text-white mt-1.5">8.0 Mock Avg.</Text>
@@ -630,7 +633,7 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          onPress={() => handleProtectedNav('Profile')}
+          onPress={() => handleProtectedNav('Mentors')}
           className="items-center py-2 flex-1"
         >
           <Svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2">

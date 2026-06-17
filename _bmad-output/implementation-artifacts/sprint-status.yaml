@@ -95,11 +95,11 @@ development_status:
 
   epic-1-retrospective: optional
 
-# ==============================================================================
-# EPIC 2: The Exam Engine & Content
-# Goal: Admin uploads exams, Students take mock exams, practice, review results
-# FRs covered: FR1, FR2, FR3, FR6 (partial)
-# ==============================================================================
+  # ==============================================================================
+  # EPIC 2: The Exam Engine & Content
+  # Goal: Admin uploads exams, Students take mock exams, practice, review results
+  # FRs covered: FR1, FR2, FR3, FR6 (partial)
+  # ==============================================================================
   epic-2: in-progress
 
   # Story 2.1 [BE] Admin Exam Management API (Backend)
@@ -157,11 +157,11 @@ development_status:
 
   epic-2-retrospective: optional
 
-# ==============================================================================
-# EPIC 3: AI Speaking Assessment
-# Goal: Record voice → STT → Gemini AI scoring (4 IELTS criteria)
-# FRs covered: FR4
-# ==============================================================================
+  # ==============================================================================
+  # EPIC 3: AI Speaking Assessment
+  # Goal: Record voice → STT → Groq AI scoring (4 IELTS criteria)
+  # FRs covered: FR4
+  # ==============================================================================
   epic-3: backlog
 
   # Story 3.1 [FE] Audio Recording & Microphone Handling (Frontend)
@@ -184,10 +184,10 @@ development_status:
   #   [BE] Temporary audio cache (15-min TTL cleanup) .............. backlog
   #   [BE] Streaming pipeline (zero-memory-footprint) .............. backlog
 
-  # Story 3.3 [BE] Gemini API Prompting & Scoring Service (Backend)
-  3-3-gemini-api-prompting-scoring-service-backend: backlog
+  # Story 3.3 [BE] Groq API Prompting & Scoring Service (Backend)
+  3-3-Groq-api-prompting-scoring-service-backend: backlog
   # Sub-tasks breakdown:
-  #   [BE] Gemini API client wrapper ............................... backlog
+  #   [BE] Groq API client wrapper ............................... backlog
   #   [BE] Specialized IELTS scoring prompt template ............... backlog
   #   [BE] Response parser (structured JSON extraction) ............ backlog
   #   [BE] Performance optimization (<7s end-to-end) ............... backlog
@@ -203,11 +203,11 @@ development_status:
 
   epic-3-retrospective: optional
 
-# ==============================================================================
-# EPIC 4: Mentor & Booking Ecosystem
-# Goal: Admin approves mentors, Mentors manage availability, Students book safely
-# FRs covered: FR5, FR6 (partial)
-# ==============================================================================
+  # ==============================================================================
+  # EPIC 4: Mentor & Booking Ecosystem
+  # Goal: Admin approves mentors, Mentors manage availability, Students book safely
+  # FRs covered: FR5, FR6 (partial)
+  # ==============================================================================
   epic-4: backlog
 
   # Story 4.1 [FULL] Mentor Approval & Profile (Admin & Mentor)

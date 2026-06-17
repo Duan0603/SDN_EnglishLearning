@@ -5,13 +5,13 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  SafeAreaView,
   useWindowDimensions,
   Modal,
   Alert,
   ActivityIndicator,
   StyleSheet
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 import useAuthStore from '../store/useAuthStore';
 import adminUserService from '../api/adminUser.service';

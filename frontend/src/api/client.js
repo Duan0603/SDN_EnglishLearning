@@ -29,6 +29,10 @@ client.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  const userId = await storage.getItem('userId');
+  if (userId) {
+    config.headers['x-client-id'] = userId;
+  }
   return config;
 }, (error) => {
   return Promise.reject(error);

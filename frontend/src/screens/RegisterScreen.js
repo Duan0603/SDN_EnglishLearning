@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { TextInput, Button, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -9,6 +9,7 @@ const RegisterScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('STUDENT');
   const [validationError, setValidationError] = useState('');
   const { register, isLoading, error } = useAuthStore();
   const insets = useSafeAreaInsets();
@@ -37,7 +38,8 @@ const RegisterScreen = ({ navigation }) => {
       username: username, 
       email: email.trim(), 
       password, 
-      fullName: fullName.trim() 
+      fullName: fullName.trim(),
+      role
     });
   };
 
@@ -80,6 +82,41 @@ const RegisterScreen = ({ navigation }) => {
                 </Text>
               </View>
             )}
+
+            {/* Role Selector */}
+            <Text style={{ fontFamily: 'Outfit_500Medium', color: '#374151', marginBottom: 8, fontSize: 15 }}>I want to register as:</Text>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+              <TouchableOpacity
+                onPress={() => { setRole('STUDENT'); clearErrors(); }}
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: role === 'STUDENT' ? '#00D1A0' : '#E5E7EB',
+                  backgroundColor: role === 'STUDENT' ? '#E6F9F5' : 'transparent',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontFamily: 'Outfit_700Bold', color: role === 'STUDENT' ? '#005C42' : '#737373' }}>Student</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { setRole('MENTOR'); clearErrors(); }}
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: role === 'MENTOR' ? '#00D1A0' : '#E5E7EB',
+                  backgroundColor: role === 'MENTOR' ? '#E6F9F5' : 'transparent',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontFamily: 'Outfit_700Bold', color: role === 'MENTOR' ? '#005C42' : '#737373' }}>Mentor</Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={{ gap: 8, marginBottom: 32 }}>
               <TextInput

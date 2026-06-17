@@ -9,6 +9,7 @@ import PracticeScreen from '../screens/PracticeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ExamScreen from '../screens/ExamScreen';
 import AdminScreen from '../screens/AdminScreen';
+import MentorsScreen from '../screens/MentorsScreen';
 import useAuthStore from '../store/useAuthStore';
 
 const Stack = createNativeStackNavigator();
@@ -45,6 +46,7 @@ const AppNavigator = () => {
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="Exam" component={ExamScreen} />
             <Stack.Screen name="Admin" component={AdminScreen} />
+            <Stack.Screen name="Mentors" component={MentorsScreen} />
           </>
         )}
       </Stack.Navigator>
