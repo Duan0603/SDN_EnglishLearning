@@ -157,41 +157,41 @@ development_status:
 
   epic-2-retrospective: optional
 
-  # ==============================================================================
-  # EPIC 3: AI Speaking Assessment
-  # Goal: Record voice → STT → Groq AI scoring (4 IELTS criteria)
-  # FRs covered: FR4
-  # ==============================================================================
-  epic-3: backlog
+# ==============================================================================
+# EPIC 3: AI Speaking Assessment
+# Goal: Record voice → STT → Gemini AI scoring (4 IELTS criteria)
+# FRs covered: FR4
+# ==============================================================================
+  epic-3: in-progress
 
   # Story 3.1 [FE] Audio Recording & Microphone Handling (Frontend)
-  3-1-audio-recording-microphone-handling-frontend: backlog
+  3-1-audio-recording-microphone-handling-frontend: done
   # Sub-tasks breakdown:
-  #   [FE] Microphone permission request flow ...................... backlog
-  #   [FE] MediaRecorder API integration (start/stop/pause) ........ backlog
-  #   [FE] Recording indicator (blinking dot animation) ............ backlog
-  #   [FE] Error handling: mic disconnect / network loss ........... backlog
-  #   [FE] Toast notification for retry on interruption ............ backlog
-  #   [FE] IndexedDB caching for offline audio blobs ............... backlog
-  #   [FE] Disabled button state during permission request ......... backlog
+  #   [FE] Microphone permission request flow ...................... done
+  #   [FE] MediaRecorder API integration (start/stop/pause) ........ done
+  #   [FE] Recording indicator (blinking dot animation) ............ done
+  #   [FE] Error handling: mic disconnect / network loss ........... done
+  #   [FE] Toast notification for retry on interruption ............ done
+  #   [FE] IndexedDB caching for offline audio blobs ............... done
+  #   [FE] Disabled button state during permission request ......... done
 
   # Story 3.2 [BE] Socket.io Audio Receiver & Speech-to-Text (Backend)
-  3-2-socket-io-audio-receiver-speech-to-text-backend: backlog
+  3-2-socket-io-audio-receiver-speech-to-text-backend: done
   # Sub-tasks breakdown:
-  #   [BE] Socket.io audio:chunk event handler ..................... backlog
-  #   [BE] Audio buffer assembly from chunks ....................... backlog
-  #   [BE] Whisper STT API integration ............................. backlog
-  #   [BE] Temporary audio cache (15-min TTL cleanup) .............. backlog
-  #   [BE] Streaming pipeline (zero-memory-footprint) .............. backlog
+  #   [BE] Socket.io audio:chunk event handler ..................... done
+  #   [BE] Audio buffer assembly from chunks ....................... done
+  #   [BE] Whisper STT API integration ............................. done
+  #   [BE] Temporary audio cache (15-min TTL cleanup) .............. done
+  #   [BE] Streaming pipeline (zero-memory-footprint) .............. done
 
-  # Story 3.3 [BE] Groq API Prompting & Scoring Service (Backend)
-  3-3-Groq-api-prompting-scoring-service-backend: backlog
+  # Story 3.3 [BE] Gemini API Prompting & Scoring Service (Backend)
+  3-3-gemini-api-prompting-scoring-service-backend: done
   # Sub-tasks breakdown:
-  #   [BE] Groq API client wrapper ............................... backlog
-  #   [BE] Specialized IELTS scoring prompt template ............... backlog
-  #   [BE] Response parser (structured JSON extraction) ............ backlog
-  #   [BE] Performance optimization (<7s end-to-end) ............... backlog
-  #   [BE] SpeakingSubmission model & persistence .................. backlog
+  #   [BE] Gemini API client wrapper ............................... done
+  #   [BE] Specialized IELTS scoring prompt template ............... done
+  #   [BE] Response parser (structured JSON extraction) ............ done
+  #   [BE] Performance optimization (<7s end-to-end) ............... done
+  #   [BE] SpeakingSubmission model & persistence .................. done
 
   # Story 3.4 [FE] Speaking Assessment Results UI (Frontend)
   3-4-speaking-assessment-results-ui-frontend: backlog

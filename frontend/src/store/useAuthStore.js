@@ -11,7 +11,10 @@ const useAuthStore = create((set) => ({
 
   setSession: async (user, token) => {
     if (token) await storage.setItem('userToken', token);
-    if (user) await storage.setItem('userId', user._id || user.id);
+    if (user) {
+      const userId = user._id || user.id;
+      await storage.setItem('userId', userId);
+    }
     set({ user, token, isLoading: false, isBootstrapping: false, error: null });
   },
 
@@ -59,7 +62,23 @@ const useAuthStore = create((set) => ({
     }
   },
 
-
+  googleLogin: async (idToken) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await client.post('/auth/google-login', { idToken });
+      const { metadata } = response.data;
+      const token = metadata.tokens.accessToken;
+      const user = metadata.user;
+      
+      await storage.setItem('userToken', token);
+      set({ user, token, isLoading: false, isBootstrapping: false });
+    } catch (error) {
+      set({ 
+        error: error.response?.data?.message || 'Google Login failed', 
+        isLoading: false 
+      });
+    }
+  },
   logout: async () => {
     try {
       await client.post('/auth/logout');
@@ -76,7 +95,8 @@ const useAuthStore = create((set) => ({
     set({ isBootstrapping: true });
     try {
       const token = await storage.getItem('userToken');
-      if (token) {
+      const userId = await storage.getItem('userId');
+      if (token && userId) {
         const response = await client.get('/auth/profile');
         const user = response.data.metadata;
         await storage.setItem('userId', user._id || user.id);

@@ -6,3 +6,10 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body, html, div, span, p, a, input, textarea, button, p, h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit_500Medium', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  }
+}
+
+

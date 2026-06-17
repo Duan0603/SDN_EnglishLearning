@@ -11,6 +11,9 @@ accessRouter.post('/signup', asyncHandler(AccessController.signUp));
 // SignIn 
 accessRouter.post('/login', asyncHandler(AccessController.signIn));
 
+// Google Login
+accessRouter.post('/google-login', asyncHandler(AccessController.googleLogin));
+
 // Authentication middleware
 accessRouter.use(authentication);
 

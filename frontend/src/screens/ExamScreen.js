@@ -55,6 +55,7 @@ const AnimatedButton = ({ onPress, children, className, style, activeScale = 0.9
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onPress={onPress}
+      hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
       style={[style, animatedStyle]}
     >
       <View className={className}>
@@ -182,6 +183,7 @@ const SlidingSegmentedControl = ({ activeTab, setActiveTab, screenWidth }) => {
       
       <TouchableOpacity 
         onPress={() => setActiveTab('passage')}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         className="flex-1 py-3 items-center z-10 rounded-xl"
         activeOpacity={0.8}
       >
@@ -192,6 +194,7 @@ const SlidingSegmentedControl = ({ activeTab, setActiveTab, screenWidth }) => {
       
       <TouchableOpacity 
         onPress={() => setActiveTab('questions')}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         className="flex-1 py-3 items-center z-10 rounded-xl"
         activeOpacity={0.8}
       >
@@ -270,6 +273,7 @@ const AnimatedOption = ({ optionKey, text, isSelected, onPress }) => {
     <Animated.View style={animatedCardStyle} className="border rounded-2xl mb-2.5 overflow-hidden shadow-xs">
       <TouchableOpacity
         onPress={onPress}
+        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
         className="flex-row items-center p-4 active:opacity-90"
         activeOpacity={0.9}
       >
@@ -324,6 +328,7 @@ const SlidingTFNG = ({ selectedValue, onSelect, screenWidth }) => {
         <TouchableOpacity
           key={choice}
           onPress={() => onSelect(choice)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           className="flex-1 py-3 items-center z-10"
           activeOpacity={0.8}
         >
