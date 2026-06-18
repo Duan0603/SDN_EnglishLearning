@@ -73,12 +73,30 @@ export class ExamService {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
+        include: {
+          sections: {
+            select: {
+              _count: {
+                select: { questions: true }
+              }
+            }
+          }
+        }
       }),
       prisma.test.count({ where }),
     ]);
 
+    const examsWithCount = exams.map(exam => {
+      const questionsCount = exam.sections.reduce((sum, sec) => sum + (sec._count?.questions || 0), 0);
+      const { sections, ...examData } = exam;
+      return {
+        ...examData,
+        questionsCount
+      };
+    });
+
     return {
-      exams,
+      exams: examsWithCount,
       pagination: {
         total,
         page,

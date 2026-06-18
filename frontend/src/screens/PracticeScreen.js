@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useAuthStore from '../store/useAuthStore';
+import examService from '../api/exam.service';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import { socket } from '../utils/socket';
@@ -242,32 +243,31 @@ const CircularTimer = ({ timeLeft, initialTime }) => {
   const isLowTime = timeLeft < 300;
 
   return (
-    <Animated.View 
+    <Animated.View
       style={animatedContainerStyle}
-      className={`flex-row items-center px-4 py-2 rounded-2xl border ${
-        isLowTime 
-          ? 'bg-[#FEF2F2]/90 border-[#EF4444]/20 shadow-sm shadow-red-100' 
+      className={`flex-row items-center px-4 py-2 rounded-2xl border ${isLowTime
+          ? 'bg-[#FEF2F2]/90 border-[#EF4444]/20 shadow-sm shadow-red-100'
           : 'bg-white/90 border-[#00CC99]/20'
-      }`}
+        }`}
     >
       <View className="relative w-5 h-5 mr-2 items-center justify-center">
         <Svg width="20" height="20" viewBox="0 0 36 36">
-          <Circle 
-            cx="18" 
-            cy="18" 
-            r="15" 
-            fill="none" 
-            stroke={isLowTime ? '#FCA5A5' : '#D1FAE5'} 
-            strokeWidth="3.5" 
+          <Circle
+            cx="18"
+            cy="18"
+            r="15"
+            fill="none"
+            stroke={isLowTime ? '#FCA5A5' : '#D1FAE5'}
+            strokeWidth="3.5"
             style={{ opacity: 0.4 }}
           />
-          <AnimatedCircle 
-            cx="18" 
-            cy="18" 
-            r="15" 
-            fill="none" 
-            strokeWidth="3.5" 
-            strokeDasharray="94.2" 
+          <AnimatedCircle
+            cx="18"
+            cy="18"
+            r="15"
+            fill="none"
+            strokeWidth="3.5"
+            strokeDasharray="94.2"
             strokeLinecap="round"
             animatedProps={animatedCircleProps}
             transform="rotate(-90 18 18)"
@@ -300,12 +300,12 @@ const SlidingSegmentedControl = ({ activeTab, setActiveTab, screenWidth }) => {
 
   return (
     <View className="flex-row bg-[#F1F5F9]/85 mx-6 my-3 p-1 rounded-2xl relative border border-[#E5E7EB]">
-      <Animated.View 
+      <Animated.View
         style={[{ height: '82%', position: 'absolute', top: 4, left: 4 }, animatedPillStyle]}
         className="bg-white rounded-xl shadow-md shadow-slate-200/50"
       />
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         onPress={() => setActiveTab('passage')}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         className="flex-1 py-3 items-center z-10 rounded-xl"
@@ -315,8 +315,8 @@ const SlidingSegmentedControl = ({ activeTab, setActiveTab, screenWidth }) => {
           📖 Read Passage
         </Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         onPress={() => setActiveTab('questions')}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         className="flex-1 py-3 items-center z-10 rounded-xl"
@@ -401,8 +401,8 @@ const AnimatedOption = ({ optionKey, text, isSelected, onPress }) => {
         className="flex-row items-center p-4 active:opacity-90"
         activeOpacity={0.9}
       >
-        <Animated.View 
-          style={animatedRadioStyle} 
+        <Animated.View
+          style={animatedRadioStyle}
           className="w-5 h-5 rounded-full border-2 items-center justify-center mr-3"
         >
           <Animated.View style={animatedRadioDotStyle} className="w-2.5 h-2.5 rounded-full bg-white" />
@@ -441,12 +441,12 @@ const SlidingTFNG = ({ selectedValue, onSelect, screenWidth }) => {
   return (
     <View className="flex-row bg-[#F1F5F9] p-1 rounded-2xl relative border border-[#E5E7EB] mt-3">
       {index !== -1 && (
-        <Animated.View 
+        <Animated.View
           style={[{ height: '82%', position: 'absolute', top: 4, left: 4 }, animatedPillStyle]}
           className="bg-[#00CC99] rounded-xl shadow-xs"
         />
       )}
-      
+
       {['TRUE', 'FALSE', 'NOT GIVEN'].map((choice) => (
         <TouchableOpacity
           key={choice}
@@ -455,9 +455,8 @@ const SlidingTFNG = ({ selectedValue, onSelect, screenWidth }) => {
           className="flex-1 py-3 items-center z-10"
           activeOpacity={0.8}
         >
-          <Text className={`text-[10px] font-black tracking-wider ${
-            selectedValue === choice ? 'text-white' : 'text-[#9CA3AF]'
-          }`}>
+          <Text className={`text-[10px] font-black tracking-wider ${selectedValue === choice ? 'text-white' : 'text-[#9CA3AF]'
+            }`}>
             {choice}
           </Text>
         </TouchableOpacity>
@@ -502,14 +501,14 @@ const SlideUpModal = ({ visible, onClose, children }) => {
   return (
     <Modal transparent visible={shouldRender} animationType="none" onRequestClose={onClose}>
       <View className="flex-1 justify-end">
-        <Animated.View 
+        <Animated.View
           style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000000' }, animatedBackdropStyle]}
         >
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
         </Animated.View>
 
-        <Animated.View 
-          style={[animatedSheetStyle]} 
+        <Animated.View
+          style={[animatedSheetStyle]}
           className="bg-white p-6 rounded-t-[36px] border-t border-[#E5E7EB] shadow-2xl pb-10"
         >
           <View className="w-12 h-1.5 bg-[#E5E7EB] rounded-full self-center mb-6" />
@@ -563,7 +562,7 @@ const SlidingHeaderTabs = ({ activeTab, setActiveTab }) => {
     { id: 'SpeakingAI', label: 'Speaking' },
     { id: 'ReadingAnalysis', label: 'Analytics' }
   ];
-  
+
   const index = tabs.findIndex(t => t.id === activeTab);
   const slideVal = useSharedValue(index === -1 ? 0 : index);
 
@@ -580,15 +579,15 @@ const SlidingHeaderTabs = ({ activeTab, setActiveTab }) => {
   });
 
   return (
-    <View 
+    <View
       style={{ width: 428, height: 40, padding: 4 }}
       className="bg-[#F1F5F9] rounded-full flex-row border border-[#E5E7EB] relative items-center flex-shrink-0"
     >
-      <Animated.View 
+      <Animated.View
         style={[{ width: 84, height: 32, position: 'absolute', top: 4, left: 4 }, animatedPillStyle]}
         className="bg-white rounded-full shadow-sm shadow-emerald-500/20"
       />
-      
+
       {tabs.map((tab) => (
         <TouchableOpacity
           key={tab.id}
@@ -598,11 +597,10 @@ const SlidingHeaderTabs = ({ activeTab, setActiveTab }) => {
           className="items-center justify-center z-10"
           activeOpacity={0.8}
         >
-          <Text 
+          <Text
             style={{ fontSize: 10.5 }}
-            className={`font-black tracking-tight ${
-              activeTab === tab.id ? 'text-[#005C42]' : 'text-[#6B7280]'
-            }`}
+            className={`font-black tracking-tight ${activeTab === tab.id ? 'text-[#005C42]' : 'text-[#6B7280]'
+              }`}
           >
             {tab.label}
           </Text>
@@ -629,11 +627,11 @@ const SlidingGraphFilter = ({ graphFilter, setGraphFilter }) => {
 
   return (
     <View className="w-[144px] h-8 bg-[#F1F5F9] rounded-xl flex-row p-0.5 border border-[#E5E7EB] relative items-center justify-between">
-      <Animated.View 
+      <Animated.View
         style={[{ width: 68, height: 24, position: 'absolute', top: 2, left: 2 }, animatedPillStyle]}
         className="bg-[#1E1E1E] rounded-lg"
       />
-      
+
       <TouchableOpacity
         onPress={() => setGraphFilter('last10')}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -717,7 +715,7 @@ const MilestoneCard = ({ title, date, score, iconType }) => {
 // --- Main PracticeScreen Component ---
 const PracticeScreen = ({ navigation, route }) => {
   const initialTab = route?.params?.screen || 'ReadingAI';
-  
+
   const getNormalizedTab = (tabName) => {
     if (tabName === 'WritingSubmit' || tabName === 'WritingAI') {
       return 'WritingAI';
@@ -742,6 +740,36 @@ const PracticeScreen = ({ navigation, route }) => {
   const { width: screenWidth } = useWindowDimensions();
 
   const { token } = useAuthStore();
+
+  // Dynamic Exams State
+  const [readingExams, setReadingExams] = useState([]);
+  const [listeningExams, setListeningExams] = useState([]);
+  const [examsLoading, setExamsLoading] = useState(false);
+  const [examsError, setExamsError] = useState(null);
+
+  useEffect(() => {
+    const fetchExamsList = async () => {
+      if (activeTab === 'ReadingAI' || activeTab === 'ListeningAI') {
+        setExamsLoading(true);
+        setExamsError(null);
+        try {
+          const type = activeTab === 'ReadingAI' ? 'READING' : 'LISTENING';
+          const res = await examService.getAll({ type });
+          const list = res.data?.data?.exams || res.data?.exams || [];
+          if (type === 'READING') {
+            setReadingExams(list);
+          } else {
+            setListeningExams(list);
+          }
+        } catch (err) {
+          setExamsError('Không thể tải danh sách đề thi. Vui lòng thử lại sau.');
+        } finally {
+          setExamsLoading(false);
+        }
+      }
+    };
+    fetchExamsList();
+  }, [activeTab]);
 
   // Reading Exam States
   const [readingTimeLeft, setReadingTimeLeft] = useState(3600); // 60 minutes
@@ -769,9 +797,9 @@ const PracticeScreen = ({ navigation, route }) => {
   const readingPassageStyle = useAnimatedStyle(() => {
     const progress = 1 + (readingTabOffset.value / screenWidth);
     return {
-      opacity: progress * 0.45 + 0.55, 
+      opacity: progress * 0.45 + 0.55,
       transform: [
-        { scale: progress * 0.04 + 0.96 } 
+        { scale: progress * 0.04 + 0.96 }
       ]
     };
   });
@@ -779,9 +807,9 @@ const PracticeScreen = ({ navigation, route }) => {
   const readingQuestionsStyle = useAnimatedStyle(() => {
     const progress = -readingTabOffset.value / screenWidth;
     return {
-      opacity: progress * 0.45 + 0.55, 
+      opacity: progress * 0.45 + 0.55,
       transform: [
-        { scale: progress * 0.04 + 0.96 } 
+        { scale: progress * 0.04 + 0.96 }
       ]
     };
   });
@@ -1040,7 +1068,7 @@ const PracticeScreen = ({ navigation, route }) => {
       setActiveTab(getNormalizedTab(route.params.screen));
     }
   }, [route?.params?.screen]);
-  
+
   // States cho Writing AI
   const [writingInput, setWritingInput] = useState(
     "In recent years, the consumption of fast food has increased dramatically. Some people believe that this trend has a negative impact on individuals and society, and they think that taxes on fast food should be increased to solve this problem. Personally, I am agree with this viewpoint because fast food causes many health issues."
@@ -1203,7 +1231,7 @@ const PracticeScreen = ({ navigation, route }) => {
     setTimeout(() => {
       setIsAnalyzingWriting(false);
       setShowWritingResult(true);
-    }, 2000); 
+    }, 2000);
   };
 
   return (
@@ -1211,7 +1239,7 @@ const PracticeScreen = ({ navigation, route }) => {
       <StarryBackground />
       {/* Premium Header */}
       <View className="flex-row items-center justify-between px-6 py-4 bg-white border-b border-[#E5E7EB] flex-wrap gap-y-3">
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => navigation.navigate('Home')}
           className="flex-row items-center"
         >
@@ -1220,459 +1248,149 @@ const PracticeScreen = ({ navigation, route }) => {
           </Svg>
           <Text className="text-xl font-black text-[#1E1E1E] ml-2 tracking-tight">Apex AI Workspace</Text>
         </TouchableOpacity>
-        
+
         {/* Navigation Tabs - Modern Segmented Sliding Indicator */}
         <SlidingHeaderTabs activeTab={activeTab} setActiveTab={setActiveTab} />
       </View>
 
-      {/* Main Workspace Body */}
+      {/* Main Workspace Body - Reading */}
       {activeTab === 'ReadingAI' && (
-        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-          {/* Sub-Header inside active workspace */}
-          <View className="flex-row items-center justify-between px-6 py-3 bg-white border-b border-[#E5E7EB]">
-            <View>
-              <Text className="text-[10px] font-extrabold text-[#9CA3AF] uppercase tracking-widest">Reading Simulation</Text>
-              <Text className="text-sm font-bold text-[#1E1E1E] mt-0.5 font-sans">IELTS Prep - Test 08</Text>
+        <ScrollView className="flex-1 px-6 pt-6" style={{ backgroundColor: 'transparent' }} showsVerticalScrollIndicator={false}>
+          <View className="mb-6">
+            <View className="bg-[#E6F9F5] px-3.5 py-1 rounded-full self-start mb-2.5 border border-[#A7F3D0]">
+              <Text className="text-[#005C42] text-[10px] font-extrabold uppercase tracking-widest">📖 Reading Simulation</Text>
             </View>
-            <CircularTimer timeLeft={readingTimeLeft} initialTime={3600} />
+            <Text className="text-3xl font-black text-[#1E1E1E] tracking-tight">IELTS Reading Practice</Text>
+            <Text className="text-sm text-[#6B7280] mt-1.5 leading-5">
+              Chọn một đề thi đọc dưới đây để bắt đầu kiểm tra khả năng đọc hiểu của bạn với thời gian thực.
+            </Text>
           </View>
-          
-          <SlidingSegmentedControl activeTab={activeReadingSubTab} setActiveTab={setActiveReadingSubTab} screenWidth={screenWidth} />
-          
-          <View style={{ width: screenWidth, flex: 1, overflow: 'hidden' }}>
-            <Animated.View style={[{ flexDirection: 'row', width: screenWidth * 2, flex: 1 }, readingAnimatedContentStyle]}>
-              {/* PAGE 1: Passage reading column */}
-              <Animated.View style={[{ width: screenWidth, flex: 1 }, readingPassageStyle]}>
-                <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
-                  <View className="bg-[#FCFDFD] p-6 rounded-[32px] border border-[#E5E7EB] mb-28 shadow-sm">
-                    <View className="flex-row justify-between items-center mb-4">
-                      <Text className="text-xs font-extrabold text-[#00CC99] uppercase tracking-widest">READING PASSAGE 1</Text>
+
+          {examsLoading ? (
+            <View className="py-12 items-center">
+              <ActivityIndicator size="large" color="#00CC99" />
+              <Text className="text-xs font-bold text-[#6B7280] mt-3">Đang tải danh sách đề thi...</Text>
+            </View>
+          ) : examsError ? (
+            <View className="py-12 items-center">
+              <Text className="text-xs font-bold text-red-500">{examsError}</Text>
+            </View>
+          ) : readingExams.length === 0 ? (
+            <View className="py-12 items-center bg-white rounded-[28px] border border-[#E5E7EB] p-8">
+              <Text className="text-xs font-bold text-[#6B7280]">Không có đề thi đọc nào có sẵn.</Text>
+            </View>
+          ) : (
+            <View className="pb-20">
+              {readingExams.map((item) => (
+                <View key={item.id} className="bg-white p-5 rounded-[28px] border border-[#E5E7EB] mb-4 shadow-sm flex-row justify-between items-center px-6">
+                  <View className="flex-1 pr-4">
+                    <View className="flex-row items-center mb-2">
                       <View className="bg-[#E6F9F5] px-2.5 py-0.5 rounded-full border border-[#A7F3D0]">
-                        <Text className="text-[9px] font-extrabold text-[#005C42]">💡 Tap underlined words to translate</Text>
+                        <Text className="text-[9px] font-black text-[#005C42] uppercase tracking-wider">IELTS Reading</Text>
                       </View>
                     </View>
-                    <Text className="text-2xl font-black text-[#1E1E1E] leading-8 mb-5 tracking-tight font-sans">
-                      The Rise of Creative Urban Spaces
+                    <Text className="text-base font-black text-[#1E1E1E] leading-6 font-sans mb-3" numberOfLines={2}>
+                      {item.title}
                     </Text>
-                    
-                    {/* Paragraph A Card */}
-                    <View className="bg-white p-5 rounded-2xl border border-[#F1F5F9] mb-5 shadow-xs border-l-4 border-l-[#00CC99]">
-                      <View className="flex-row items-center mb-3">
-                        <View className="bg-[#E6F9F5] px-2.5 py-0.5 rounded-md border border-[#A7F3D0]">
-                          <Text className="text-[10px] font-extrabold text-[#005C42] tracking-wider uppercase font-sans">Paragraph A</Text>
-                        </View>
+                    <View className="flex-row items-center">
+                      <View className="flex-row items-center mr-4">
+                        <Svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2.5">
+                          <Circle cx="12" cy="12" r="10" />
+                          <Path d="M12 6v6l4 2" />
+                        </Svg>
+                        <Text className="text-xs text-[#6B7280] font-bold ml-1.5">{item.duration} phút</Text>
                       </View>
-                      <Text className="text-sm text-[#4B5563] leading-7 font-medium font-sans">
-                        In the early decades of the twenty-first century, cities around the world have undergone a radical{' '}
-                        <Text 
-                          onPress={() => handleWordPress("transformation", "A marked change in form, nature, or appearance.", "/ˌtræns.fəˈmeɪ.ʃən/")}
-                          className="text-[#005C42] font-extrabold mx-0.5"
-                          style={{ textDecorationLine: 'underline', textDecorationColor: '#00CC99' }}
-                        >transformation</Text>. Formerly industrial districts, once filled with abandoned warehouses and dusty factories, have been reborn as vibrant hubs of culture and technology. This trend, often referred to as the{' '}
-                        <Text 
-                          onPress={() => handleWordPress("creative", "Relating to or involving the imagination or original ideas.", "/kriˈeɪ.tɪv/")}
-                          className="text-[#005C42] font-extrabold mx-0.5"
-                          style={{ textDecorationLine: 'underline', textDecorationColor: '#00CC99' }}
-                        >creative</Text> city movement, is not merely about aesthetic remodeling; it represents a fundamental shift in how urban economies operate. Instead of relying on traditional manufacturing, cities now compete to attract highly skilled workers in software development, design, and biomedical engineering.
-                      </Text>
-                    </View>
-                    
-                    {/* Paragraph B Card */}
-                    <View className="bg-white p-5 rounded-2xl border border-[#F1F5F9] mb-5 shadow-xs border-l-4 border-l-[#00CC99]">
-                      <View className="flex-row items-center mb-3">
-                        <View className="bg-[#E6F9F5] px-2.5 py-0.5 rounded-md border border-[#A7F3D0]">
-                          <Text className="text-[10px] font-extrabold text-[#005C42] tracking-wider uppercase font-sans">Paragraph B</Text>
-                        </View>
-                      </View>
-                      <Text className="text-sm text-[#4B5563] leading-7 font-medium font-sans">
-                        At the heart of this rebirth are shared infrastructure projects. Shared workspaces, local maker spaces, and public-private innovation hubs have sprung up globally. Research shows that geographic{' '}
-                        <Text 
-                          onPress={() => handleWordPress("proximity", "Closeness in space, time, or relationship.", "/prɒkˈsɪm.ə.ti/")}
-                          className="text-[#005C42] font-extrabold mx-0.5"
-                          style={{ textDecorationLine: 'underline', textDecorationColor: '#00CC99' }}
-                        >proximity</Text> between diverse industries sparks spontaneous collaboration and knowledge sharing. When developers work in close proximity to fashion designers and visual artists, new and unexpected ideas are forged. This cross-pollination has led to the emergence of multi-disciplinary fields, such as wearable technology and digital architecture.
-                      </Text>
-                    </View>
-
-                    {/* Paragraph C Card */}
-                    <View className="bg-white p-5 rounded-2xl border border-[#F1F5F9] mb-5 shadow-xs border-l-4 border-l-[#00CC99]">
-                      <View className="flex-row items-center mb-3">
-                        <View className="bg-[#E6F9F5] px-2.5 py-0.5 rounded-md border border-[#A7F3D0]">
-                          <Text className="text-[10px] font-extrabold text-[#005C42] tracking-wider uppercase font-sans">Paragraph C</Text>
-                        </View>
-                      </View>
-                      <Text className="text-sm text-[#4B5563] leading-7 font-medium font-sans">
-                        However, the creative urban revolution is not without critics. Many sociologists point out that the influx of high-earning tech professionals leads to skyrocketing property values, forcing out long-term residents and local businesses. This{' '}
-                        <Text 
-                          onPress={() => handleWordPress("gentrification", "The process of renovating and improving a house or district so that it conforms to middle-class taste.", "/ˌdʒen.trɪ.fɪˈkeɪ.ʃən/")}
-                          className="text-[#005C42] font-extrabold mx-0.5"
-                          style={{ textDecorationLine: 'underline', textDecorationColor: '#00CC99' }}
-                        >gentrification</Text> can strip a neighborhood of its original cultural diversity, the very element that attracted the creative class in the first place. Urban planners are now faced with the monumental task of fostering economic innovation while ensuring affordable housing and social equity.
-                      </Text>
-                    </View>
-                  </View>
-                </ScrollView>
-              </Animated.View>
-
-              {/* PAGE 2: Questions Sheet column */}
-              <Animated.View style={[{ width: screenWidth, flex: 1 }, readingQuestionsStyle]}>
-                <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
-                  <View className="mb-28">
-                    {/* Q1 Card (MCQ) */}
-                    <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
-                      <View className="flex-row items-start mb-4">
-                        <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
-                          <Text className="text-sm font-extrabold text-[#005C42]">1</Text>
-                        </View>
-                        <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
-                          What is the main driver behind the creative city movement as described in Paragraph A?
+                      <View className="flex-row items-center">
+                        <Svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2.5">
+                          <Path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                        </Svg>
+                        <Text className="text-xs text-[#6B7280] font-bold ml-1.5">
+                          {item.questionsCount || 40} câu hỏi
                         </Text>
-                      </View>
-
-                      <AnimatedOption 
-                        optionKey="A"
-                        text="To restore historically significant manufacturing factories."
-                        isSelected={readingAnswers.q1 === 'A'}
-                        onPress={() => setReadingAnswers({ ...readingAnswers, q1: 'A' })}
-                      />
-                      <AnimatedOption 
-                        optionKey="B"
-                        text="To shift the urban economy from manufacturing to knowledge-based industries."
-                        isSelected={readingAnswers.q1 === 'B'}
-                        onPress={() => setReadingAnswers({ ...readingAnswers, q1: 'B' })}
-                      />
-                      <AnimatedOption 
-                        optionKey="C"
-                        text="To decrease the density of high-skilled professionals in cities."
-                        isSelected={readingAnswers.q1 === 'C'}
-                        onPress={() => setReadingAnswers({ ...readingAnswers, q1: 'C' })}
-                      />
-                    </View>
-
-                    {/* Q2 & Q3 Card (TFNG with Smooth Pill Sliders) */}
-                    <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
-                      <Text className="text-xs font-extrabold text-[#9CA3AF] uppercase tracking-widest mb-3 font-sans">
-                        Questions 2-3: True/False/Not Given
-                      </Text>
-                      
-                      <View className="mb-5 border-b border-[#F3F4F6] pb-5">
-                        <View className="flex-row items-start mb-3">
-                          <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
-                            <Text className="text-sm font-extrabold text-[#005C42]">2</Text>
-                          </View>
-                          <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
-                            Geographic proximity between different industries prevents spontaneous collaboration.
-                          </Text>
-                        </View>
-                        <SlidingTFNG 
-                          selectedValue={readingAnswers.q2}
-                          onSelect={(choice) => setReadingAnswers({ ...readingAnswers, q2: choice })}
-                          screenWidth={screenWidth}
-                        />
-                      </View>
-
-                      <View className="mb-2">
-                        <View className="flex-row items-start mb-3">
-                          <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
-                            <Text className="text-sm font-extrabold text-[#005C42]">3</Text>
-                          </View>
-                          <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
-                            Rising property prices are causing some long-term residents to leave creative districts.
-                          </Text>
-                        </View>
-                        <SlidingTFNG 
-                          selectedValue={readingAnswers.q3}
-                          onSelect={(choice) => setReadingAnswers({ ...readingAnswers, q3: choice })}
-                          screenWidth={screenWidth}
-                        />
-                      </View>
-                    </View>
-
-                    {/* Q4 & Q5 Card (Fill-in-the-blanks) */}
-                    <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
-                      <Text className="text-xs font-extrabold text-[#9CA3AF] uppercase tracking-widest mb-3 font-sans">
-                        Questions 4-5: Complete the Summary
-                      </Text>
-
-                      <View className="bg-[#F7F9FA] p-4 rounded-2xl border border-[#E5E7EB] mb-4">
-                        <Text className="text-xs text-[#4B5563] leading-6 font-medium font-sans">
-                          The creative city movement has triggered criticism due to the risk of gentrification. The arrival of high-earning{' '}
-                          <Text className="font-extrabold text-[#005C42] bg-[#E6F9F5] px-2 rounded font-sans"> [4] </Text>{' '}
-                          tends to drive up real estate prices. This eventually forces older residents out of their original{' '}
-                          <Text className="font-extrabold text-[#005C42] bg-[#E6F9F5] px-2 rounded font-sans"> [5] </Text>.
-                        </Text>
-                      </View>
-
-                      <View className="flex-row items-center border border-[#E5E7EB] bg-white rounded-2xl p-3 mb-3 focus-within:border-[#00CC99]">
-                        <View className="bg-[#E6F9F5] w-8 h-8 rounded-full items-center justify-center mr-3">
-                          <Text className="text-xs font-extrabold text-[#005C42] font-sans">4</Text>
-                        </View>
-                        <TextInput
-                          value={readingAnswers.q4}
-                          onChangeText={(text) => setReadingAnswers({ ...readingAnswers, q4: text })}
-                          placeholder="Enter answer for Question 4"
-                          placeholderTextColor="#9CA3AF"
-                          className="flex-1 text-sm font-bold text-[#1E1E1E] p-0 font-sans"
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                        />
-                      </View>
-
-                      <View className="flex-row items-center border border-[#E5E7EB] bg-white rounded-2xl p-3 focus-within:border-[#00CC99]">
-                        <View className="bg-[#E6F9F5] w-8 h-8 rounded-full items-center justify-center mr-3">
-                          <Text className="text-xs font-extrabold text-[#005C42] font-sans">5</Text>
-                        </View>
-                        <TextInput
-                          value={readingAnswers.q5}
-                          onChangeText={(text) => setReadingAnswers({ ...readingAnswers, q5: text })}
-                          placeholder="Enter answer for Question 5"
-                          placeholderTextColor="#9CA3AF"
-                          className="flex-1 text-sm font-bold text-[#1E1E1E] p-0 font-sans"
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                        />
                       </View>
                     </View>
                   </View>
-                </ScrollView>
-              </Animated.View>
-            </Animated.View>
-          </View>
-
-          {/* Floating Bottom Navigation Bar */}
-          <View className="absolute bottom-0 left-0 right-0 h-24 bg-white border-t border-[#E5E7EB] px-6 pb-4">
-            {/* Satisfying Top Spring Progress Line */}
-            <View className="absolute top-0 left-0 right-0 h-1 bg-[#F3F4F6]">
-              <Animated.View style={readingBottomProgressStyle} className="h-full bg-[#00CC99]" />
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('Exam', { examId: item.id, testType: 'Reading' })}
+                    className="bg-[#00CC99] px-5 py-3.5 rounded-2xl shadow-md shadow-emerald-500/20"
+                  >
+                    <Text className="text-white text-xs font-black">Làm bài</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
-
-            <View className="flex-row items-center justify-between mt-4">
-              <View>
-                <Text className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider font-sans">Progress</Text>
-                <Text className="text-sm font-extrabold text-[#1E1E1E] mt-0.5 font-sans">
-                  {readingAnsweredCount} / 5 Answered
-                </Text>
-              </View>
-              
-              {/* Submit Button */}
-              <AnimatedButton
-                onPress={() => {
-                  setSubmitModalType('Reading');
-                  setShowSubmitModal(true);
-                }}
-                className="bg-[#00CC99] px-8 py-3.5 rounded-[20px] shadow-md shadow-emerald-500/20 flex-row items-center justify-center"
-              >
-                <Text className="text-white text-base font-extrabold mr-2 font-sans">Submit Test</Text>
-                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="2.5">
-                  <Path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                </Svg>
-              </AnimatedButton>
-            </View>
-          </View>
-        </View>
+          )}
+        </ScrollView>
       )}
 
+      {/* Main Workspace Body - Listening */}
       {activeTab === 'ListeningAI' && (
-        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-          {/* Sub-Header inside active workspace */}
-          <View className="flex-row items-center justify-between px-6 py-3 bg-white border-b border-[#E5E7EB]">
-            <View>
-              <Text className="text-[10px] font-extrabold text-[#9CA3AF] uppercase tracking-widest">Listening Simulation</Text>
-              <Text className="text-sm font-bold text-[#1E1E1E] mt-0.5 font-sans">IELTS Prep - Test 08</Text>
+        <ScrollView className="flex-1 px-6 pt-6" style={{ backgroundColor: 'transparent' }} showsVerticalScrollIndicator={false}>
+          <View className="mb-6">
+            <View className="bg-[#E6F9F5] px-3.5 py-1 rounded-full self-start mb-2.5 border border-[#A7F3D0]">
+              <Text className="text-[#005C42] text-[10px] font-extrabold uppercase tracking-widest">🎧 Listening Simulation</Text>
             </View>
-            <CircularTimer timeLeft={listeningTimeLeft} initialTime={1800} />
+            <Text className="text-3xl font-black text-[#1E1E1E] tracking-tight">IELTS Listening Practice</Text>
+            <Text className="text-sm text-[#6B7280] mt-1.5 leading-5">
+              Chọn một đề thi nghe dưới đây để bắt đầu rèn luyện kỹ năng nghe của bạn với thời gian thực.
+            </Text>
           </View>
 
-          {/* Audio Player Card */}
-          <View className="bg-white px-6 py-4 border-b border-[#E5E7EB]">
-            <View className="bg-[#1E293B] p-5 rounded-[28px] shadow-lg shadow-slate-300">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center flex-1 pr-4">
-                  <AnimatedButton 
-                    onPress={() => setListeningIsPlaying(!listeningIsPlaying)}
-                    className="w-12 h-12 bg-[#00CC99] rounded-full items-center justify-center border border-[#005C42]/10"
+          {examsLoading ? (
+            <View className="py-12 items-center">
+              <ActivityIndicator size="large" color="#00CC99" />
+              <Text className="text-xs font-bold text-[#6B7280] mt-3">Đang tải danh sách đề thi...</Text>
+            </View>
+          ) : examsError ? (
+            <View className="py-12 items-center">
+              <Text className="text-xs font-bold text-red-500">{examsError}</Text>
+            </View>
+          ) : listeningExams.length === 0 ? (
+            <View className="py-12 items-center bg-white rounded-[28px] border border-[#E5E7EB] p-8">
+              <Text className="text-xs font-bold text-[#6B7280]">Không có đề thi nghe nào có sẵn.</Text>
+            </View>
+          ) : (
+            <View className="pb-20">
+              {listeningExams.map((item) => (
+                <View key={item.id} className="bg-white p-5 rounded-[28px] border border-[#E5E7EB] mb-4 shadow-sm flex-row justify-between items-center px-6">
+                  <View className="flex-1 pr-4">
+                    <View className="flex-row items-center mb-2">
+                      <View className="bg-[#E6F9F5] px-2.5 py-0.5 rounded-full border border-[#A7F3D0]">
+                        <Text className="text-[9px] font-black text-[#005C42] uppercase tracking-wider">IELTS Listening</Text>
+                      </View>
+                    </View>
+                    <Text className="text-base font-black text-[#1E1E1E] leading-6 font-sans mb-3" numberOfLines={2}>
+                      {item.title}
+                    </Text>
+                    <View className="flex-row items-center">
+                      <View className="flex-row items-center mr-4">
+                        <Svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2.5">
+                          <Circle cx="12" cy="12" r="10" />
+                          <Path d="M12 6v6l4 2" />
+                        </Svg>
+                        <Text className="text-xs text-[#6B7280] font-bold ml-1.5">{item.duration} phút</Text>
+                      </View>
+                      <View className="flex-row items-center">
+                        <Svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2.5">
+                          <Path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                        </Svg>
+                        <Text className="text-xs text-[#6B7280] font-bold ml-1.5">
+                          {item.questionsCount || 40} câu hỏi
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('Exam', { examId: item.id, testType: 'Listening' })}
+                    className="bg-[#00CC99] px-5 py-3.5 rounded-2xl shadow-md shadow-emerald-500/20"
                   >
-                    {listeningIsPlaying ? (
-                      <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <Path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill="#FFF" />
-                      </Svg>
-                    ) : (
-                      <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <Path d="M8 5v14l11-7z" fill="#FFF" />
-                      </Svg>
-                    )}
-                  </AnimatedButton>
-                  <View className="ml-4">
-                    <Text className="text-sm font-bold text-white font-sans">Section 1: Rental Inquiry</Text>
-                    <Text className="text-xs text-slate-400 mt-1 font-sans">IELTS Listening Band 8.5 Practice</Text>
-                  </View>
+                    <Text className="text-white text-xs font-black">Làm bài</Text>
+                  </TouchableOpacity>
                 </View>
-                <Text className="text-xs font-mono font-black text-[#00CC99]">09:12 / 30:00</Text>
-              </View>
-
-              {/* Glowing progress line */}
-              <View className="w-full h-2 bg-slate-700/50 rounded-full mt-5 overflow-hidden">
-                <View className="h-full bg-[#00CC99] rounded-full shadow-sm shadow-emerald-400" style={{ width: `${listeningAudioProgress * 100}%` }} />
-              </View>
+              ))}
             </View>
-          </View>
-
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            className="flex-1"
-          >
-            <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
-              <View className="mb-28">
-                {/* Q1 Card (MCQ) */}
-                <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
-                  <View className="flex-row items-start mb-4">
-                    <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
-                      <Text className="text-sm font-extrabold text-[#005C42]">1</Text>
-                    </View>
-                    <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
-                      What does the speaker identify as the main goal of the local community center project?
-                    </Text>
-                  </View>
-
-                  <AnimatedOption 
-                    optionKey="A"
-                    text="To increase the city tourism revenue."
-                    isSelected={listeningAnswers.q1 === 'A'}
-                    onPress={() => setListeningAnswers({ ...listeningAnswers, q1: 'A' })}
-                  />
-                  <AnimatedOption 
-                    optionKey="B"
-                    text="To provide affordable creative workspaces for local residents."
-                    isSelected={listeningAnswers.q1 === 'B'}
-                    onPress={() => setListeningAnswers({ ...listeningAnswers, q1: 'B' })}
-                  />
-                  <AnimatedOption 
-                    optionKey="C"
-                    text="To construct large industrial warehouses."
-                    isSelected={listeningAnswers.q1 === 'C'}
-                    onPress={() => setListeningAnswers({ ...listeningAnswers, q1: 'C' })}
-                  />
-                </View>
-
-                {/* Q2 & Q3 Card (TFNG with Smooth Pill Sliders) */}
-                <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
-                  <Text className="text-xs font-extrabold text-[#9CA3AF] uppercase tracking-widest mb-3 font-sans">
-                    Questions 2-3: True/False/Not Given
-                  </Text>
-                  
-                  <View className="mb-5 border-b border-[#F3F4F6] pb-5">
-                    <View className="flex-row items-start mb-3">
-                      <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
-                        <Text className="text-sm font-extrabold text-[#005C42]">2</Text>
-                      </View>
-                      <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
-                        Geographic proximity between different industries prevents spontaneous collaboration.
-                      </Text>
-                    </View>
-                    <SlidingTFNG 
-                      selectedValue={listeningAnswers.q2}
-                      onSelect={(choice) => setListeningAnswers({ ...listeningAnswers, q2: choice })}
-                      screenWidth={screenWidth}
-                    />
-                  </View>
-
-                  <View className="mb-2">
-                    <View className="flex-row items-start mb-3">
-                      <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
-                        <Text className="text-sm font-extrabold text-[#005C42]">3</Text>
-                      </View>
-                      <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
-                        Rising property prices are causing some long-term residents to leave creative districts.
-                      </Text>
-                    </View>
-                    <SlidingTFNG 
-                      selectedValue={listeningAnswers.q3}
-                      onSelect={(choice) => setListeningAnswers({ ...listeningAnswers, q3: choice })}
-                      screenWidth={screenWidth}
-                    />
-                  </View>
-                </View>
-
-                {/* Q4 & Q5 Card (Fill-in-the-blanks) */}
-                <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
-                  <Text className="text-xs font-extrabold text-[#9CA3AF] uppercase tracking-widest mb-3 font-sans">
-                    Questions 4-5: Complete the Summary
-                  </Text>
-
-                  <View className="bg-[#F7F9FA] p-4 rounded-2xl border border-[#E5E7EB] mb-4">
-                    <Text className="text-xs text-[#4B5563] leading-6 font-medium font-sans">
-                      The creative city movement has triggered criticism due to the risk of gentrification. The arrival of high-earning{' '}
-                      <Text className="font-extrabold text-[#005C42] bg-[#E6F9F5] px-2 rounded font-sans"> [4] </Text>{' '}
-                      tends to drive up real estate prices. This eventually forces older residents out of their original{' '}
-                      <Text className="font-extrabold text-[#005C42] bg-[#E6F9F5] px-2 rounded font-sans"> [5] </Text>.
-                    </Text>
-                  </View>
-
-                  <View className="flex-row items-center border border-[#E5E7EB] bg-white rounded-2xl p-3 mb-3 focus-within:border-[#00CC99]">
-                    <View className="bg-[#E6F9F5] w-8 h-8 rounded-full items-center justify-center mr-3">
-                      <Text className="text-xs font-extrabold text-[#005C42] font-sans">4</Text>
-                    </View>
-                    <TextInput
-                      value={listeningAnswers.q4}
-                      onChangeText={(text) => setListeningAnswers({ ...listeningAnswers, q4: text })}
-                      placeholder="Enter answer for Question 4"
-                      placeholderTextColor="#9CA3AF"
-                      className="flex-1 text-sm font-bold text-[#1E1E1E] p-0 font-sans"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                  </View>
-
-                  <View className="flex-row items-center border border-[#E5E7EB] bg-white rounded-2xl p-3 focus-within:border-[#00CC99]">
-                    <View className="bg-[#E6F9F5] w-8 h-8 rounded-full items-center justify-center mr-3">
-                      <Text className="text-xs font-extrabold text-[#005C42] font-sans">5</Text>
-                    </View>
-                    <TextInput
-                      value={listeningAnswers.q5}
-                      onChangeText={(text) => setListeningAnswers({ ...listeningAnswers, q5: text })}
-                      placeholder="Enter answer for Question 5"
-                      placeholderTextColor="#9CA3AF"
-                      className="flex-1 text-sm font-bold text-[#1E1E1E] p-0 font-sans"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                  </View>
-                </View>
-              </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
-
-          {/* Floating Bottom Navigation Bar */}
-          <View className="absolute bottom-0 left-0 right-0 h-24 bg-white border-t border-[#E5E7EB] px-6 pb-4">
-            {/* Satisfying Top Spring Progress Line */}
-            <View className="absolute top-0 left-0 right-0 h-1 bg-[#F3F4F6]">
-              <Animated.View style={listeningBottomProgressStyle} className="h-full bg-[#00CC99]" />
-            </View>
-
-            <View className="flex-row items-center justify-between mt-4">
-              <View>
-                <Text className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider font-sans">Progress</Text>
-                <Text className="text-sm font-extrabold text-[#1E1E1E] mt-0.5 font-sans">
-                  {listeningAnsweredCount} / 5 Answered
-                </Text>
-              </View>
-              
-              {/* Submit Button */}
-              <AnimatedButton
-                onPress={() => {
-                  setSubmitModalType('Listening');
-                  setShowSubmitModal(true);
-                }}
-                className="bg-[#00CC99] px-8 py-3.5 rounded-[20px] shadow-md shadow-emerald-500/20 flex-row items-center justify-center"
-              >
-                <Text className="text-white text-base font-extrabold mr-2 font-sans">Submit Test</Text>
-                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="2.5">
-                  <Path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                </Svg>
-              </AnimatedButton>
-            </View>
-          </View>
-        </View>
+          )}
+        </ScrollView>
       )}
 
       {activeTab === 'WritingAI' && (
@@ -1704,13 +1422,13 @@ const PracticeScreen = ({ navigation, route }) => {
               className="text-sm text-[#1E1E1E] font-medium min-h-[160px] bg-white border border-[#E5E7EB] rounded-2xl p-4 leading-6"
               textAlignVertical="top"
             />
-            
+
             <View className="flex-row justify-between items-center mt-4">
               <Text className="text-xs font-bold text-[#6B7280]">
                 Word count: <Text className="text-[#00CC99] font-black">{writingInput.split(/\s+/).filter(Boolean).length}</Text> words
               </Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 onPress={handleWritingAnalyze}
                 disabled={isAnalyzingWriting}
                 className="bg-[#00CC99] px-6 py-3 rounded-xl active:opacity-90 flex-row items-center"
@@ -1845,8 +1563,8 @@ const PracticeScreen = ({ navigation, route }) => {
                 {/* Waveform Visualization Mockup */}
                 <View className="flex-row items-center justify-center space-x-2 h-16 mb-6 px-10">
                   {[waveAnim1, waveAnim2, waveAnim3, waveAnim4, waveAnim2, waveAnim1].map((anim, i) => (
-                    <RNAnimated.View 
-                      key={i} 
+                    <RNAnimated.View
+                      key={i}
                       style={{ height: anim }}
                       className="w-1.5 bg-[#00CC99] rounded-full"
                     />
@@ -1868,7 +1586,7 @@ const PracticeScreen = ({ navigation, route }) => {
                   </Text>
                 </View>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={handleStopRecording}
                   className="w-16 h-16 bg-red-500 rounded-full items-center justify-center border-4 border-white shadow-lg active:opacity-90"
                 >
@@ -1883,7 +1601,7 @@ const PracticeScreen = ({ navigation, route }) => {
               </View>
             ) : (
               <View className="items-center py-6">
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={handleStartRecording}
                   className="w-20 h-20 bg-[#E6F9F5] border-4 border-white rounded-full items-center justify-center shadow-lg active:opacity-90 mb-4"
                 >
@@ -1944,7 +1662,7 @@ const PracticeScreen = ({ navigation, route }) => {
                 <Text className="text-xs text-[#6B7280] mb-4">
                   We highlighted words that need phonetic adjustment. Click on them to see IPA correction.
                 </Text>
-                
+
                 {/* Paragraph with highlighting */}
                 <View className="p-4 bg-[#F7F9FA] rounded-2xl border border-[#E5E7EB] flex-row flex-wrap">
                   <Text className="text-sm font-semibold text-[#1E1E1E] leading-7">
@@ -2080,20 +1798,20 @@ const PracticeScreen = ({ navigation, route }) => {
 
                 {/* Grid Lines */}
                 <Path d="M0 25h300M0 55h300M0 85h300" stroke="#F3F4F6" strokeWidth="1" strokeDasharray="3" />
-                
+
                 {/* Area Gradient Fill */}
-                <Path 
-                  d="M10 80 L40 73 L70 90 L100 70 L130 72 L160 55 L190 60 L220 40 L250 30 L280 43 L290 28 L290 110 L10 110 Z" 
+                <Path
+                  d="M10 80 L40 73 L70 90 L100 70 L130 72 L160 55 L190 60 L220 40 L250 30 L280 43 L290 28 L290 110 L10 110 Z"
                   fill="url(#chartGrad)"
                 />
 
                 {/* SVG Polyline for reading score progress line */}
-                <Path 
-                  d="M10 80 L40 73 L70 90 L100 70 L130 72 L160 55 L190 60 L220 40 L250 30 L280 43 L290 28" 
-                  fill="none" 
-                  stroke="#00CC99" 
-                  strokeWidth="3" 
-                  strokeLinecap="round" 
+                <Path
+                  d="M10 80 L40 73 L70 90 L100 70 L130 72 L160 55 L190 60 L220 40 L250 30 L280 43 L290 28"
+                  fill="none"
+                  stroke="#00CC99"
+                  strokeWidth="3"
+                  strokeLinecap="round"
                   strokeLinejoin="round"
                 />
 
@@ -2111,14 +1829,14 @@ const PracticeScreen = ({ navigation, route }) => {
                   { cx: 280, cy: 43 },
                   { cx: 290, cy: 28 }
                 ].map((pt, i) => (
-                  <Circle 
-                    key={i} 
-                    cx={pt.cx} 
-                    cy={pt.cy} 
-                    r={i === 10 ? "4" : "2.5"} 
-                    fill={i === 10 ? "#00CC99" : "#FFFFFF"} 
-                    stroke="#00CC99" 
-                    strokeWidth={i === 10 ? "2" : "1.5"} 
+                  <Circle
+                    key={i}
+                    cx={pt.cx}
+                    cy={pt.cy}
+                    r={i === 10 ? "4" : "2.5"}
+                    fill={i === 10 ? "#00CC99" : "#FFFFFF"}
+                    stroke="#00CC99"
+                    strokeWidth={i === 10 ? "2" : "1.5"}
                   />
                 ))}
               </Svg>
@@ -2178,22 +1896,22 @@ const PracticeScreen = ({ navigation, route }) => {
               <Text className="text-xl font-black text-white mt-1.5 tracking-tight">-0.5 to Elite 9.0 Band</Text>
               <Text className="text-[11px] text-slate-400 mt-1 leading-4">Keep practicing reading passages to narrow the gap.</Text>
             </View>
-            
+
             {/* Visual target progress ring */}
             <View className="relative w-12 h-12 items-center justify-center">
               <Svg width="48" height="48" viewBox="0 0 44 44" style={{ position: 'absolute' }}>
                 <Circle cx="22" cy="22" r="18" fill="none" stroke="#334155" strokeWidth="4.5" />
-                <Circle 
-                  cx="22" 
-                  cy="22" 
-                  r="18" 
-                  fill="none" 
-                  stroke="#00CC99" 
-                  strokeWidth="4.5" 
-                  strokeDasharray="113.1" 
+                <Circle
+                  cx="22"
+                  cy="22"
+                  r="18"
+                  fill="none"
+                  stroke="#00CC99"
+                  strokeWidth="4.5"
+                  strokeDasharray="113.1"
                   strokeDashoffset="6.3" // 94.4% progress
-                  strokeLinecap="round" 
-                  transform="rotate(-90 22 22)" 
+                  strokeLinecap="round"
+                  transform="rotate(-90 22 22)"
                 />
               </Svg>
               <Text className="text-[9px] font-black text-[#00CC99] mt-0.5">94%</Text>
@@ -2208,13 +1926,13 @@ const PracticeScreen = ({ navigation, route }) => {
 
           {/* Milestones Cards List */}
           <View className="mb-8">
-            <MilestoneCard 
+            <MilestoneCard
               title="Academic Reading Test 12"
               date="Yesterday • 14:30"
               score={8.5}
               iconType="calendar"
             />
-            <MilestoneCard 
+            <MilestoneCard
               title="True/False/Not Given Drill"
               date="2 days ago"
               score={7.5}
@@ -2224,7 +1942,7 @@ const PracticeScreen = ({ navigation, route }) => {
 
           {/* Action buttons footer */}
           <View className="flex-row space-x-4 mb-16">
-            <AnimatedButton 
+            <AnimatedButton
               onPress={() => setActiveTab('WritingAI')}
               className="flex-1 border-2 border-white rounded-[20px] overflow-hidden bg-transparent"
               style={{ height: 52 }}
@@ -2232,7 +1950,7 @@ const PracticeScreen = ({ navigation, route }) => {
               <Text className="text-white text-sm font-black font-sans">Review Errors</Text>
             </AnimatedButton>
 
-            <AnimatedButton 
+            <AnimatedButton
               onPress={handleReadingReset}
               className="flex-1 bg-[#00CC99] rounded-[20px] overflow-hidden shadow-md shadow-emerald-500/20"
               style={{ height: 52 }}
@@ -2352,7 +2070,7 @@ const PracticeScreen = ({ navigation, route }) => {
           {selectedWord?.definition}
         </Text>
 
-        <AnimatedButton 
+        <AnimatedButton
           onPress={() => setShowVocabModal(false)}
           className="bg-[#00CC99] py-4 rounded-2xl items-center justify-center shadow-md shadow-emerald-500/10"
         >

@@ -71,6 +71,7 @@ const useAuthStore = create((set) => ({
       const user = metadata.user;
       
       await storage.setItem('userToken', token);
+      await storage.setItem('userId', user._id || user.id);
       set({ user, token, isLoading: false, isBootstrapping: false });
     } catch (error) {
       set({ 

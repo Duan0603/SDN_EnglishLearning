@@ -40,7 +40,7 @@ const startServer = async () => {
   // Graceful shutdown handlers
   const shutdown = async (signal: string) => {
     console.log(`\n[Server] ${signal} received — shutting down gracefully...`);
-    server.close(async () => {
+    httpServer.close(async () => {
       await prisma.$disconnect();
       console.log('[Server] HTTP server closed');
       process.exit(0);
