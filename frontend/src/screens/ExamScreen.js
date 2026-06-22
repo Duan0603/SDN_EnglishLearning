@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import Animated, {
   interpolateColor,
   runOnJS
 } from 'react-native-reanimated';
+import { Audio } from 'expo-av';
 import examService from '../api/exam.service';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -428,6 +429,148 @@ const ExamScreen = ({ route, navigation }) => {
   // Audio Player State (Listening)
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0.0); 
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [progressBarWidth, setProgressBarWidth] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragPosition, setDragPosition] = useState(0);
+  const soundRef = useRef(null);
+
+  const currentPosition = isDragging ? dragPosition : position;
+  const progressPercentage = duration > 0 ? (currentPosition / duration) * 100 : 0;
+
+  const formatAudioTime = (millis) => {
+    if (!millis || isNaN(millis)) return "00:00";
+    const totalSeconds = Math.floor(millis / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Load and play/pause audio helper
+  const handlePlayPause = async () => {
+    try {
+      if (!activeSection?.audioUrl) {
+        Alert.alert("Lỗi", "Không tìm thấy file âm thanh cho phần này.");
+        return;
+      }
+
+      if (!soundRef.current) {
+        console.log("Loading and playing sound from:", activeSection.audioUrl);
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: activeSection.audioUrl },
+          { shouldPlay: true }
+        );
+        soundRef.current = sound;
+        setIsPlaying(true);
+
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded) {
+            setPosition(status.positionMillis || 0);
+            setDuration(status.durationMillis || 0);
+            if (status.didJustFinish) {
+              setIsPlaying(false);
+              soundRef.current = null;
+              setPosition(0);
+            }
+          }
+        });
+      } else {
+        if (isPlaying) {
+          await soundRef.current.pauseAsync();
+          setIsPlaying(false);
+        } else {
+          await soundRef.current.playAsync();
+          setIsPlaying(true);
+        }
+      }
+    } catch (err) {
+      console.error("Lỗi phát âm thanh:", err);
+      Alert.alert("Lỗi", "Không thể phát âm thanh này.");
+    }
+  };
+
+  // Clean up sound on unmount or section changes
+  useEffect(() => {
+    setIsPlaying(false);
+    setPosition(0);
+    setDuration(0);
+    if (soundRef.current) {
+      soundRef.current.unloadAsync().catch(() => {});
+      soundRef.current = null;
+    }
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {});
+      }
+    };
+  }, [activeSectionIdx, examId]);
+
+  // Skip backward 10 seconds
+  const handleSkipBackward = async () => {
+    try {
+      if (soundRef.current) {
+        const status = await soundRef.current.getStatusAsync();
+        if (status.isLoaded) {
+          const newPosition = Math.max(0, status.positionMillis - 10000);
+          await soundRef.current.setPositionAsync(newPosition);
+          console.log(`Rewound 10s. New position: ${newPosition}ms`);
+        }
+      }
+    } catch (err) {
+      console.error("Lỗi tua lại:", err);
+    }
+  };
+
+  // Skip forward 10 seconds
+  const handleSkipForward = async () => {
+    try {
+      if (soundRef.current) {
+        const status = await soundRef.current.getStatusAsync();
+        if (status.isLoaded) {
+          const newPosition = Math.min(status.durationMillis || 0, status.positionMillis + 10000);
+          await soundRef.current.setPositionAsync(newPosition);
+          console.log(`Forwarded 10s. New position: ${newPosition}ms`);
+        }
+      }
+    } catch (err) {
+      console.error("Lỗi tua đi:", err);
+    }
+  };
+
+  // Gesture handlers for dragging progress bar
+  const handleProgressBarGesture = (event) => {
+    if (duration <= 0 || progressBarWidth <= 0) return;
+    const { locationX } = event.nativeEvent;
+    const seekPercentage = Math.max(0, Math.min(1, locationX / progressBarWidth));
+    const seekPosition = seekPercentage * duration;
+    setDragPosition(seekPosition);
+  };
+
+  const handleResponderGrant = (event) => {
+    setIsDragging(true);
+    handleProgressBarGesture(event);
+  };
+
+  const handleResponderMove = (event) => {
+    handleProgressBarGesture(event);
+  };
+
+  const handleResponderRelease = async (event) => {
+    setIsDragging(false);
+    if (soundRef.current && duration > 0) {
+      const { locationX } = event.nativeEvent;
+      const seekPercentage = Math.max(0, Math.min(1, locationX / progressBarWidth));
+      const seekPosition = seekPercentage * duration;
+      try {
+        await soundRef.current.setPositionAsync(seekPosition);
+        setPosition(seekPosition);
+        console.log(`Seeked to position via drag: ${seekPosition}ms`);
+      } catch (err) {
+        console.error("Lỗi tua đoạn khi thả tay:", err);
+      }
+    }
+  };
 
   // Vocabulary Lookup Helper State
   const [selectedWord, setSelectedWord] = useState(null);
@@ -813,21 +956,46 @@ const ExamScreen = ({ route, navigation }) => {
           <View className="bg-[#1E293B] p-5 rounded-[28px] shadow-lg shadow-slate-300">
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center flex-1 pr-4">
-                <AnimatedButton 
-                  onPress={() => setIsPlaying(!isPlaying)}
-                  className="w-12 h-12 bg-[#00CC99] rounded-full items-center justify-center border border-[#005C42]/10"
-                >
-                  {isPlaying ? (
-                    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <Path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill="#FFF" />
+                <View className="flex-row items-center mr-4" style={{ gap: 8 }}>
+                  {/* Skip Backward Button */}
+                  <TouchableOpacity 
+                    onPress={handleSkipBackward}
+                    className="w-10 h-10 bg-slate-800 rounded-full items-center justify-center border border-slate-700 active:bg-slate-705"
+                  >
+                    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="2">
+                      <Path d="M12.5 15L7 11.5L12.5 8V15Z" fill="#FFF" />
+                      <Path d="M18.5 15L13 11.5L18.5 8V15Z" fill="#FFF" />
                     </Svg>
-                  ) : (
-                    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <Path d="M8 5v14l11-7z" fill="#FFF" />
+                  </TouchableOpacity>
+
+                  {/* Play/Pause Button */}
+                  <AnimatedButton 
+                    onPress={handlePlayPause}
+                    className="w-12 h-12 bg-[#00CC99] rounded-full items-center justify-center border border-[#005C42]/10"
+                  >
+                    {isPlaying ? (
+                      <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <Path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill="#FFF" />
+                      </Svg>
+                    ) : (
+                      <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <Path d="M8 5v14l11-7z" fill="#FFF" />
+                      </Svg>
+                    )}
+                  </AnimatedButton>
+
+                  {/* Skip Forward Button */}
+                  <TouchableOpacity 
+                    onPress={handleSkipForward}
+                    className="w-10 h-10 bg-slate-800 rounded-full items-center justify-center border border-slate-700 active:bg-slate-705"
+                  >
+                    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="2">
+                      <Path d="M11.5 15L17 11.5L11.5 8V15Z" fill="#FFF" />
+                      <Path d="M5.5 15L11 11.5L5.5 8V15Z" fill="#FFF" />
                     </Svg>
-                  )}
-                </AnimatedButton>
-                <View className="ml-4">
+                  </TouchableOpacity>
+                </View>
+                <View className="flex-1">
                   <Text className="text-sm font-bold text-white font-sans">
                     {activeSection.title || `Part ${activeSection.sectionOrder}`}
                   </Text>
@@ -840,6 +1008,55 @@ const ExamScreen = ({ route, navigation }) => {
                 {isPlaying ? 'Playing' : 'Paused'}
               </Text>
             </View>
+
+            {/* Seekable Progress Bar */}
+            {duration > 0 && (
+              <View className="mt-4">
+                <View 
+                  onStartShouldSetResponder={() => true}
+                  onMoveShouldSetResponder={() => true}
+                  onResponderGrant={handleResponderGrant}
+                  onResponderMove={handleResponderMove}
+                  onResponderRelease={handleResponderRelease}
+                  onLayout={(e) => setProgressBarWidth(e.nativeEvent.layout.width)}
+                  className="h-6 justify-center relative"
+                >
+                  {/* Track (gray background) */}
+                  <View pointerEvents="none" className="h-1.5 w-full bg-slate-700 rounded-full relative">
+                    {/* Progress fill */}
+                    <View 
+                      pointerEvents="none"
+                      style={{ width: `${progressPercentage}%` }}
+                      className="h-full bg-[#00CC99] rounded-full"
+                    />
+                  </View>
+                  {/* Slider Thumb */}
+                  <View 
+                    pointerEvents="none"
+                    style={{ 
+                      position: 'absolute',
+                      left: `${progressPercentage}%`,
+                      transform: [{ translateX: -7 }],
+                      width: 14,
+                      height: 14,
+                      borderRadius: 7,
+                      backgroundColor: '#FFFFFF',
+                      borderWidth: 2,
+                      borderColor: '#00CC99',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 1.41,
+                      elevation: 2,
+                    }}
+                  />
+                </View>
+                <View className="flex-row justify-between mt-1">
+                  <Text className="text-[10px] text-slate-400 font-mono">{formatAudioTime(currentPosition)}</Text>
+                  <Text className="text-[10px] text-slate-400 font-mono">{formatAudioTime(duration)}</Text>
+                </View>
+              </View>
+            )}
           </View>
         </View>
       )}
