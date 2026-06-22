@@ -9,6 +9,7 @@ import {
   Platform,
   Modal,
   Alert,
+  ActivityIndicator,
   useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,6 +27,7 @@ import Animated, {
   interpolateColor,
   runOnJS
 } from 'react-native-reanimated';
+import examService from '../api/exam.service';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -95,7 +97,6 @@ const CircularTimer = ({ timeLeft, initialTime }) => {
       [0.15, 0.5, 1],
       ['#EF4444', '#F59E0B', '#00CC99']
     );
-    // Circumference for R=15 is 2 * Math.PI * 15 = 94.2
     const strokeDashoffset = 94.2 * (1 - progress.value);
     return {
       stroke: strokeColor,
@@ -165,7 +166,7 @@ const SlidingSegmentedControl = ({ activeTab, setActiveTab, screenWidth }) => {
     pillOffset.value = withSpring(activeTab === 'passage' ? 0 : 1, { damping: 18, stiffness: 120 });
   }, [activeTab]);
 
-  const pillWidth = (screenWidth - 48 - 8) / 2; // padding px-6 = 24*2 = 48; inner spacing 8
+  const pillWidth = (screenWidth - 48 - 8) / 2;
 
   const animatedPillStyle = useAnimatedStyle(() => {
     return {
@@ -302,7 +303,6 @@ const SlidingTFNG = ({ selectedValue, onSelect, screenWidth }) => {
     }
   }, [index]);
 
-  // Screen layout: screenWidth - page padding(48) - card inner padding(40) = screenWidth - 88
   const containerWidth = screenWidth - 88;
   const itemWidth = (containerWidth - 8) / 3;
 
@@ -379,19 +379,16 @@ const SlideUpModal = ({ visible, onClose, children }) => {
   return (
     <Modal transparent visible={shouldRender} animationType="none" onRequestClose={onClose}>
       <View className="flex-1 justify-end">
-        {/* Backdrop overlay */}
         <Animated.View 
           style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000000' }, animatedBackdropStyle]}
         >
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
         </Animated.View>
 
-        {/* Sliding Bottom Sheet */}
         <Animated.View 
           style={[animatedSheetStyle]} 
           className="bg-white p-6 rounded-t-[36px] border-t border-[#E5E7EB] shadow-2xl pb-10"
         >
-          {/* Handlebar */}
           <View className="w-12 h-1.5 bg-[#E5E7EB] rounded-full self-center mb-6" />
           {children}
         </Animated.View>
@@ -400,32 +397,37 @@ const SlideUpModal = ({ visible, onClose, children }) => {
   );
 };
 
+// HTML content cleaner helper
+const cleanHTML = (html) => {
+  if (!html) return '';
+  return html
+    .replace(/<\/p>/g, '\n\n')
+    .replace(/<\/div>/g, '\n\n')
+    .replace(/<br\s*\/?>/g, '\n')
+    .replace(/<[^>]+>/g, '') // Strip other HTML tags
+    .replace(/&nbsp;/g, ' ')
+    .trim();
+};
+
 // --- Main ExamScreen Component ---
 const ExamScreen = ({ route, navigation }) => {
-  const { testType } = route.params || { testType: 'Reading' };
+  const { examId, testType } = route.params || {};
   const { width: screenWidth } = useWindowDimensions();
 
-  // Tabs for Reading Simulation
-  const [activeTab, setActiveTab] = useState('passage'); 
+  const [examData, setExamData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const [activeTab, setActiveTab] = useState('passage'); // 'passage' or 'questions'
+  const [activeSectionIdx, setActiveSectionIdx] = useState(0);
 
-  // Countdown timer
-  const initialTime = testType === 'Reading' ? 3600 : 1800;
-  const [timeLeft, setTimeLeft] = useState(initialTime);
-
-  // User answers
-  const [answers, setAnswers] = useState({
-    q1: '', 
-    q2: '', 
-    q3: '', 
-    q4: '', 
-    q5: '', 
-  });
-
+  const [timeLeft, setTimeLeft] = useState(3600);
+  const [answers, setAnswers] = useState({});
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   // Audio Player State (Listening)
   const [isPlaying, setIsPlaying] = useState(false);
-  const [audioProgress, setAudioProgress] = useState(0.35); 
+  const [audioProgress, setAudioProgress] = useState(0.0); 
 
   // Vocabulary Lookup Helper State
   const [selectedWord, setSelectedWord] = useState(null);
@@ -433,29 +435,76 @@ const ExamScreen = ({ route, navigation }) => {
 
   const { token } = useAuthStore();
 
-  // 1. TẢI DỮ LIỆU CŨ khi người dùng vào màn hình
+  // 1. Fetch exam data on mount
   useEffect(() => {
-    const loadSavedProgress = async () => {
+    const fetchExamDetails = async () => {
+      if (!examId) {
+        setError('Không tìm thấy thông tin đề thi.');
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError(null);
       try {
-        const savedData = await AsyncStorage.getItem(`exam_progress_${testType}`);
-        if (savedData) {
-          const parsed = JSON.parse(savedData);
-          setAnswers(parsed.answers);
-          setTimeLeft(parsed.timeLeft);
+        const res = await examService.getById(examId);
+        const exam = res.data?.data || res.data;
+        if (!exam) {
+          throw new Error('Không có dữ liệu đề thi.');
         }
-      } catch (e) {
-        console.log('Lỗi tải dữ liệu cũ:', e);
+        
+        if (exam.sections) {
+          exam.sections.sort((a, b) => a.sectionOrder - b.sectionOrder);
+          exam.sections.forEach(sec => {
+            if (sec.questions) {
+              sec.questions.sort((a, b) => a.questionNumber - b.questionNumber);
+            }
+          });
+        }
+
+        setExamData(exam);
+        
+        // Load saved progress or initialize empty answers
+        const savedProgress = await AsyncStorage.getItem(`exam_progress_${examId}`);
+        const initialAnswers = {};
+        
+        exam.sections.forEach(sec => {
+          if (sec.questions) {
+            sec.questions.forEach(q => {
+              initialAnswers[q.id] = '';
+            });
+          }
+        });
+
+        if (savedProgress) {
+          const parsed = JSON.parse(savedProgress);
+          const mergedAnswers = { ...initialAnswers };
+          Object.keys(parsed.answers || {}).forEach(k => {
+            if (k in mergedAnswers) {
+              mergedAnswers[k] = parsed.answers[k];
+            }
+          });
+          setAnswers(mergedAnswers);
+          setTimeLeft(parsed.timeLeft || exam.duration * 60);
+        } else {
+          setAnswers(initialAnswers);
+          setTimeLeft(exam.duration * 60);
+        }
+      } catch (err) {
+        setError('Không thể tải chi tiết đề thi.');
+      } finally {
+        setLoading(false);
       }
     };
-    loadSavedProgress();
-  }, [testType]);
+    fetchExamDetails();
+  }, [examId]);
 
-  // 2. LƯU DỮ LIỆU MỚI mỗi khi `answers` hoặc `timeLeft` thay đổi
+  // 2. Save progress on changes
   useEffect(() => {
+    if (!examId || loading || error) return;
     const saveProgress = async () => {
       try {
         const dataToSave = JSON.stringify({ answers, timeLeft });
-        await AsyncStorage.setItem(`exam_progress_${testType}`, dataToSave);
+        await AsyncStorage.setItem(`exam_progress_${examId}`, dataToSave);
       } catch (e) {
         console.log('Lỗi lưu dữ liệu:', e);
       }
@@ -463,10 +512,11 @@ const ExamScreen = ({ route, navigation }) => {
     
     const saveTimer = setTimeout(saveProgress, 3000); 
     return () => clearTimeout(saveTimer);
-  }, [answers, timeLeft, testType]);
+  }, [answers, timeLeft, examId, loading, error]);
 
-  // Timer runner
+  // 3. Timer runner
   useEffect(() => {
+    if (loading || error) return;
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -478,70 +528,46 @@ const ExamScreen = ({ route, navigation }) => {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [loading, error]);
 
   const handleAutoSubmit = () => {
-    Alert.alert("Time's Up!", "Your answers have been automatically submitted.", [
-      { text: "View Results", onPress: () => handleSubmit() }
+    Alert.alert("Hết giờ làm bài!", "Bài làm của bạn đã tự động nộp.", [
+      { text: "Xem kết quả", onPress: () => handleSubmit() }
     ]);
   };
 
   const handleSubmit = async () => {
+    if (!examData) return;
     try {
-      const payload = {
-        timeTaken: initialTime - timeLeft,
-        answers: [
-          { questionId: 'q1', studentAnswer: answers.q1 },
-          { questionId: 'q2', studentAnswer: answers.q2 },
-          { questionId: 'q3', studentAnswer: answers.q3 },
-          { questionId: 'q4', studentAnswer: answers.q4 },
-          { questionId: 'q5', studentAnswer: answers.q5 }
-        ]
-      };
+      const answerPayload = Object.keys(answers).map(qId => ({
+        questionId: qId,
+        userAnswer: answers[qId] || ''
+      }));
 
-      const EXAM_ID = '64f1a2b3c4d5e6f7g8h9i0j1'; // Dummy exam ID
+      const res = await examService.submit(examId, answerPayload, (examData.duration * 60) - timeLeft);
+      const submitResult = res.data?.data || res.data;
 
-      const response = await fetch(`http://localhost:5000/api/v1/exams/${EXAM_ID}/submit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify(payload)
-      });
-      
-      const responseData = await response.json();
-
-      if (response.ok || response.status === 201) {
-        await AsyncStorage.removeItem(`exam_progress_${testType}`);
+      if (submitResult) {
+        await AsyncStorage.removeItem(`exam_progress_${examId}`);
         setShowSubmitModal(false);
-        
-        navigation.navigate('Practice', { 
-          screen: testType === 'Reading' ? 'ReadingAnalysis' : 'WritingAI',
-          score: responseData?.data?.bandScore || '8.5'
-        });
-      } else {
-        Alert.alert('Lỗi nộp bài', responseData.message || 'Có lỗi xảy ra');
-        
-        // Fallback cho FE test (nếu server không chạy)
-        await AsyncStorage.removeItem(`exam_progress_${testType}`);
-        setShowSubmitModal(false);
-        navigation.navigate('Practice', { 
-          screen: testType === 'Reading' ? 'ReadingAnalysis' : 'WritingAI',
-          score: '8.5'
-        });
+
+        Alert.alert(
+          'Nộp bài thành công! 🎉',
+          `Kết quả thi:\n• Số câu đúng: ${submitResult.correctCount} / ${submitResult.totalQuestions}\n• Điểm Band: ${submitResult.bandScore}`,
+          [
+            {
+              text: 'Xác nhận',
+              onPress: () => {
+                navigation.navigate('Practice', { 
+                  screen: testType === 'Reading' ? 'ReadingAnalysis' : 'WritingAI'
+                });
+              }
+            }
+          ]
+        );
       }
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Lỗi kết nối', 'Không thể kết nối đến server nộp bài');
-      
-      // Fallback
-      await AsyncStorage.removeItem(`exam_progress_${testType}`);
+    } catch (err) {
       setShowSubmitModal(false);
-      navigation.navigate('Practice', { 
-        screen: testType === 'Reading' ? 'ReadingAnalysis' : 'WritingAI',
-        score: '8.5'
-      });
     }
   };
 
@@ -550,7 +576,7 @@ const ExamScreen = ({ route, navigation }) => {
     setShowVocabModal(true);
   };
 
-  // Reanimated Tab Offset (Reading simulation sliding pages)
+  // Reanimated Tab Offset for Reading
   const tabOffset = useSharedValue(0);
   useEffect(() => {
     tabOffset.value = withSpring(activeTab === 'passage' ? 0 : -screenWidth, { damping: 18, stiffness: 120 });
@@ -562,7 +588,6 @@ const ExamScreen = ({ route, navigation }) => {
     };
   });
 
-  // 3D scale and fade-in/fade-out page transition effects
   const passageStyle = useAnimatedStyle(() => {
     const progress = 1 + (tabOffset.value / screenWidth);
     return {
@@ -583,13 +608,14 @@ const ExamScreen = ({ route, navigation }) => {
     };
   });
 
-  // Satisfying bottom navigation progress bar width logic
+  // Dynamic Progress calculations
+  const questionsCount = examData?.sections?.reduce((sum, sec) => sum + (sec.questions?.length || 0), 0) || 1;
   const answeredCount = Object.values(answers).filter(v => v !== '').length;
   const bottomProgress = useSharedValue(0);
 
   useEffect(() => {
-    bottomProgress.value = withSpring(answeredCount / 5, { damping: 15 });
-  }, [answeredCount]);
+    bottomProgress.value = withSpring(answeredCount / questionsCount, { damping: 15 });
+  }, [answeredCount, questionsCount]);
 
   const bottomProgressStyle = useAnimatedStyle(() => {
     return {
@@ -597,16 +623,134 @@ const ExamScreen = ({ route, navigation }) => {
     };
   });
 
+  const renderQuestion = (q, idx) => {
+    const isTFNG = q.type === 'TRUE_FALSE_NOT_GIVEN' || 
+                   (q.options && q.options.length === 3 && 
+                    (q.options.includes('TRUE') || q.options.includes('YES') || q.options.includes('FALSE') || q.options.includes('NO')));
+
+    if (isTFNG) {
+      const choices = q.options || ['TRUE', 'FALSE', 'NOT GIVEN'];
+      return (
+        <View key={q.id} className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
+          <View className="flex-row items-start mb-3">
+            <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
+              <Text className="text-sm font-extrabold text-[#005C42]">{q.questionNumber}</Text>
+            </View>
+            <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
+              {q.content}
+            </Text>
+          </View>
+          <View className="flex-row bg-[#F1F5F9] p-1 rounded-2xl relative border border-[#E5E7EB] mt-3">
+            {choices.map((choice) => {
+              const isSelected = answers[q.id] === choice;
+              return (
+                <TouchableOpacity
+                  key={choice}
+                  onPress={() => setAnswers({ ...answers, [q.id]: choice })}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  className={`flex-1 py-3 items-center rounded-xl ${isSelected ? 'bg-[#00CC99]' : ''}`}
+                  activeOpacity={0.8}
+                >
+                  <Text className={`text-[10px] font-black tracking-wider ${isSelected ? 'text-white' : 'text-[#9CA3AF]'}`}>
+                    {choice}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      );
+    }
+
+    if (q.type === 'MULTIPLE_CHOICE' && q.options && q.options.length > 0) {
+      return (
+        <View key={q.id} className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
+          <View className="flex-row items-start mb-4">
+            <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
+              <Text className="text-sm font-extrabold text-[#005C42]">{q.questionNumber}</Text>
+            </View>
+            <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
+              {q.content}
+            </Text>
+          </View>
+
+          {q.options.map((opt, optIdx) => {
+            const optionLabel = String.fromCharCode(65 + optIdx);
+            const isSelected = answers[q.id] === optionLabel || answers[q.id] === opt;
+            return (
+              <AnimatedOption
+                key={optIdx}
+                optionKey={optionLabel}
+                text={opt}
+                isSelected={isSelected}
+                onPress={() => setAnswers({ ...answers, [q.id]: optionLabel })}
+              />
+            );
+          })}
+        </View>
+      );
+    }
+
+    return (
+      <View key={q.id} className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
+        <View className="flex-row items-start mb-4">
+          <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
+            <Text className="text-sm font-extrabold text-[#005C42]">{q.questionNumber}</Text>
+          </View>
+          <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
+            {q.content}
+          </Text>
+        </View>
+
+        <View className="flex-row items-center border border-[#E5E7EB] bg-[#F8FAFC] rounded-2xl p-3">
+          <TextInput
+            value={answers[q.id] || ''}
+            onChangeText={(text) => setAnswers({ ...answers, [q.id]: text })}
+            placeholder="Nhập câu trả lời..."
+            placeholderTextColor="#9CA3AF"
+            className="flex-1 text-sm font-bold text-[#1E1E1E] p-0 font-sans"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+      </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#00CC99" />
+        <Text className="text-sm font-bold text-[#1E1E1E] mt-4 font-sans">Đang tải đề thi...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !examData) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center px-6">
+        <Text className="text-sm font-bold text-red-500 text-center font-sans">{error || 'Không tìm thấy dữ liệu đề thi.'}</Text>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="mt-6 bg-[#00CC99] px-6 py-3 rounded-2xl"
+        >
+          <Text className="text-white text-sm font-black">Quay lại</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  const activeSection = examData.sections?.[activeSectionIdx];
+
   return (
     <SafeAreaView className="flex-1 bg-[#F7F9FA]">
       {/* Top Header */}
       <View className="flex-row items-center justify-between px-6 py-4 bg-white border-b border-[#E5E7EB]">
-        {/* Animated back button */}
         <AnimatedButton 
           onPress={() => {
-            Alert.alert("Quit Test?", "All your progress in this session will be lost.", [
-              { text: "Cancel", style: "cancel" },
-              { text: "Quit", style: "destructive", onPress: () => navigation.goBack() }
+            Alert.alert("Thoát làm bài?", "Mọi tiến trình làm bài trong phiên này của bạn sẽ bị mất.", [
+              { text: "Hủy", style: "cancel" },
+              { text: "Thoát", style: "destructive", onPress: () => navigation.goBack() }
             ]);
           }}
           className="w-10 h-10 bg-[#F7F9FA] rounded-full items-center justify-center border border-[#E5E7EB]"
@@ -616,13 +760,12 @@ const ExamScreen = ({ route, navigation }) => {
           </Svg>
         </AnimatedButton>
 
-        <View className="items-center">
+        <View className="items-center max-w-[200px]">
           <Text className="text-[10px] font-extrabold text-[#9CA3AF] uppercase tracking-widest">{testType} Simulation</Text>
-          <Text className="text-base font-bold text-[#1E1E1E] mt-0.5 font-sans">IELTS Prep - Test 08</Text>
+          <Text className="text-base font-bold text-[#1E1E1E] mt-0.5 font-sans" numberOfLines={1}>{examData.title}</Text>
         </View>
 
-        {/* Custom Circular Pulse Timer */}
-        <CircularTimer timeLeft={timeLeft} initialTime={initialTime} />
+        <CircularTimer timeLeft={timeLeft} initialTime={examData.duration * 60} />
       </View>
 
       {/* Switch Tab cho Reading */}
@@ -630,8 +773,42 @@ const ExamScreen = ({ route, navigation }) => {
         <SlidingSegmentedControl activeTab={activeTab} setActiveTab={setActiveTab} screenWidth={screenWidth} />
       )}
 
-      {/* Audio Player (Listening) - Premium Dark Media Card */}
-      {testType === 'Listening' && (
+      {/* Section/Passage Selector Tabs Row */}
+      {examData.sections && examData.sections.length > 1 && (
+        <View className="bg-white border-b border-[#E5E7EB]">
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 10, gap: 10 }}
+          >
+            {examData.sections.map((sec, idx) => {
+              const isActive = idx === activeSectionIdx;
+              return (
+                <TouchableOpacity
+                  key={sec.id}
+                  onPress={() => {
+                    setActiveSectionIdx(idx);
+                    if (testType === 'Reading') {
+                      setActiveTab('passage');
+                    }
+                  }}
+                  style={{ marginRight: 8 }}
+                  className={`px-4 py-2 rounded-2xl border ${
+                    isActive ? 'bg-[#00CC99] border-[#00CC99]' : 'bg-[#F8FAFC] border-[#E2E8F0]'
+                  }`}
+                >
+                  <Text className={`text-xs font-extrabold ${isActive ? 'text-white' : 'text-[#64748B]'}`}>
+                    {testType === 'Reading' ? `Passage ${sec.sectionOrder}` : `Part ${sec.sectionOrder}`}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Audio Player (Listening) */}
+      {testType === 'Listening' && activeSection?.audioUrl && (
         <View className="bg-white px-6 py-4 border-b border-[#E5E7EB]">
           <View className="bg-[#1E293B] p-5 rounded-[28px] shadow-lg shadow-slate-300">
             <View className="flex-row items-center justify-between">
@@ -651,16 +828,17 @@ const ExamScreen = ({ route, navigation }) => {
                   )}
                 </AnimatedButton>
                 <View className="ml-4">
-                  <Text className="text-sm font-bold text-white font-sans">Section 1: Rental Inquiry</Text>
-                  <Text className="text-xs text-slate-400 mt-1 font-sans">IELTS Listening Band 8.5 Practice</Text>
+                  <Text className="text-sm font-bold text-white font-sans">
+                    {activeSection.title || `Part ${activeSection.sectionOrder}`}
+                  </Text>
+                  <Text className="text-xs text-slate-400 mt-1 font-sans">
+                    {examData.title}
+                  </Text>
                 </View>
               </View>
-              <Text className="text-xs font-mono font-black text-[#00CC99]">09:12 / 30:00</Text>
-            </View>
-
-            {/* Glowing progress line */}
-            <View className="w-full h-2 bg-slate-700/50 rounded-full mt-5 overflow-hidden">
-              <View className="h-full bg-[#00CC99] rounded-full shadow-sm shadow-emerald-400" style={{ width: `${audioProgress * 100}%` }} />
+              <Text className="text-xs font-mono font-black text-[#00CC99]">
+                {isPlaying ? 'Playing' : 'Paused'}
+              </Text>
             </View>
           </View>
         </View>
@@ -679,68 +857,17 @@ const ExamScreen = ({ route, navigation }) => {
                 <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
                   <View className="bg-[#FCFDFD] p-6 rounded-[32px] border border-[#E5E7EB] mb-28 shadow-sm">
                     <View className="flex-row justify-between items-center mb-4">
-                      <Text className="text-xs font-extrabold text-[#00CC99] uppercase tracking-widest">READING PASSAGE 1</Text>
-                      <View className="bg-[#E6F9F5] px-2.5 py-0.5 rounded-full border border-[#A7F3D0]">
-                        <Text className="text-[9px] font-extrabold text-[#005C42]">💡 Tap underlined words to translate</Text>
-                      </View>
+                      <Text className="text-xs font-extrabold text-[#00CC99] uppercase tracking-widest">
+                        READING PASSAGE {activeSection?.sectionOrder}
+                      </Text>
                     </View>
                     <Text className="text-2xl font-black text-[#1E1E1E] leading-8 mb-5 tracking-tight font-sans">
-                      The Rise of Creative Urban Spaces
+                      {activeSection?.title || 'No Title'}
                     </Text>
                     
-                    {/* Paragraph A Card */}
                     <View className="bg-white p-5 rounded-2xl border border-[#F1F5F9] mb-5 shadow-xs border-l-4 border-l-[#00CC99]">
-                      <View className="flex-row items-center mb-3">
-                        <View className="bg-[#E6F9F5] px-2.5 py-0.5 rounded-md border border-[#A7F3D0]">
-                          <Text className="text-[10px] font-extrabold text-[#005C42] tracking-wider uppercase font-sans">Paragraph A</Text>
-                        </View>
-                      </View>
                       <Text className="text-sm text-[#4B5563] leading-7 font-medium font-sans">
-                        In the early decades of the twenty-first century, cities around the world have undergone a radical 
-                        <Text 
-                          onPress={() => handleWordPress("transformation", "A marked change in form, nature, or appearance.", "/ˌtræns.fəˈmeɪ.ʃən/")}
-                          className="text-[#005C42] font-extrabold mx-0.5"
-                          style={{ textDecorationLine: 'underline', textDecorationColor: '#00CC99' }}
-                        > transformation</Text>. Formerly industrial districts, once filled with abandoned warehouses and dusty factories, have been reborn as vibrant hubs of culture and technology. This trend, often referred to as the 
-                        <Text 
-                          onPress={() => handleWordPress("creative", "Relating to or involving the imagination or original ideas.", "/kriˈeɪ.tɪv/")}
-                          className="text-[#005C42] font-extrabold mx-0.5"
-                          style={{ textDecorationLine: 'underline', textDecorationColor: '#00CC99' }}
-                        > creative</Text> city movement, is not merely about aesthetic remodeling; it represents a fundamental shift in how urban economies operate. Instead of relying on traditional manufacturing, cities now compete to attract highly skilled workers in software development, design, and biomedical engineering.
-                      </Text>
-                    </View>
-                    
-                    {/* Paragraph B Card */}
-                    <View className="bg-white p-5 rounded-2xl border border-[#F1F5F9] mb-5 shadow-xs border-l-4 border-l-[#00CC99]">
-                      <View className="flex-row items-center mb-3">
-                        <View className="bg-[#E6F9F5] px-2.5 py-0.5 rounded-md border border-[#A7F3D0]">
-                          <Text className="text-[10px] font-extrabold text-[#005C42] tracking-wider uppercase font-sans">Paragraph B</Text>
-                        </View>
-                      </View>
-                      <Text className="text-sm text-[#4B5563] leading-7 font-medium font-sans">
-                        At the heart of this rebirth are shared infrastructure projects. Shared workspaces, local maker spaces, and public-private innovation hubs have sprung up globally. Research shows that geographic 
-                        <Text 
-                          onPress={() => handleWordPress("proximity", "Closeness in space, time, or relationship.", "/prɒkˈsɪm.ə.ti/")}
-                          className="text-[#005C42] font-extrabold mx-0.5"
-                          style={{ textDecorationLine: 'underline', textDecorationColor: '#00CC99' }}
-                        > proximity</Text> between diverse industries sparks spontaneous collaboration and knowledge sharing. When developers work in close proximity to fashion designers and visual artists, new and unexpected ideas are forged. This cross-pollination has led to the emergence of multi-disciplinary fields, such as wearable technology and digital architecture.
-                      </Text>
-                    </View>
-
-                    {/* Paragraph C Card */}
-                    <View className="bg-white p-5 rounded-2xl border border-[#F1F5F9] mb-5 shadow-xs border-l-4 border-l-[#00CC99]">
-                      <View className="flex-row items-center mb-3">
-                        <View className="bg-[#E6F9F5] px-2.5 py-0.5 rounded-md border border-[#A7F3D0]">
-                          <Text className="text-[10px] font-extrabold text-[#005C42] tracking-wider uppercase font-sans">Paragraph C</Text>
-                        </View>
-                      </View>
-                      <Text className="text-sm text-[#4B5563] leading-7 font-medium font-sans">
-                        However, the creative urban revolution is not without critics. Many sociologists point out that the influx of high-earning tech professionals leads to skyrocketing property values, forcing out long-term residents and local businesses. This 
-                        <Text 
-                          onPress={() => handleWordPress("gentrification", "The process of renovating and improving a house or district so that it conforms to middle-class taste.", "/ˌdʒen.trɪ.fɪˈkeɪ.ʃən/")}
-                          className="text-[#005C42] font-extrabold mx-0.5"
-                          style={{ textDecorationLine: 'underline', textDecorationColor: '#00CC99' }}
-                        > gentrification</Text> can strip a neighborhood of its original cultural diversity, the very element that attracted the creative class in the first place. Urban planners are now faced with the monumental task of fostering economic innovation while ensuring affordable housing and social equity.
+                        {cleanHTML(activeSection?.passageText)}
                       </Text>
                     </View>
                   </View>
@@ -751,271 +878,53 @@ const ExamScreen = ({ route, navigation }) => {
               <Animated.View style={[{ width: screenWidth, flex: 1 }, questionsStyle]}>
                 <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
                   <View className="mb-28">
-                    {/* Q1 Card (MCQ) */}
-                    <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
-                      <View className="flex-row items-start mb-4">
-                        <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
-                          <Text className="text-sm font-extrabold text-[#005C42]">1</Text>
-                        </View>
-                        <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
-                          What is the main driver behind the creative city movement as described in Paragraph A?
-                        </Text>
+                    {activeSection?.questions && activeSection.questions.length > 0 ? (
+                      activeSection.questions.map((q, qidx) => renderQuestion(q, qidx))
+                    ) : (
+                      <View className="items-center justify-center p-10">
+                        <Text className="text-sm font-bold text-slate-400">Không có câu hỏi trong phần này.</Text>
                       </View>
-
-                      <AnimatedOption 
-                        optionKey="A"
-                        text="To restore historically significant manufacturing factories."
-                        isSelected={answers.q1 === 'A'}
-                        onPress={() => setAnswers({ ...answers, q1: 'A' })}
-                      />
-                      <AnimatedOption 
-                        optionKey="B"
-                        text="To shift the urban economy from manufacturing to knowledge-based industries."
-                        isSelected={answers.q1 === 'B'}
-                        onPress={() => setAnswers({ ...answers, q1: 'B' })}
-                      />
-                      <AnimatedOption 
-                        optionKey="C"
-                        text="To decrease the density of high-skilled professionals in cities."
-                        isSelected={answers.q1 === 'C'}
-                        onPress={() => setAnswers({ ...answers, q1: 'C' })}
-                      />
-                    </View>
-
-                    {/* Q2 & Q3 Card (TFNG with Smooth Pill Sliders) */}
-                    <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
-                      <Text className="text-xs font-extrabold text-[#9CA3AF] uppercase tracking-widest mb-3 font-sans">
-                        Questions 2-3: True/False/Not Given
-                      </Text>
-                      
-                      <View className="mb-5 border-b border-[#F3F4F6] pb-5">
-                        <View className="flex-row items-start mb-3">
-                          <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
-                            <Text className="text-sm font-extrabold text-[#005C42]">2</Text>
-                          </View>
-                          <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
-                            Geographic proximity between different industries prevents spontaneous collaboration.
-                          </Text>
-                        </View>
-                        <SlidingTFNG 
-                          selectedValue={answers.q2}
-                          onSelect={(choice) => setAnswers({ ...answers, q2: choice })}
-                          screenWidth={screenWidth}
-                        />
-                      </View>
-
-                      <View className="mb-2">
-                        <View className="flex-row items-start mb-3">
-                          <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
-                            <Text className="text-sm font-extrabold text-[#005C42]">3</Text>
-                          </View>
-                          <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
-                            Rising property prices are causing some long-term residents to leave creative districts.
-                          </Text>
-                        </View>
-                        <SlidingTFNG 
-                          selectedValue={answers.q3}
-                          onSelect={(choice) => setAnswers({ ...answers, q3: choice })}
-                          screenWidth={screenWidth}
-                        />
-                      </View>
-                    </View>
-
-                    {/* Q4 & Q5 Card (Fill-in-the-blanks) */}
-                    <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
-                      <Text className="text-xs font-extrabold text-[#9CA3AF] uppercase tracking-widest mb-3 font-sans">
-                        Questions 4-5: Complete the Summary
-                      </Text>
-
-                      <View className="bg-[#F7F9FA] p-4 rounded-2xl border border-[#E5E7EB] mb-4">
-                        <Text className="text-xs text-[#4B5563] leading-6 font-medium font-sans">
-                          The creative city movement has triggered criticism due to the risk of gentrification. The arrival of high-earning 
-                          <Text className="font-extrabold text-[#005C42] bg-[#E6F9F5] px-2 rounded font-sans"> [4] </Text> 
-                          tends to drive up real estate prices. This eventually forces older residents out of their original 
-                          <Text className="font-extrabold text-[#005C42] bg-[#E6F9F5] px-2 rounded font-sans"> [5] </Text>.
-                        </Text>
-                      </View>
-
-                      <View className="flex-row items-center border border-[#E5E7EB] bg-white rounded-2xl p-3 mb-3 focus-within:border-[#00CC99]">
-                        <View className="bg-[#E6F9F5] w-8 h-8 rounded-full items-center justify-center mr-3">
-                          <Text className="text-xs font-extrabold text-[#005C42] font-sans">4</Text>
-                        </View>
-                        <TextInput
-                          value={answers.q4}
-                          onChangeText={(text) => setAnswers({ ...answers, q4: text })}
-                          placeholder="Enter answer for Question 4"
-                          placeholderTextColor="#9CA3AF"
-                          className="flex-1 text-sm font-bold text-[#1E1E1E] p-0 font-sans"
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                        />
-                      </View>
-
-                      <View className="flex-row items-center border border-[#E5E7EB] bg-white rounded-2xl p-3 focus-within:border-[#00CC99]">
-                        <View className="bg-[#E6F9F5] w-8 h-8 rounded-full items-center justify-center mr-3">
-                          <Text className="text-xs font-extrabold text-[#005C42] font-sans">5</Text>
-                        </View>
-                        <TextInput
-                          value={answers.q5}
-                          onChangeText={(text) => setAnswers({ ...answers, q5: text })}
-                          placeholder="Enter answer for Question 5"
-                          placeholderTextColor="#9CA3AF"
-                          className="flex-1 text-sm font-bold text-[#1E1E1E] p-0 font-sans"
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                        />
-                      </View>
-                    </View>
+                    )}
                   </View>
                 </ScrollView>
               </Animated.View>
             </Animated.View>
           </View>
         ) : (
-          // Listening simulation (single column scroll)
+          // Listening simulation
           <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
             <View className="mb-28">
-              {/* Q1 Card */}
-              <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
-                <View className="flex-row items-start mb-4">
-                  <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
-                    <Text className="text-sm font-extrabold text-[#005C42]">1</Text>
-                  </View>
-                  <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
-                    What does the speaker identify as the main goal of the local community center project?
-                  </Text>
+              {activeSection?.questions && activeSection.questions.length > 0 ? (
+                activeSection.questions.map((q, qidx) => renderQuestion(q, qidx))
+              ) : (
+                <View className="items-center justify-center p-10">
+                  <Text className="text-sm font-bold text-slate-400">Không có câu hỏi trong phần này.</Text>
                 </View>
-
-                <AnimatedOption 
-                  optionKey="A"
-                  text="To increase the city tourism revenue."
-                  isSelected={answers.q1 === 'A'}
-                  onPress={() => setAnswers({ ...answers, q1: 'A' })}
-                />
-                <AnimatedOption 
-                  optionKey="B"
-                  text="To provide affordable creative workspaces for local residents."
-                  isSelected={answers.q1 === 'B'}
-                  onPress={() => setAnswers({ ...answers, q1: 'B' })}
-                />
-                <AnimatedOption 
-                  optionKey="C"
-                  text="To construct large industrial warehouses."
-                  isSelected={answers.q1 === 'C'}
-                  onPress={() => setAnswers({ ...answers, q1: 'C' })}
-                />
-              </View>
-
-              {/* Q2 & Q3 (TFNG) */}
-              <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
-                <Text className="text-xs font-extrabold text-[#9CA3AF] uppercase tracking-widest mb-3 font-sans">
-                  Questions 2-3: True/False/Not Given
-                </Text>
-                
-                <View className="mb-5 border-b border-[#F3F4F6] pb-5">
-                  <View className="flex-row items-start mb-3">
-                    <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
-                      <Text className="text-sm font-extrabold text-[#005C42]">2</Text>
-                    </View>
-                    <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
-                      Geographic proximity between different industries prevents spontaneous collaboration.
-                    </Text>
-                  </View>
-                  <SlidingTFNG 
-                    selectedValue={answers.q2}
-                    onSelect={(choice) => setAnswers({ ...answers, q2: choice })}
-                    screenWidth={screenWidth}
-                  />
-                </View>
-
-                <View className="mb-2">
-                  <View className="flex-row items-start mb-3">
-                    <View className="bg-[#E6F9F5] w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5">
-                      <Text className="text-sm font-extrabold text-[#005C42]">3</Text>
-                    </View>
-                    <Text className="flex-1 text-sm font-bold text-[#1E1E1E] leading-6 font-sans">
-                      Rising property prices are causing some long-term residents to leave creative districts.
-                    </Text>
-                  </View>
-                  <SlidingTFNG 
-                    selectedValue={answers.q3}
-                    onSelect={(choice) => setAnswers({ ...answers, q3: choice })}
-                    screenWidth={screenWidth}
-                  />
-                </View>
-              </View>
-
-              {/* Q4 & Q5 Card */}
-              <View className="bg-white p-6 rounded-[32px] border border-[#E5E7EB] mb-4 shadow-xs">
-                <Text className="text-xs font-extrabold text-[#9CA3AF] uppercase tracking-widest mb-3 font-sans">
-                  Questions 4-5: Complete the Summary
-                </Text>
-
-                <View className="bg-[#F7F9FA] p-4 rounded-2xl border border-[#E5E7EB] mb-4">
-                  <Text className="text-xs text-[#4B5563] leading-6 font-medium font-sans">
-                    The creative city movement has triggered criticism due to the risk of gentrification. The arrival of high-earning 
-                    <Text className="font-extrabold text-[#005C42] bg-[#E6F9F5] px-2 rounded font-sans"> [4] </Text> 
-                    tends to drive up real estate prices. This eventually forces older residents out of their original 
-                    <Text className="font-extrabold text-[#005C42] bg-[#E6F9F5] px-2 rounded font-sans"> [5] </Text>.
-                  </Text>
-                </View>
-
-                <View className="flex-row items-center border border-[#E5E7EB] bg-white rounded-2xl p-3 mb-3 focus-within:border-[#00CC99]">
-                  <View className="bg-[#E6F9F5] w-8 h-8 rounded-full items-center justify-center mr-3">
-                    <Text className="text-xs font-extrabold text-[#005C42] font-sans">4</Text>
-                  </View>
-                  <TextInput
-                    value={answers.q4}
-                    onChangeText={(text) => setAnswers({ ...answers, q4: text })}
-                    placeholder="Enter answer for Question 4"
-                    placeholderTextColor="#9CA3AF"
-                    className="flex-1 text-sm font-bold text-[#1E1E1E] p-0 font-sans"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-
-                <View className="flex-row items-center border border-[#E5E7EB] bg-white rounded-2xl p-3 focus-within:border-[#00CC99]">
-                  <View className="bg-[#E6F9F5] w-8 h-8 rounded-full items-center justify-center mr-3">
-                    <Text className="text-xs font-extrabold text-[#005C42] font-sans">5</Text>
-                  </View>
-                  <TextInput
-                    value={answers.q5}
-                    onChangeText={(text) => setAnswers({ ...answers, q5: text })}
-                    placeholder="Enter answer for Question 5"
-                    placeholderTextColor="#9CA3AF"
-                    className="flex-1 text-sm font-bold text-[#1E1E1E] p-0 font-sans"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-              </View>
+              )}
             </View>
           </ScrollView>
         )}
       </KeyboardAvoidingView>
 
-      {/* Floating Bottom Navigation Bar chứa nút Submit Test với progress mượt mà */}
+      {/* Floating Bottom Navigation Bar */}
       <View className="absolute bottom-0 left-0 right-0 h-24 bg-white border-t border-[#E5E7EB] px-6 pb-4">
-        {/* Satisfying Top Spring Progress Line */}
         <View className="absolute top-0 left-0 right-0 h-1 bg-[#F3F4F6]">
           <Animated.View style={bottomProgressStyle} className="h-full bg-[#00CC99]" />
         </View>
 
         <View className="flex-row items-center justify-between mt-4">
           <View>
-            <Text className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider font-sans">Progress</Text>
+            <Text className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider font-sans">Tiến trình</Text>
             <Text className="text-sm font-extrabold text-[#1E1E1E] mt-0.5 font-sans">
-              {answeredCount} / 5 Answered
+              {answeredCount} / {questionsCount} đã trả lời
             </Text>
           </View>
           
-          {/* Custom Animated Bouncy Submit Button */}
           <AnimatedButton
             onPress={() => setShowSubmitModal(true)}
             className="bg-[#00CC99] px-8 py-3.5 rounded-[20px] shadow-md shadow-emerald-500/20 flex-row items-center justify-center"
           >
-            <Text className="text-white text-base font-extrabold mr-2 font-sans">Submit Test</Text>
+            <Text className="text-white text-base font-extrabold mr-2 font-sans">Nộp bài</Text>
             <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="2.5">
               <Path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
@@ -1023,7 +932,7 @@ const ExamScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      {/* Premium Slide-Up Submit Confirmation Modal */}
+      {/* Submit Confirmation Modal */}
       <SlideUpModal visible={showSubmitModal} onClose={() => setShowSubmitModal(false)}>
         <View className="items-center mb-6 mt-2">
           <View className="w-16 h-16 bg-[#E6F9F5] rounded-full items-center justify-center mb-4 shadow-sm shadow-[#A7F3D0]">
@@ -1032,9 +941,9 @@ const ExamScreen = ({ route, navigation }) => {
               <Path d="M22 4L12 14.01l-3-3" strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </View>
-          <Text className="text-xl font-bold text-[#1E1E1E] text-center font-sans">Are you ready to submit?</Text>
+          <Text className="text-xl font-bold text-[#1E1E1E] text-center font-sans">Xác nhận nộp bài?</Text>
           <Text className="text-sm text-[#9CA3AF] text-center mt-2 leading-5 px-6 font-sans">
-            You have completed {answeredCount} out of 5 questions. AI Engine will instantly grade your test.
+            Bạn đã hoàn thành {answeredCount} trên tổng số {questionsCount} câu hỏi. Hệ thống AI sẽ chấm điểm bài thi của bạn ngay lập tức.
           </Text>
         </View>
 
@@ -1044,7 +953,7 @@ const ExamScreen = ({ route, navigation }) => {
             className="bg-[#F7F9FA] border border-[#E5E7EB] py-4 rounded-2xl items-center justify-center"
             style={{ flex: 1 }}
           >
-            <Text className="text-[#1E1E1E] text-sm font-bold font-sans">Keep Reviewing</Text>
+            <Text className="text-[#1E1E1E] text-sm font-bold font-sans">Xem lại bài</Text>
           </AnimatedButton>
           <View className="w-4" />
           <AnimatedButton
@@ -1052,12 +961,12 @@ const ExamScreen = ({ route, navigation }) => {
             className="bg-[#00CC99] py-4 rounded-2xl items-center justify-center shadow-md shadow-emerald-500/10"
             style={{ flex: 1 }}
           >
-            <Text className="text-white text-sm font-bold font-sans">Submit Now</Text>
+            <Text className="text-white text-sm font-bold font-sans">Nộp bài ngay</Text>
           </AnimatedButton>
         </View>
       </SlideUpModal>
 
-      {/* Tra cứu từ vựng thông minh (AI Vocab Helper Slide-up) */}
+      {/* Vocabulary Helper Slide-up */}
       <SlideUpModal visible={showVocabModal} onClose={() => setShowVocabModal(false)}>
         <View className="mb-4 mt-2">
           <View className="flex-row justify-between items-center pb-3 border-b border-[#F3F4F6]">
@@ -1077,10 +986,9 @@ const ExamScreen = ({ route, navigation }) => {
           onPress={() => setShowVocabModal(false)}
           className="bg-[#00CC99] py-4 rounded-2xl items-center justify-center shadow-md shadow-emerald-500/10"
         >
-          <Text className="text-white text-sm font-extrabold font-sans">Got it, thanks!</Text>
+          <Text className="text-white text-sm font-extrabold font-sans">Đồng ý</Text>
         </AnimatedButton>
       </SlideUpModal>
-
     </SafeAreaView>
   );
 };

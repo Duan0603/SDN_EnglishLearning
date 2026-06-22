@@ -4,7 +4,9 @@ import { StatusCode, ReasonStatusCode } from "../data/data.js";
 class ErrorResponse extends Error {
     constructor(message, status) {
         super(message);       // Gọi constructor của class Error gốc
-        this.status = status; // Bổ sung thêm mã HTTP status
+        this.status = status >= 400 && status < 500 ? 'fail' : 'error';
+        this.statusCode = status; // Map to TS error handler
+        this.isOperational = true; // Mark as operational error
     }
 }
 

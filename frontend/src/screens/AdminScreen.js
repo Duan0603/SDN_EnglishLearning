@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 import useAuthStore from '../store/useAuthStore';
 import adminUserService from '../api/adminUser.service';
+import examService from '../api/exam.service';
 
 const customAlert = (title, message, buttons) => {
   if (Platform.OS === 'web') {
@@ -70,11 +71,9 @@ const AdminScreen = ({ navigation }) => {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   // ── Exams state ──────────────────────────────────────────
-  const [examsList, setExamsList] = useState([
-    { id: '1', title: 'IELTS Cambridge 18 - Test 1', type: 'Reading', duration: 60, questionsCount: 40 },
-    { id: '2', title: 'IELTS Cambridge 18 - Test 2', type: 'Listening', duration: 30, questionsCount: 40 },
-    { id: '3', title: 'IELTS Cambridge 17 - Test 1', type: 'Reading', duration: 60, questionsCount: 40 },
-  ]);
+  const [examsList, setExamsList] = useState([]);
+  const [examsLoading, setExamsLoading] = useState(false);
+  const [examsError, setExamsError] = useState(null);
   const [showCreateExamModal, setShowCreateExamModal] = useState(false);
   const [newExamTitle, setNewExamTitle] = useState('');
   const [newExamType, setNewExamType] = useState('Reading');
@@ -97,9 +96,32 @@ const AdminScreen = ({ navigation }) => {
     }
   }, []);
 
+  const fetchExams = useCallback(async () => {
+    setExamsLoading(true);
+    setExamsError(null);
+    try {
+      const res = await examService.getAll();
+      const raw = res.data?.data?.exams || res.data?.exams || [];
+      setExamsList(raw.map(e => ({
+        ...e,
+        id: e._id || e.id,
+        type: e.type === 'READING' ? 'Reading' : e.type === 'LISTENING' ? 'Listening' : e.type
+      })));
+    } catch (err) {
+      setExamsList([]);
+      setExamsError('Không thể tải danh sách đề thi từ database.');
+    } finally {
+      setExamsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers, activeTab]);
+    if (activeTab === 'users') {
+      fetchUsers();
+    } else if (activeTab === 'exams') {
+      fetchExams();
+    }
+  }, [activeTab, fetchUsers, fetchExams]);
 
   // Filtered Users
   const filteredUsers = useMemo(() => {
@@ -211,22 +233,38 @@ const AdminScreen = ({ navigation }) => {
     } catch (err) { }
   };
 
-  const handleCreateExamSubmit = () => {
+  const handleDeleteExam = async (examId) => {
+    try {
+      await examService.remove(examId);
+      setExamsList(prev => prev.filter(e => e.id !== examId));
+      customAlert('✅ Thành công', 'Đã xóa đề thi thành công.');
+    } catch (err) {
+      // Handled globally
+    }
+  };
+
+  const handleCreateExamSubmit = async () => {
     if (!newExamTitle.trim()) {
       customAlert('Lỗi nhập liệu', 'Vui lòng điền tiêu đề đề thi.');
       return;
     }
-    const newExam = {
-      id: String(examsList.length + 1),
-      title: newExamTitle.trim(),
-      type: newExamType,
-      duration: parseInt(newExamDuration) || 60,
-      questionsCount: parseInt(newExamQuestions) || 40
-    };
-    setExamsList(prev => [newExam, ...prev]);
-    setShowCreateExamModal(false);
-    setNewExamTitle('');
-    customAlert('✅ Tạo thành công', 'Đề thi thử mới đã được thêm vào danh sách.');
+    try {
+      const payload = {
+        title: newExamTitle.trim(),
+        type: newExamType.toUpperCase(),
+        duration: parseInt(newExamDuration, 10) || 60,
+        sections: []
+      };
+      const res = await examService.create(payload);
+      if (res.data?.success) {
+        fetchExams();
+        setShowCreateExamModal(false);
+        setNewExamTitle('');
+        customAlert('✅ Tạo thành công', 'Đề thi mới đã được thêm vào hệ thống.');
+      }
+    } catch (err) {
+      // Handled globally
+    }
   };
 
   const handleUnsupportedTab = (tabName) => {
@@ -764,8 +802,16 @@ const AdminScreen = ({ navigation }) => {
                   </View>
 
                   {/* Grid elements */}
-                  <View style={[styles.examsGridBox, { flexDirection: 'row', flexWrap: 'wrap', gap: 16 }]}>
-                    {filteredExams.length === 0 ? (
+                  <View style={[styles.examsGridBox, { flexDirection: 'row', flexWrap: 'wrap', gap: 16, width: '100%' }]}>
+                    {examsLoading ? (
+                      <View style={styles.centerLoadingWrapper}>
+                        <ActivityIndicator size="large" color="#111827" />
+                      </View>
+                    ) : examsError ? (
+                      <View style={styles.centerEmptyWrapper}>
+                        <Text style={[styles.emptyStateText, { color: '#EF4444' }]}>{examsError}</Text>
+                      </View>
+                    ) : filteredExams.length === 0 ? (
                       <View style={styles.centerEmptyWrapper}>
                         <Text style={styles.emptyStateText}>Không có đề thi nào trong danh sách.</Text>
                       </View>
@@ -789,9 +835,9 @@ const AdminScreen = ({ navigation }) => {
                               </TouchableOpacity>
                               <TouchableOpacity
                                 onPress={() => {
-                                  Alert.alert('Xóa đề thi', `Bạn có chắc muốn xóa đề ${item.title}?`, [
+                                  customAlert('Xóa đề thi', `Bạn có chắc muốn xóa đề ${item.title}?`, [
                                     { text: 'Hủy', style: 'cancel' },
-                                    { text: 'Xóa', style: 'destructive', onPress: () => setExamsList(prev => prev.filter(e => e.id !== item.id)) }
+                                    { text: 'Xóa', style: 'destructive', onPress: () => handleDeleteExam(item.id) }
                                   ]);
                                 }}
                                 style={styles.examCardDeleteBtn}

@@ -40,8 +40,20 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const userInitial = user?.fullName?.charAt(0)?.toUpperCase() || 'U';
-  const userDisplayName = user?.fullName || 'IELTS Learner';
+  const userDisplayName = user?.fullName || 'Học viên IELTS';
   const userEmail = user?.email || 'user@sdn.com';
+
+  const getRoleBadge = (role) => {
+    switch (role) {
+      case 'ADMIN':
+        return { text: 'Quản trị viên', bg: 'bg-red-50 border border-red-100', color: 'text-red-600' };
+      case 'MENTOR':
+        return { text: 'Cố vấn (Mentor)', bg: 'bg-emerald-50 border border-emerald-100', color: 'text-emerald-600' };
+      default:
+        return { text: 'Học viên', bg: 'bg-blue-50 border border-blue-100', color: 'text-blue-600' };
+    }
+  };
+  const roleBadge = getRoleBadge(user?.role);
 
   const handleProfilePress = () => {
     toggleUserMenu(false);
@@ -87,7 +99,10 @@ const HomeScreen = ({ navigation }) => {
   return (
     <SafeAreaView className="flex-1 bg-[#F7F9FA]">
       {/* Premium Mobile Header */}
-      <View className="flex-row items-center justify-between px-5 h-16 bg-white border-b border-[#E5E7EB] z-40">
+      <View 
+        className="flex-row items-center justify-between px-5 h-16 bg-white border-b border-[#E5E7EB] z-40"
+        style={{ zIndex: 40, elevation: 40 }}
+      >
         {/* Logo */}
         <View className="flex-row items-center">
           <View className="w-10 h-10 bg-[#E6F9F5] rounded-2xl items-center justify-center border border-[#A7F3D0]">
@@ -113,49 +128,165 @@ const HomeScreen = ({ navigation }) => {
 
           {/* Avatar or Login Button */}
           {!user ? (
-            <TouchableOpacity onPress={() => setIsAuthModalVisible(true)} className="bg-[#00CC99] px-4 py-2 rounded-xl active:opacity-90">
-              <Text className="text-white text-xs font-bold">Log in</Text>
+            <TouchableOpacity
+              onPress={() => setIsAuthModalVisible(true)}
+              className="bg-[#00CC99] px-5 py-2.5 rounded-xl active:opacity-90"
+            >
+              <Text className="text-white text-xs font-bold">Log in / Sign up</Text>
             </TouchableOpacity>
           ) : (
-            <View className="relative">
-              <TouchableOpacity onPress={toggleUserMenu} className="w-10 h-10 rounded-full bg-[#00CC99] items-center justify-center border-2 border-white shadow-sm">
-                <Text className="text-white font-bold text-base">{userInitial}</Text>
+            <View className="relative z-50" style={{ zIndex: 50 }}>
+              <TouchableOpacity
+                onPress={toggleUserMenu}
+                className="w-10 h-10 rounded-full bg-[#00CC99] items-center justify-center"
+              >
+                <Text className="text-white font-bold text-base">
+                  {userInitial}
+                </Text>
               </TouchableOpacity>
 
-              {/* Dropdown Menu */}
+              {/* Dropdown */}
               {isUserMenuVisible && (
-                <Animated.View style={menuAnimatedStyle} className="absolute right-0 top-14 w-64 bg-white rounded-2xl border border-[#E5E7EB] shadow-xl z-50 overflow-hidden">
-                  <View className="p-4 border-b border-[#F3F4F6] bg-[#FAFAFA]">
-                    <Text numberOfLines={1} className="text-sm font-bold text-[#111827]">{userDisplayName}</Text>
-                    <Text numberOfLines={1} className="text-xs text-[#6B7280] mt-0.5">{userEmail}</Text>
+                <Animated.View
+                  style={[
+                    menuAnimatedStyle,
+                    {
+                      zIndex: 100,
+                      top: 48,
+                      elevation: 50,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 12,
+                    }
+                  ]}
+                  className="absolute right-0 w-72 bg-white rounded-2xl border border-[#E5E7EB] shadow-xl overflow-hidden"
+                >
+                  {/* User Card */}
+                  <View className="p-4 border-b border-[#F3F4F6]">
+                    <View className="flex-row items-center bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl p-3">
+                      <View className="w-11 h-11 rounded-full bg-[#00CC99] items-center justify-center shadow-sm">
+                        <Text className="text-white font-extrabold text-lg">
+                          {userInitial}
+                        </Text>
+                      </View>
+                      <View className="ml-3 flex-1">
+                        <Text
+                          numberOfLines={1}
+                          className="text-sm font-bold text-[#111827]"
+                        >
+                          {userDisplayName}
+                        </Text>
+                        <Text
+                          numberOfLines={1}
+                          className="text-xs text-[#6B7280] mt-0.5"
+                        >
+                          {userEmail}
+                        </Text>
+                        <View className={`self-start mt-1.5 px-2 py-0.5 rounded-md ${roleBadge.bg}`}>
+                          <Text className={`text-[10px] font-bold ${roleBadge.color}`}>
+                            {roleBadge.text}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
                   </View>
 
-                  <TouchableOpacity onPress={handleProfilePress} className="flex-row items-center px-4 py-3.5">
-                    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2">
-                      <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                      <Circle cx="12" cy="7" r="4" />
+                  {/* Profile */}
+                  <TouchableOpacity
+                    onPress={handleProfilePress}
+                    activeOpacity={0.7}
+                    className="flex-row items-center justify-between px-5 py-4 hover:bg-[#F9FAFB] active:bg-[#F3F4F6]"
+                  >
+                    <View className="flex-row items-center">
+                      <View className="w-8 h-8 rounded-xl bg-[#F3F4F6] items-center justify-center mr-3">
+                        <Svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#4B5563"
+                          strokeWidth="2"
+                        >
+                          <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                          <Circle cx="12" cy="7" r="4" />
+                        </Svg>
+                      </View>
+                      <Text className="text-sm font-semibold text-[#1F2937]">
+                        Hồ sơ cá nhân
+                      </Text>
+                    </View>
+                    <Svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.5">
+                      <Path d="M9 5l7 7-7 7" />
                     </Svg>
-                    <Text className="ml-3 text-sm font-semibold text-[#4B5563]">My Profile</Text>
                   </TouchableOpacity>
 
                   {user?.role === 'ADMIN' && (
-                    <TouchableOpacity onPress={() => { toggleUserMenu(false); setTimeout(() => navigation.navigate('Admin'), 150); }} className="flex-row items-center px-4 py-3.5 bg-[#F0FDF4]">
-                      <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00CC99" strokeWidth="2">
-                        <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                      </Svg>
-                      <Text className="ml-3 text-sm font-bold text-[#005C42]">Admin Portal</Text>
-                    </TouchableOpacity>
+                    <>
+                      <View className="h-px bg-[#F3F4F6]" />
+                      <TouchableOpacity
+                        onPress={() => {
+                          toggleUserMenu(false);
+                          setTimeout(() => navigation.navigate('Admin'), 150);
+                        }}
+                        activeOpacity={0.7}
+                        className="flex-row items-center justify-between px-5 py-4 hover:bg-[#F9FAFB] active:bg-[#F3F4F6]"
+                      >
+                        <View className="flex-row items-center">
+                          <View className="w-8 h-8 rounded-xl bg-[#E6F9F5] items-center justify-center mr-3">
+                            <Svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="#00CC99"
+                              strokeWidth="2.5"
+                            >
+                              <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </Svg>
+                          </View>
+                          <Text className="text-sm font-bold text-[#005C42]">
+                            Trang quản trị
+                          </Text>
+                        </View>
+                        <Svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00CC99" strokeWidth="2.5">
+                          <Path d="M9 5l7 7-7 7" />
+                        </Svg>
+                      </TouchableOpacity>
+                    </>
                   )}
 
+                  {/* Divider */}
                   <View className="h-px bg-[#F3F4F6]" />
 
-                  <TouchableOpacity onPress={handleLogoutPress} className="flex-row items-center px-4 py-3.5">
-                    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2">
-                      <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                      <Path d="M16 17l5-5-5-5" />
-                      <Path d="M21 12H9" />
+                  {/* Logout */}
+                  <TouchableOpacity
+                    onPress={handleLogoutPress}
+                    activeOpacity={0.7}
+                    className="flex-row items-center justify-between px-5 py-4 hover:bg-[#FEF2F2] active:bg-[#FEE2E2]"
+                  >
+                    <View className="flex-row items-center">
+                      <View className="w-8 h-8 rounded-xl bg-[#FEF2F2] items-center justify-center mr-3">
+                        <Svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#EF4444"
+                          strokeWidth="2.5"
+                        >
+                          <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                          <Path d="M16 17l5-5-5-5" />
+                          <Path d="M21 12H9" />
+                        </Svg>
+                      </View>
+                      <Text className="text-sm font-semibold text-[#EF4444]">
+                        Đăng xuất
+                      </Text>
+                    </View>
+                    <Svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5">
+                      <Path d="M9 5l7 7-7 7" />
                     </Svg>
-                    <Text className="ml-3 text-sm font-semibold text-[#EF4444]">Logout</Text>
                   </TouchableOpacity>
                 </Animated.View>
               )}
@@ -165,7 +296,11 @@ const HomeScreen = ({ navigation }) => {
       </View>
 
       {isUserMenuVisible && (
-        <Pressable className="absolute inset-0 z-30" onPress={() => toggleUserMenu(false)} />
+        <Pressable 
+          className="absolute inset-0 z-30" 
+          style={{ zIndex: 30 }}
+          onPress={() => toggleUserMenu(false)} 
+        />
       )}
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
