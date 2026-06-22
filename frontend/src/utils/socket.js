@@ -1,11 +1,8 @@
 import { io } from 'socket.io-client';
 import { Platform } from 'react-native';
 
-// For Android emulator, use 10.0.2.2 instead of localhost
-// For iOS simulator, localhost works
-// For physical devices, use your computer's local IP address (e.g., 192.168.x.x)
 const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL || 
-  (Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000');
+  (__DEV__ ? (Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000') : 'https://api.apex-ielts.com');
 
 export const socket = io(SOCKET_URL, {
   autoConnect: false,

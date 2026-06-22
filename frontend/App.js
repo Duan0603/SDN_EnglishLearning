@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Toast from 'react-native-toast-message';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -9,8 +9,37 @@ import {
   useFonts,
   Outfit_400Regular,
   Outfit_500Medium,
-  Outfit_700Bold
+  Outfit_600SemiBold,
+  Outfit_700Bold,
+  Outfit_800ExtraBold,
+  Outfit_900Black,
 } from '@expo-google-fonts/outfit';
+import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+
+// ── BẢO ĐẢM ĐỒNG BỘ LOGO/ICON TRÊN WEB ─────────────────────────
+if (Platform.OS === 'web') {
+  const iconFontStyles = `
+    @font-face {
+      src: url('https://unpkg.com/@expo/vector-icons@14.0.2/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf');
+      font-family: Ionicons;
+    }
+    @font-face {
+      src: url('https://unpkg.com/@expo/vector-icons@14.0.2/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf');
+      font-family: MaterialDesignIcons;
+    }
+    @font-face {
+      src: url('https://unpkg.com/@expo/vector-icons@14.0.2/build/vendor/react-native-vector-icons/Fonts/Feather.ttf');
+      font-family: Feather;
+    }
+  `;
+  if (!document.getElementById('vector-icons-web-fonts')) {
+    const style = document.createElement('style');
+    style.id = 'vector-icons-web-fonts';
+    style.type = 'text/css';
+    style.appendChild(document.createTextNode(iconFontStyles));
+    document.head.appendChild(style);
+  }
+}
 
 const fontConfig = {
   fontFamily: 'Outfit_400Regular',
@@ -39,7 +68,13 @@ export default function App() {
   let [fontsLoaded] = useFonts({
     Outfit_400Regular,
     Outfit_500Medium,
+    Outfit_600SemiBold,
     Outfit_700Bold,
+    Outfit_800ExtraBold,
+    Outfit_900Black,
+    ...Ionicons.font,
+    ...MaterialCommunityIcons.font,
+    ...Feather.font,
   });
 
   if (!fontsLoaded) {

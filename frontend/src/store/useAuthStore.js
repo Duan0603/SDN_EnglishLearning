@@ -9,6 +9,8 @@ const useAuthStore = create((set) => ({
   isBootstrapping: true,
   error: null,
 
+  clearError: () => set({ error: null }),
+
   setSession: async (user, token) => {
     const userId = user._id || user.id;
     await storage.setItem('userToken', token);
@@ -25,7 +27,7 @@ const useAuthStore = create((set) => ({
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await client.post('/auth/login', { email, password });
+      const response = await client.post('/auth/login', { email, password }, { hideToast: true });
       const { metadata } = response.data;
       const token = metadata.tokens.accessToken;
       const user = metadata.user;
@@ -34,8 +36,9 @@ const useAuthStore = create((set) => ({
       await storage.setItem('userId', user._id || user.id);
       set({ user, token, isLoading: false, isBootstrapping: false });
     } catch (error) {
+      const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản hoặc mật khẩu.';
       set({ 
-        error: error.response?.data?.message || 'Login failed', 
+        error: errorMessage, 
         isLoading: false 
       });
     }
@@ -44,7 +47,7 @@ const useAuthStore = create((set) => ({
   register: async (userData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await client.post('/auth/signup', userData);
+      const response = await client.post('/auth/signup', userData, { hideToast: true });
       const { metadata } = response.data;
       const token = metadata.tokens.accessToken;
       const user = metadata.user;
@@ -53,8 +56,9 @@ const useAuthStore = create((set) => ({
       await storage.setItem('userId', user._id || user.id);
       set({ user, token, isLoading: false, isBootstrapping: false });
     } catch (error) {
+      const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.';
       set({ 
-        error: error.response?.data?.message || 'Registration failed', 
+        error: errorMessage, 
         isLoading: false 
       });
     }
@@ -63,7 +67,7 @@ const useAuthStore = create((set) => ({
   googleLogin: async (idToken) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await client.post('/auth/google-login', { idToken });
+      const response = await client.post('/auth/google-login', { idToken }, { hideToast: true });
       const { metadata } = response.data;
       const token = metadata.tokens.accessToken;
       const user = metadata.user;
@@ -71,8 +75,9 @@ const useAuthStore = create((set) => ({
       await storage.setItem('userToken', token);
       set({ user, token, isLoading: false, isBootstrapping: false });
     } catch (error) {
+      const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || 'Đăng nhập bằng Google thất bại.';
       set({ 
-        error: error.response?.data?.message || 'Google Login failed', 
+        error: errorMessage, 
         isLoading: false 
       });
     }
