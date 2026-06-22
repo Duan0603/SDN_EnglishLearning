@@ -15,7 +15,9 @@
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
     "scrape": "npx ts-node src/utils/scraper.ts",
-    "import-scraped": "npx ts-node src/utils/importExams.ts"
+    "import-scraped": "npx ts-node src/utils/importExams.ts",
+    "seed:cambridge": "node prisma/seedCambridge10.js",
+    "seed:cambridge11": "node prisma/seedCambridge11.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
