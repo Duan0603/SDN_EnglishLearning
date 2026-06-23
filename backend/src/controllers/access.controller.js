@@ -98,8 +98,49 @@ export class AccessController {
                 fullName: user.fullName,
                 email: user.email,
                 role: user.role,
-                avatar: user.avatar
+                avatar: user.avatar,
+                birthday: user.birthday,
+                phone: user.phone,
+                identityNumber: user.identityNumber,
+                bio: user.bio,
+                expertise: user.expertise
             }
         }).send(res)
+    }
+
+    static updateProfile = async (req, res, next) => {
+        const { prisma } = await import("../config/prisma.config.js");
+        const { fullName, birthday, phone, identityNumber, bio, expertise, avatar } = req.body;
+        
+        const updateData = {};
+        if (fullName !== undefined) updateData.fullName = fullName;
+        if (birthday !== undefined) updateData.birthday = birthday;
+        if (phone !== undefined) updateData.phone = phone;
+        if (identityNumber !== undefined) updateData.identityNumber = identityNumber;
+        if (bio !== undefined) updateData.bio = bio;
+        if (expertise !== undefined) updateData.expertise = expertise;
+        if (avatar !== undefined) updateData.avatar = avatar;
+
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user.userId },
+            data: updateData
+        });
+
+        new OK({
+            message: "Profile updated successfully!",
+            metadata: {
+                _id: updatedUser.id,
+                username: updatedUser.username,
+                fullName: updatedUser.fullName,
+                email: updatedUser.email,
+                role: updatedUser.role,
+                avatar: updatedUser.avatar,
+                birthday: updatedUser.birthday,
+                phone: updatedUser.phone,
+                identityNumber: updatedUser.identityNumber,
+                bio: updatedUser.bio,
+                expertise: updatedUser.expertise
+            }
+        }).send(res);
     }
 }

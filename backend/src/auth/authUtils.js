@@ -1,4 +1,5 @@
 import JWT from "jsonwebtoken";
+import { UnauthorizedError } from "../core/error.response.js";
 
 const createTokenPair = async (payload, publicKey, privateKey) => {
     try {
@@ -28,18 +29,22 @@ const createTokenPair = async (payload, publicKey, privateKey) => {
 const authentication = async (req, res, next) => {
     try {
         const userId = req.headers['x-client-id'];
-        if (!userId) throw new Error('Missing x-client-id');
+        if (!userId) throw new UnauthorizedError('Missing x-client-id');
 
         const { KeyTokenService } = await import('../services/keyToken.service.js');
         const keyStore = await KeyTokenService.findByUserId(userId);
-        if (!keyStore) throw new Error('Not found keyStore');
+        if (!keyStore) throw new UnauthorizedError('Not found keyStore');
 
         const accessToken = req.headers['authorization'];
-        if (!accessToken) throw new Error('Missing authorization');
+        if (!accessToken) throw new UnauthorizedError('Missing authorization');
 
         try {
             const decodeUser = JWT.verify(accessToken.replace('Bearer ', ''), keyStore.publicKey);
+<<<<<<< HEAD
             if (userId !== decodeUser.userId.toString()) throw new Error('Invalid userId');
+=======
+            if (userId !== decodeUser.userId) throw new UnauthorizedError('Invalid userId');
+>>>>>>> origin/main
             req.keyStore = keyStore;
             req.user = decodeUser;
             return next();

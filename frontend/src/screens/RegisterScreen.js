@@ -3,6 +3,7 @@
 // Real-time validation, Password Checklist, Mint-Green UI
 // ============================================================
 
+<<<<<<< HEAD
 import React, { useState } from 'react';
 import {
   View,
@@ -18,6 +19,59 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import AppIcon from '../shared/icons/AppIcon';
 import client from '../api/client';
+=======
+// Validation Rules
+const validatePhone = (text) => /^(03|05|07|08|09)\d{8}$/.test(text.replace(/\s+/g, ''));
+const validateEmail = (text) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text.trim());
+
+// Mock API for availability check
+const checkAvailability = async (field, value) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // Mock logic: some specific values are "taken"
+      if (field === 'email' && value === 'test@test.com') resolve(false);
+      if (field === 'phone' && value === '0912345678') resolve(false);
+      if (field === 'username' && value === 'admin') resolve(false);
+      resolve(true);
+    }, 400);
+  });
+};
+
+const PasswordCriteria = ({ text, isValid, isEmpty }) => (
+  <View style={styles.criteriaRow}>
+    {!isEmpty && isValid ? (
+      <AntDesign name="checkcircle" size={16} color="#00c495" />
+    ) : !isEmpty && !isValid ? (
+      <AntDesign name="closecircle" size={16} color="#EF4444" />
+    ) : (
+      <Feather name="circle" size={16} color="#9CA3AF" />
+    )}
+    <Text style={[styles.criteriaText, { color: !isEmpty && isValid ? '#00c495' : !isEmpty && !isValid ? '#EF4444' : '#6B7280' }]}>
+      {text}
+    </Text>
+  </View>
+);
+
+const RegisterScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
+  const { register, isLoading, error } = useAuthStore();
+
+  const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState('STUDENT');
+  const [validationError, setValidationError] = useState('');
+
+  const [isRobot, setIsRobot] = useState(false); // mock recaptcha: false means IS a robot, checked means NOT a robot
+  const [agreeTerms, setAgreeTerms] = useState(false);
+
+  // Error States from onBlur
+  const [usernameError, setUsernameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
+>>>>>>> origin/main
 
 export default function RegisterScreen({ navigation }) {
   // ── States ───────────────────────────────────────────
@@ -61,6 +115,7 @@ export default function RegisterScreen({ navigation }) {
     if (field === 'phone') isValidFormat = isValidPhone(value);
     if (field === 'username') isValidFormat = isValidUsername(value);
 
+<<<<<<< HEAD
     if (isValidFormat) {
       try {
         const response = await client.post('/auth/check-exists', { [field]: value.trim() });
@@ -68,6 +123,55 @@ export default function RegisterScreen({ navigation }) {
           setServerErrors((prev) => ({ ...prev, [field]: true }));
         } else {
           setServerErrors((prev) => ({ ...prev, [field]: false }));
+=======
+  const handleSubmit = async () => {
+    // Check missing fields
+    if (!username || !phone || !email || !password || !confirmPassword) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ các thông tin yêu cầu');
+      return;
+    }
+
+    // Check Format Errors
+    if (usernameError || phoneError || emailError || !isPasswordValid || !isConfirmValid) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đúng các thông tin yêu cầu');
+      return;
+    }
+
+    // Check Checkboxes
+    if (!isRobot) {
+      Alert.alert('Lỗi', 'Vui lòng xác thực bạn không phải là robot');
+      return;
+    }
+    if (!agreeTerms) {
+      Alert.alert('Lỗi', 'Vui lòng đồng ý điều khoản dịch vụ & chính sách bảo mật');
+      return;
+    }
+
+    // Register Call
+    try {
+      await register({
+        username: username.trim(),
+        email: email.trim(),
+        password,
+        phone: phone.trim(),
+        role: role,
+        fullName: username.trim(),
+      });
+      // Success
+      Alert.alert('Thành công', 'Đăng ký thành công! Vui lòng đăng nhập.', [
+        {
+          text: 'OK',
+          onPress: () => {
+            setUsername('');
+            setPhone('');
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+            setIsRobot(false);
+            setAgreeTerms(false);
+            navigation.navigate('Login');
+          }
+>>>>>>> origin/main
         }
       } catch (error) {
         // ignore network error silently during real-time check
@@ -184,11 +288,60 @@ export default function RegisterScreen({ navigation }) {
             )}
           </View>
 
+<<<<<<< HEAD
           {/* ── Phone ── */}
           <View className="mb-4">
             <Text className="text-[13px] text-gray-500 font-semibold mb-1 uppercase tracking-wider">Số điện thoại</Text>
             <View className={`flex-row items-center border rounded-xl px-4 py-3.5 ${getInputClasses()}`}>
               <AppIcon name="phone" size={18} color={touched.phone && isValidPhone(form.phone) && !serverErrors.phone ? '#00CC99' : '#9CA3AF'} />
+=======
+          <View style={styles.form}>
+            {/* Role Selector */}
+            <Text style={{ fontFamily: 'Outfit_500Medium', color: '#374151', marginBottom: 8, fontSize: 15 }}>Tôi muốn đăng ký làm:</Text>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+              <TouchableOpacity
+                onPress={() => setRole('STUDENT')}
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: role === 'STUDENT' ? '#00c495' : '#E5E7EB',
+                  backgroundColor: role === 'STUDENT' ? '#E6F9F5' : 'transparent',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontFamily: 'Outfit_700Bold', color: role === 'STUDENT' ? '#005C42' : '#737373' }}>Học viên</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setRole('MENTOR')}
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: role === 'MENTOR' ? '#00c495' : '#E5E7EB',
+                  backgroundColor: role === 'MENTOR' ? '#E6F9F5' : 'transparent',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontFamily: 'Outfit_700Bold', color: role === 'MENTOR' ? '#005C42' : '#737373' }}>Giáo viên</Text>
+              </TouchableOpacity>
+            </View>
+
+            {!!(error || validationError) && (
+              <View style={{ backgroundColor: '#FEE2E2', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+                <Text style={{ color: '#DC2626', textAlign: 'center', fontFamily: 'Outfit_500Medium' }}>
+                  {validationError || error}
+                </Text>
+              </View>
+            )}
+
+            {/* Username */}
+            <View style={styles.inputWrapper}>
+>>>>>>> origin/main
               <TextInput
                 className="flex-1 text-gray-800 text-base ml-3"
                 placeholder="0912345678"

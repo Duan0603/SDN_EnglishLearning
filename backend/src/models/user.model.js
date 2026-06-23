@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['active', 'inactive'],
+        enum: ['active', 'inactive', 'pending'],
         default: 'active'
     },
     verify: {
@@ -42,6 +42,21 @@ const userSchema = new mongoose.Schema({
     phone: {
         type: String,
         default: ''
+<<<<<<< HEAD
+=======
+    },
+    identityNumber: {
+        type: String,
+        default: ''
+    },
+    bio: {
+        type: String,
+        default: ''
+    },
+    expertise: {
+        type: String,
+        default: ''
+>>>>>>> origin/main
     }
 }, {
     timestamps: true,

@@ -95,11 +95,11 @@ development_status:
 
   epic-1-retrospective: optional
 
-# ==============================================================================
-# EPIC 2: The Exam Engine & Content
-# Goal: Admin uploads exams, Students take mock exams, practice, review results
-# FRs covered: FR1, FR2, FR3, FR6 (partial)
-# ==============================================================================
+  # ==============================================================================
+  # EPIC 2: The Exam Engine & Content
+  # Goal: Admin uploads exams, Students take mock exams, practice, review results
+  # FRs covered: FR1, FR2, FR3, FR6 (partial)
+  # ==============================================================================
   epic-2: in-progress
 
   # Story 2.1 [BE] Admin Exam Management API (Backend)
@@ -203,11 +203,11 @@ development_status:
 
   epic-3-retrospective: optional
 
-# ==============================================================================
-# EPIC 4: Mentor & Booking Ecosystem
-# Goal: Admin approves mentors, Mentors manage availability, Students book safely
-# FRs covered: FR5, FR6 (partial)
-# ==============================================================================
+  # ==============================================================================
+  # EPIC 4: Mentor & Booking Ecosystem
+  # Goal: Admin approves mentors, Mentors manage availability, Students book safely
+  # FRs covered: FR5, FR6 (partial)
+  # ==============================================================================
   epic-4: backlog
 
   # Story 4.1 [FULL] Mentor Approval & Profile (Admin & Mentor)
