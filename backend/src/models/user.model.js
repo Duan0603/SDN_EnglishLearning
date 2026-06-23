@@ -42,8 +42,6 @@ const userSchema = new mongoose.Schema({
     phone: {
         type: String,
         default: ''
-<<<<<<< HEAD
-=======
     },
     identityNumber: {
         type: String,
@@ -56,7 +54,6 @@ const userSchema = new mongoose.Schema({
     expertise: {
         type: String,
         default: ''
->>>>>>> origin/main
     }
 }, {
     timestamps: true,
