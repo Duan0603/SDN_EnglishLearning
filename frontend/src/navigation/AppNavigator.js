@@ -194,7 +194,8 @@ const AppNavigator = () => {
             />
             <Stack.Screen name="Admin" component={AdminScreen}
               options={{ animation: 'slide_from_right' }}
-            />            <Stack.Screen name="Mentors" component={MentorsScreen} />
+            />
+            <Stack.Screen name="Mentors" component={MentorsScreen} />
           </>
         )}
       </Stack.Navigator>
