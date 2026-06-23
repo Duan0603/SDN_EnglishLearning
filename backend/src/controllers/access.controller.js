@@ -2,6 +2,14 @@ import {Created, OK} from "../core/success.response.js";
 import {AccessService} from "../services/access.service.js";
 import userModel from "../models/user.model.js";
 export class AccessController {
+    static checkExists = async (req, res, next) => {
+        const metadata = await AccessService.checkExists(req.body);
+        new OK({
+            message: "Check exists success",
+            metadata
+        }).send(res);
+    }
+
     static signUp = async (req, res, next) => {
         const metadata = await AccessService.signUp(req.body);
         

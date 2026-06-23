@@ -11,6 +11,23 @@ import { OAuth2Client } from "google-auth-library";
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export class AccessService {
+    static checkExists = async ({ email, phone, username }) => {
+        const result = { exists: false, field: null };
+        if (email) {
+            const found = await userModel.findOne({ email }).lean();
+            if (found) return { exists: true, field: 'email' };
+        }
+        if (phone) {
+            const found = await userModel.findOne({ phone }).lean();
+            if (found) return { exists: true, field: 'phone' };
+        }
+        if (username) {
+            const found = await userModel.findOne({ username }).lean();
+            if (found) return { exists: true, field: 'username' };
+        }
+        return result;
+    }
+
     static logout = async (keyStore) => {
         const delKey = await KeyTokenService.removeKeyById(keyStore._id);
         return delKey;
@@ -25,13 +42,13 @@ export class AccessService {
             ]
         }).lean()
         if (!foundUser) {
-            throw new BadRequestError("User not registered")
+            throw new BadRequestError("Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.")
         }
 
         // 2. Match password
         const match = await bcrypt.compare(password, foundUser.password)
         if (!match) {
-            throw new BadRequestError("Authentication failed")
+            throw new BadRequestError("Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.")
         }
 
         // 3. Create privateKey, publicKey
@@ -58,7 +75,7 @@ export class AccessService {
         })
 
         return {
-            user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'birthday', 'phone', 'identityNumber'], object: foundUser}),
+            user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'phone'], object: foundUser}),
             tokens
         }
 
@@ -67,22 +84,22 @@ export class AccessService {
     static signUp = async ({username, email, password, phone}) => {
         // Validate required fields
         if (!username || !email || !password || !phone) {
-            throw new BadRequestError("username, email, password and phone are required")
+            throw new BadRequestError("Vui lòng điền đầy đủ thông tin!")
         }
 
         const holdUserByEmail = await userModel.findOne({email}).lean()
         if (holdUserByEmail) {
-            throw new BadRequestError("Email đã tồn tại")
+            throw new BadRequestError("Email này đã được sử dụng!")
         }
 
         const holdUserByUsername = await userModel.findOne({username}).lean()
         if (holdUserByUsername) {
-            throw new BadRequestError("Tên đã tồn tại")
+            throw new BadRequestError("Tên người dùng đã tồn tại!")
         }
         
         const holdUserByPhone = await userModel.findOne({phone}).lean()
         if (holdUserByPhone) {
-            throw new BadRequestError("Số điện thoại đã được sử dụng")
+            throw new BadRequestError("Số điện thoại đã được sử dụng!")
         }
 
         const hashedPassword = await bcrypt.hash(password, 10)
@@ -123,7 +140,7 @@ export class AccessService {
             })
 
             if(!publicKeyString){
-                throw new BadRequestError('Public key error !')
+                throw new BadRequestError('Lỗi hệ thống mã hóa!')
             }
 
             console.log(`Create Token Success:: `, tokens)
@@ -151,7 +168,7 @@ export class AccessService {
         const { email, name, picture, sub } = payload;
 
         if (!email) {
-            throw new BadRequestError("Google token does not contain email");
+            throw new BadRequestError("Tài khoản Google không cung cấp Email hợp lệ!");
         }
 
         // 2. Find or create user
@@ -184,7 +201,7 @@ export class AccessService {
         });
 
         return {
-            user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'birthday', 'phone', 'identityNumber', 'avatar'], object: user}),
+            user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'phone', 'avatar'], object: user}),
             tokens
         };
     }

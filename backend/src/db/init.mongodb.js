@@ -12,14 +12,23 @@ class Database {
             mongoose.set("debug", {color: true})
         }
 
-        // Read env var here (after dotenv has loaded)
-        const connectString = process.env.DATABASE_URL;
+        // MONGOOSE_URL: standalone MongoDB — no Replica Set required (auth/user routes)
+        // Fallback to DATABASE_URL for backward compatibility
+        const connectString = process.env.MONGOOSE_URL || process.env.DATABASE_URL;
 
-        mongoose.connect(connectString, {
+        if (!connectString) {
+            console.error('[Mongoose] No database URL found. Set MONGOOSE_URL in .env');
+            return;
+        }
+
+        // Strip replicaSet param — Mongoose works with standalone MongoDB
+        const standaloneUrl = connectString.replace(/[?&]replicaSet=[^&]*/g, '').replace(/[?&]directConnection=[^&]*/g, '').replace(/\?$/, '');
+
+        mongoose.connect(standaloneUrl, {
             maxPoolSize: 50
         })
-            .then(() => console.log("Connect success to MongoDB: ", countConnect()))
-            .catch((err) => console.error("Error while connect to MongoDB: ", err));
+            .then(() => console.log("[Mongoose] Connect success to MongoDB:", countConnect()))
+            .catch((err) => console.error("[Mongoose] Error connecting to MongoDB:", err));
     }
 
     static getInstance() {
