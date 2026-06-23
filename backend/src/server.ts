@@ -9,22 +9,31 @@ import { getRedisClient } from './config/redis.config';
 import './db/init.mongodb';
 
 const startServer = async () => {
-  // Initialize database connections
+  // ── Mongoose (auth, user, keyToken) ─────────────────────────────
+  // Mongoose connects via init.mongodb.js (already imported above).
+  // It works with standalone MongoDB (no Replica Set required).
+
+  // ── Prisma (exam, booking — needs Replica Set) ──────────────────
+  // Non-blocking: warn and continue if Replica Set not configured.
+  // Auth/user routes use Mongoose and work without Prisma.
   try {
-    // Test Prisma/MongoDB connection — AC3
     await prisma.$connect();
     console.log('[DB] Prisma connected to MongoDB successfully');
+  } catch (dbErr: any) {
+    console.warn(
+      '[DB] Prisma could not connect (Replica Set may not be configured).',
+      'Auth routes still work via Mongoose. Exam/Booking routes require Replica Set.',
+      '\nError:', dbErr?.message
+    );
+    // Do NOT exit — Mongoose handles auth routes independently
+  }
 
-    // Initialize Redis connection (non-blocking — app runs even if Redis is down)
-    try {
-      await getRedisClient();
-      console.log('[Redis] Connected successfully');
-    } catch (redisErr) {
-      console.warn('[Redis] Could not connect — booking locking will be unavailable:', redisErr);
-    }
-  } catch (dbErr) {
-    console.error('[DB] Failed to connect to MongoDB:', dbErr);
-    process.exit(1);
+  // ── Redis (non-blocking) ─────────────────────────────────────────
+  try {
+    await getRedisClient();
+    console.log('[Redis] Connected successfully');
+  } catch (redisErr) {
+    console.warn('[Redis] Could not connect — booking locking will be unavailable:', redisErr);
   }
 
   const app = createApp();

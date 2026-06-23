@@ -11,7 +11,23 @@ import {
   StyleSheet,
   Dimensions
 } from 'react-native';
-import { TextInput, Button } from 'react-native-paper';
+import { TextInput, Button, HelperText } from 'react-native-paper';
+import { AntDesign, Feather } from '@expo/vector-icons';
+
+const PasswordCriteria = ({ text, isValid, isEmpty }) => (
+  <View style={styles.criteriaRow}>
+    {!isEmpty && isValid ? (
+      <Feather name="check-circle" size={16} color="#88D4AB" />
+    ) : !isEmpty && !isValid ? (
+      <Feather name="x-circle" size={16} color="#EF4444" />
+    ) : (
+      <Feather name="circle" size={16} color="#9CA3AF" />
+    )}
+    <Text style={[styles.criteriaText, { color: !isEmpty && isValid ? '#88D4AB' : !isEmpty && !isValid ? '#EF4444' : '#6B7280' }]}>
+      {text}
+    </Text>
+  </View>
+);
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import useAuthStore from '../store/useAuthStore';
 import * as WebBrowser from 'expo-web-browser';
@@ -30,11 +46,24 @@ const AuthModal = ({ visible, onClose }) => {
   const [username, setUsername] = useState('');
   
   // Custom requested fields
-  const [birthday, setBirthday] = useState('');
   const [phone, setPhone] = useState('');
-  const [identityNumber, setIdentityNumber] = useState('');
   const [isNotRobot, setIsNotRobot] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+
+  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasLength = password.length >= 10;
+  const hasNumberOrSpecial = /[\d\W]/.test(password);
+  const isPasswordValid = hasLetter && hasLength && hasNumberOrSpecial;
+  const isConfirmValid = confirmPassword.length > 0 && confirmPassword === password;
+
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const isFullNameValid = fullName.trim().length > 0;
+  const isUsernameValid = username.trim().length >= 3;
+  const isPhoneValid = /^\d+$/.test(phone.trim());
   
   const validationErrorRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const [validationError, setValidationError] = useState('');
@@ -43,7 +72,6 @@ const AuthModal = ({ visible, onClose }) => {
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
     webClientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
-    ...(Platform.OS === 'web' && { redirectUri: 'http://localhost:8081' })
   });
 
   useEffect(() => {
@@ -74,12 +102,11 @@ const AuthModal = ({ visible, onClose }) => {
       setValidationError('Please enter a valid email address.');
       return;
     }
-    if (!password || password.length < 6) {
-      setValidationError('Password must be at least 6 characters.');
-      return;
-    }
-
     if (isLogin) {
+      if (!password || password.length < 6) {
+        setValidationError('Password must be at least 6 characters.');
+        return;
+      }
       login(email.trim(), password);
     } else {
       // Sign Up validations
@@ -96,12 +123,6 @@ const AuthModal = ({ visible, onClose }) => {
         return;
       }
 
-      // 1. Birthday validation: (dd/mm/yyyy)
-      const bdayRegex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/;
-      if (!birthday.trim() || !bdayRegex.test(birthday.trim())) {
-        setValidationError('Birthday must be in dd/mm/yyyy format.');
-        return;
-      }
 
       // 2. Phone validation (numbers only)
       const numericRegex = /^\d+$/;
@@ -110,14 +131,14 @@ const AuthModal = ({ visible, onClose }) => {
         return;
       }
 
-      // 3. Identity number validation (numbers only)
-      if (!identityNumber.trim() || !numericRegex.test(identityNumber.trim())) {
-        setValidationError('Please enter a valid identity number (digits only).');
-        return;
-      }
 
       if (password !== confirmPassword) {
         setValidationError('Passwords do not match.');
+        return;
+      }
+
+      if (!isPasswordValid) {
+        setValidationError('Password does not meet the requirements.');
         return;
       }
 
@@ -137,9 +158,7 @@ const AuthModal = ({ visible, onClose }) => {
         email: email.trim(),
         password,
         fullName: fullName.trim(),
-        birthday: birthday.trim(),
-        phone: phone.trim(),
-        identityNumber: identityNumber.trim()
+        phone: phone.trim()
       });
     }
   };
@@ -166,11 +185,11 @@ const AuthModal = ({ visible, onClose }) => {
                 <View style={styles.accentContent}>
                   <View style={styles.logoContainer}>
                     <Svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                      <Path d="M12 2L2 7l10 5 10-5-10-5z" fill="#00CC99" />
-                      <Path d="M6 12.5V17c0 1.66 2.69 3 6 3s6-1.34 6-3v-4.5l-6 3-6-3z" fill="#005C42" />
+                      <Path d="M12 2L2 7l10 5 10-5-10-5z" fill="#88D4AB" />
+                      <Path d="M6 12.5V17c0 1.66 2.69 3 6 3s6-1.34 6-3v-4.5l-6 3-6-3z" fill="#006269" />
                     </Svg>
                   </View>
-                  <Text style={styles.accentTitle}>Apex IELTS</Text>
+                  <Text style={styles.accentTitle}>Lumina IELTS</Text>
                   <Text style={styles.accentSubtitle}>
                     {isLogin 
                       ? "Welcome back to your personalized elite training workspace." 
@@ -231,129 +250,188 @@ const AuthModal = ({ visible, onClose }) => {
                   {/* Form inputs */}
                   {!isLogin && (
                     <>
-                      <TextInput
-                        mode="outlined"
-                        label="Full Name"
-                        placeholder="Enter your full name"
-                        value={fullName}
-                        onChangeText={setFullName}
-                        autoCapitalize="words"
-                        autoCorrect={false}
-                        style={styles.input}
-                        outlineColor="#E5E7EB"
-                        activeOutlineColor="#00CC99"
-                        textColor="#1F2937"
-                        left={<TextInput.Icon icon="account-outline" color="#9CA3AF" />}
-                      />
+                      <View style={{ marginBottom: 16 }}>
+                        <TextInput
+                          mode="outlined"
+                          label="Full Name"
+                          placeholder="Enter your full name"
+                          value={fullName}
+                          onChangeText={setFullName}
+                          autoCapitalize="words"
+                          autoCorrect={false}
+                          style={{ backgroundColor: '#FFFFFF', fontSize: 14 }}
+                          outlineColor="#E5E7EB"
+                          activeOutlineColor="#88D4AB"
+                          textColor="#1F2937"
+                          error={fullName.length > 0 && !isFullNameValid}
+                          left={<TextInput.Icon icon={() => <Feather name="user" size={20} color="#9CA3AF" />} />}
+                          right={
+                            fullName.length > 0 ? (
+                              <TextInput.Icon icon={() => <Feather name={isFullNameValid ? "check-circle" : "x-circle"} size={20} color={isFullNameValid ? "#88D4AB" : "#EF4444"} />} />
+                            ) : null
+                          }
+                        />
+                        {fullName.length > 0 && !isFullNameValid && <HelperText type="error" visible={true} style={{ paddingHorizontal: 0 }}>Please enter your full name.</HelperText>}
+                      </View>
 
-                      <TextInput
-                        mode="outlined"
-                        label="Username"
-                        placeholder="Choose a username"
-                        value={username}
-                        onChangeText={setUsername}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        style={styles.input}
-                        outlineColor="#E5E7EB"
-                        activeOutlineColor="#00CC99"
-                        textColor="#1F2937"
-                        left={<TextInput.Icon icon="at" color="#9CA3AF" />}
-                      />
+                      <View style={{ marginBottom: 16 }}>
+                        <TextInput
+                          mode="outlined"
+                          label="Username"
+                          placeholder="Choose a username"
+                          value={username}
+                          onChangeText={setUsername}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          style={{ backgroundColor: '#FFFFFF', fontSize: 14 }}
+                          outlineColor="#E5E7EB"
+                          activeOutlineColor="#88D4AB"
+                          textColor="#1F2937"
+                          error={username.length > 0 && !isUsernameValid}
+                          left={<TextInput.Icon icon={() => <Feather name="at-sign" size={20} color="#9CA3AF" />} />}
+                          right={
+                            username.length > 0 ? (
+                              <TextInput.Icon icon={() => <Feather name={isUsernameValid ? "check-circle" : "x-circle"} size={20} color={isUsernameValid ? "#88D4AB" : "#EF4444"} />} />
+                            ) : null
+                          }
+                        />
+                        {username.length > 0 && !isUsernameValid && <HelperText type="error" visible={true} style={{ paddingHorizontal: 0 }}>Username must be at least 3 characters.</HelperText>}
+                      </View>
 
-                      <TextInput
-                        mode="outlined"
-                        label="Type your birthday"
-                        placeholder="Insert your birthday"
-                        value={birthday}
-                        onChangeText={setBirthday}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        style={styles.input}
-                        outlineColor="#E5E7EB"
-                        activeOutlineColor="#00CC99"
-                        textColor="#1F2937"
-                        left={<TextInput.Icon icon="calendar-range" color="#9CA3AF" />}
-                      />
 
-                      <TextInput
-                        mode="outlined"
-                        label="Insert your cell phone"
-                        placeholder="Insert your phone number"
-                        value={phone}
-                        onChangeText={setPhone}
-                        keyboardType="numeric"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        style={styles.input}
-                        outlineColor="#E5E7EB"
-                        activeOutlineColor="#00CC99"
-                        textColor="#1F2937"
-                        left={<TextInput.Icon icon="phone-outline" color="#9CA3AF" />}
-                      />
+                      <View style={{ marginBottom: 16 }}>
+                        <TextInput
+                          mode="outlined"
+                          label="Insert your cell phone"
+                          placeholder="Insert your phone number"
+                          value={phone}
+                          onChangeText={setPhone}
+                          keyboardType="numeric"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          style={{ backgroundColor: '#FFFFFF', fontSize: 14 }}
+                          outlineColor="#E5E7EB"
+                          activeOutlineColor="#88D4AB"
+                          textColor="#1F2937"
+                          error={phone.length > 0 && !isPhoneValid}
+                          left={<TextInput.Icon icon={() => <Feather name="phone" size={20} color="#9CA3AF" />} />}
+                          right={
+                            phone.length > 0 ? (
+                              <TextInput.Icon icon={() => <Feather name={isPhoneValid ? "check-circle" : "x-circle"} size={20} color={isPhoneValid ? "#88D4AB" : "#EF4444"} />} />
+                            ) : null
+                          }
+                        />
+                        {phone.length > 0 && !isPhoneValid && <HelperText type="error" visible={true} style={{ paddingHorizontal: 0 }}>Must be digits only.</HelperText>}
+                      </View>
 
-                      <TextInput
-                        mode="outlined"
-                        label="Insert your identity number to confirm yourself"
-                        placeholder="Insert your identity number"
-                        value={identityNumber}
-                        onChangeText={setIdentityNumber}
-                        keyboardType="numeric"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        style={styles.input}
-                        outlineColor="#E5E7EB"
-                        activeOutlineColor="#00CC99"
-                        textColor="#1F2937"
-                        left={<TextInput.Icon icon="card-account-details-outline" color="#9CA3AF" />}
-                      />
                     </>
                   )}
 
-                  <TextInput
-                    mode="outlined"
-                    label="Email Address"
-                    placeholder="name@example.com"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    style={styles.input}
-                    outlineColor="#E5E7EB"
-                    activeOutlineColor="#00CC99"
-                    textColor="#1F2937"
-                    left={<TextInput.Icon icon="email-outline" color="#9CA3AF" />}
-                  />
-
-                  <TextInput
-                    mode="outlined"
-                    label="Password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    style={styles.input}
-                    outlineColor="#E5E7EB"
-                    activeOutlineColor="#00CC99"
-                    textColor="#1F2937"
-                    left={<TextInput.Icon icon="lock-outline" color="#9CA3AF" />}
-                  />
-
-                  {!isLogin && (
+                  <View style={{ marginBottom: 16 }}>
                     <TextInput
                       mode="outlined"
-                      label="Confirm Password"
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChangeText={setConfirmPassword}
-                      secureTextEntry
-                      style={styles.input}
+                      label="Email Address"
+                      placeholder="name@example.com"
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      style={{ backgroundColor: '#FFFFFF', fontSize: 14 }}
                       outlineColor="#E5E7EB"
-                      activeOutlineColor="#00CC99"
+                      activeOutlineColor="#88D4AB"
                       textColor="#1F2937"
-                      left={<TextInput.Icon icon="lock-check-outline" color="#9CA3AF" />}
+                      error={email.length > 0 && !isEmailValid}
+                      left={<TextInput.Icon icon={() => <Feather name="mail" size={20} color="#9CA3AF" />} />}
+                      right={
+                        email.length > 0 ? (
+                          <TextInput.Icon icon={() => <Feather name={isEmailValid ? "check-circle" : "x-circle"} size={20} color={isEmailValid ? "#88D4AB" : "#EF4444"} />} />
+                        ) : null
+                      }
                     />
+                    {email.length > 0 && !isEmailValid && <HelperText type="error" visible={true} style={{ paddingHorizontal: 0 }}>Invalid email format.</HelperText>}
+                  </View>
+
+                  <View style={{ marginBottom: 16 }}>
+                    <TextInput
+                      mode="outlined"
+                      label="Password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChangeText={setPassword}
+                      onFocus={() => setIsPasswordFocused(true)}
+                      onBlur={() => setIsPasswordFocused(false)}
+                      secureTextEntry={!showPassword}
+                      style={{ backgroundColor: '#FFFFFF', fontSize: 14 }}
+                      outlineColor="#E5E7EB"
+                      activeOutlineColor="#88D4AB"
+                      textColor="#1F2937"
+                      error={password.length > 0 && !isPasswordValid && !isLogin}
+                      left={<TextInput.Icon icon={() => <Feather name="lock" size={20} color="#9CA3AF" />} />}
+                      right={
+                        <TextInput.Icon
+                          icon={() => (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              {password.length > 0 && !isLogin ? (
+                                <Feather name={isPasswordValid ? "check-circle" : "x-circle"} size={20} color={isPasswordValid ? "#88D4AB" : "#EF4444"} />
+                              ) : null}
+                              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color="#9CA3AF" />
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        />
+                      }
+                    />
+                    {!isLogin && isPasswordFocused && (
+                      <View style={styles.criteriaContainer}>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                          <View style={{ width: '50%', marginBottom: 8 }}>
+                            <PasswordCriteria text="Có chữ cái" isValid={hasLetter} isEmpty={password.length === 0} />
+                          </View>
+                          <View style={{ width: '50%', marginBottom: 8 }}>
+                            <PasswordCriteria text="Tối thiểu 10 ký tự" isValid={hasLength} isEmpty={password.length === 0} />
+                          </View>
+                          <View style={{ width: '100%' }}>
+                            <PasswordCriteria text="Có chữ số/ký tự đặc biệt" isValid={hasNumberOrSpecial} isEmpty={password.length === 0} />
+                          </View>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+
+                  {!isLogin && (
+                    <View style={{ marginBottom: 16 }}>
+                      <TextInput
+                        mode="outlined"
+                        label="Confirm Password"
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        secureTextEntry={!showConfirmPassword}
+                        style={{ backgroundColor: '#FFFFFF', fontSize: 14 }}
+                        outlineColor="#E5E7EB"
+                        activeOutlineColor="#88D4AB"
+                        textColor="#1F2937"
+                        error={confirmPassword.length > 0 && !isConfirmValid}
+                        left={<TextInput.Icon icon={() => <Feather name="lock" size={20} color="#9CA3AF" />} />}
+                        right={
+                          <TextInput.Icon
+                            icon={() => (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                {confirmPassword.length > 0 ? (
+                                  <Feather name={isConfirmValid ? "check-circle" : "x-circle"} size={20} color={isConfirmValid ? "#88D4AB" : "#EF4444"} />
+                                ) : null}
+                                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                  <Feather name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#9CA3AF" />
+                                </TouchableOpacity>
+                              </View>
+                            )}
+                          />
+                        }
+                      />
+                      {confirmPassword.length > 0 && !isConfirmValid && <HelperText type="error" visible={true} style={{ paddingHorizontal: 0 }}>Passwords do not match.</HelperText>}
+                    </View>
                   )}
 
                   {isLogin ? (
@@ -501,7 +579,7 @@ const styles = StyleSheet.create({
   },
   leftAccentPanel: {
     flex: 1,
-    backgroundColor: '#005C42', // Deep green accent
+    backgroundColor: '#006269', // Deep green accent
     padding: 40,
     justifyContent: 'center',
     position: 'relative',
@@ -520,7 +598,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: '#00CC99',
+    backgroundColor: '#88D4AB',
     opacity: 0.15,
     top: -80,
     right: -80,
@@ -610,7 +688,7 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 3,
-    borderBottomColor: '#00CC99',
+    borderBottomColor: '#88D4AB',
   },
   tabText: {
     fontSize: 15,
@@ -649,6 +727,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 13,
   },
+  criteriaContainer: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  criteriaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  criteriaText: {
+    marginLeft: 8,
+    fontSize: 12,
+    fontWeight: '500',
+  },
   input: {
     marginBottom: 16,
     backgroundColor: '#FFFFFF',
@@ -660,7 +751,7 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 13,
-    color: '#00CC99',
+    color: '#88D4AB',
     fontWeight: '600',
   },
   checkboxesContainer: {
@@ -683,8 +774,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   checkboxActive: {
-    backgroundColor: '#00CC99',
-    borderColor: '#00CC99',
+    backgroundColor: '#88D4AB',
+    borderColor: '#88D4AB',
   },
   robotLabel: {
     fontSize: 13,
@@ -701,13 +792,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   termsHighlight: {
-    color: '#00CC99',
+    color: '#88D4AB',
     fontWeight: '600',
   },
   submitBtn: {
     borderRadius: 14,
-    backgroundColor: '#00CC99',
-    shadowColor: '#00CC99',
+    backgroundColor: '#88D4AB',
+    shadowColor: '#88D4AB',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
     shadowRadius: 8,

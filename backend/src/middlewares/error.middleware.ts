@@ -37,15 +37,17 @@ export const globalErrorHandler = (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction
 ): void => {
-  const statusCode = err.statusCode || 500;
+  const statusCode = err.statusCode || err.status || 500;
   const message = err.message || 'Internal Server Error';
 
   // Log non-operational errors (unexpected bugs)
-  if (!err.isOperational) {
+  // We consider it operational if statusCode is < 500 or isOperational is true
+  const isOperational = err.isOperational !== undefined ? err.isOperational : (Number(statusCode) < 500);
+  if (!isOperational) {
     console.error('[ERROR] Unexpected error:', err);
   }
 
-  res.status(statusCode).json({
+  res.status(Number(statusCode)).json({
     success: false,
     error: {
       code: statusCode,

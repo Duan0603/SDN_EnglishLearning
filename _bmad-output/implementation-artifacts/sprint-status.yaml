@@ -194,11 +194,11 @@ development_status:
   #   [BE] SpeakingSubmission model & persistence .................. done
 
   # Story 3.4 [FE] Speaking Assessment Results UI (Frontend)
-  3-4-speaking-assessment-results-ui-frontend: backlog
+  3-4-speaking-assessment-results-ui-frontend: done
   # Sub-tasks breakdown:
-  #   [FE] Score display: 4-criteria radar/bar chart ............... backlog
-  #   [FE] Fluency, Lexical, Grammar, Pronunciation breakdown ..... backlog
-  #   [FE] Loading state during AI processing ...................... backlog
+  #   [FE] Score display: 4-criteria radar/bar chart ............... done
+  #   [FE] Fluency, Lexical, Grammar, Pronunciation breakdown ..... done
+  #   [FE] Loading state during AI processing ...................... done
   #   [FE] Speaking history list (past assessments) ................ backlog
 
   epic-3-retrospective: optional
