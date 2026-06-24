@@ -87,12 +87,15 @@ export default function HomeNewTests() {
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
                   <span className="font-sans font-black text-[#005c42] normal-case text-[10px]">{user.fullName}</span>
                 </div>
+                <Link to="/practice" className="border-2 border-[#1b263b] px-4 py-1.5 rounded-xl hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all bg-[#ffd54f] shadow-[2px_2px_0px_0px_#1b263b]">
+                  ✍️ Practice Portal
+                </Link>
                 {user.role === 'ADMIN' && (
-                  <Link to="/admin" className="border-2 border-[#1b263b] px-4 py-1.5 rounded-xl hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all bg-[#ffd54f] shadow-[2px_2px_0px_0px_#1b263b]">
+                  <Link to="/admin" className="border-2 border-[#1b263b] px-4 py-1.5 rounded-xl hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all bg-[#fcfbf7] shadow-[2px_2px_0px_0px_#1b263b]">
                     👑 Admin Panel
                   </Link>
                 )}
-                <Link to="/login" className="border-2 border-[#1b263b] px-4 py-1.5 rounded-xl hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all bg-[#fcfbf7] shadow-[2px_2px_0px_0px_#1b263b]">
+                <Link to="/login" className="border-2 border-[#1b263b] px-4 py-1.5 rounded-xl hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all bg-[#fcfbf7]/40 shadow-[2px_2px_0px_0px_#1b263b]">
                   Switch Account
                 </Link>
               </>
@@ -127,10 +130,16 @@ export default function HomeNewTests() {
             </p>
 
             <div className="flex flex-wrap gap-4 pt-4">
-              {isAuthenticated && user && user.role === 'ADMIN' ? (
-                <Link to="/admin" className="bg-[#c92a2a] text-white border-2 border-[#1b263b] px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-[#b01e1e] transition-all flex items-center gap-2 shadow-[3px_3px_0px_0px_#1b263b]">
-                  <span>👑</span> Go to Admin Panel
-                </Link>
+              {isAuthenticated && user ? (
+                user.role === 'ADMIN' ? (
+                  <Link to="/admin" className="bg-[#c92a2a] text-white border-2 border-[#1b263b] px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-[#b01e1e] transition-all flex items-center gap-2 shadow-[3px_3px_0px_0px_#1b263b]">
+                    <span>👑</span> Go to Admin Panel
+                  </Link>
+                ) : (
+                  <Link to="/practice" className="bg-[#c92a2a] text-white border-2 border-[#1b263b] px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-[#b01e1e] transition-all flex items-center gap-2 shadow-[3px_3px_0px_0px_#1b263b]">
+                    <span>✎</span> Go to Practice Portal
+                  </Link>
+                )
               ) : (
                 <Link to="/login" className="bg-[#c92a2a] text-white border-2 border-[#1b263b] px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-[#b01e1e] transition-all flex items-center gap-2 shadow-[3px_3px_0px_0px_#1b263b]">
                   <span>✎</span> Start Practice
@@ -191,21 +200,25 @@ export default function HomeNewTests() {
           {/* 3x2 Lined Grid Cards with Dark outline & round corner */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { title: 'AI Speaking Evaluator', tutor: 'Whisper & Gemini API', place: 'Speaking Submissions', progress: 62, stats: '14 logs • Part 1 & 2' },
-              { title: 'AI Writing Evaluator', tutor: 'Criteria Essay Grader', place: 'Writing Submissions', progress: 45, stats: '22 essays submitted' },
-              { title: 'IELTS Reading Simulator', tutor: 'Cambridge Test Pool', place: 'Reading Exam Simulator', progress: 78, stats: '9 papers • 6 sections' },
-              { title: 'IELTS Listening Simulator', tutor: 'Audio Stream Tests', place: 'Listening Exam Simulator', progress: 33, stats: '11 audios completed' },
-              { title: '1-on-1 Mentor Booking', tutor: 'Certified IELTS Mentors', place: 'Availability Scheduler', progress: 51, stats: '5 sessions scheduled' },
-              { title: 'Personal Score Tracker', tutor: 'Database Band reports', place: 'Test Results History', progress: 89, stats: '17 exams analyzed' },
+              { title: 'AI Speaking Evaluator', tutor: 'Whisper & Gemini API', place: 'Speaking Submissions', progress: 62, stats: '14 logs • Part 1 & 2', tab: 'speaking' },
+              { title: 'AI Writing Evaluator', tutor: 'Criteria Essay Grader', place: 'Writing Submissions', progress: 45, stats: '22 essays submitted', tab: 'writing' },
+              { title: 'IELTS Reading Simulator', tutor: 'Cambridge Test Pool', place: 'Reading Exam Simulator', progress: 78, stats: '9 papers • 6 sections', tab: 'reading' },
+              { title: 'IELTS Listening Simulator', tutor: 'Audio Stream Tests', place: 'Listening Exam Simulator', progress: 33, stats: '11 audios completed', tab: 'listening' },
+              { title: '1-on-1 Mentor Booking', tutor: 'Certified IELTS Mentors', place: 'Availability Scheduler', progress: 51, stats: '5 sessions scheduled', tab: 'mentors' },
+              { title: 'Personal Score Tracker', tutor: 'Database Band reports', place: 'Test Results History', progress: 89, stats: '17 exams analyzed', tab: 'tracker' },
             ].map((course, idx) => (
-              <div key={idx} className="bg-[#fcfbf7] bg-notebook-card bg-notebook bg-repeat border-2 border-[#1b263b] rounded-2xl p-6 shadow-md hover:shadow-lg transition-all relative flex flex-col justify-between min-h-[190px] text-left">
+              <Link
+                key={idx}
+                to={isAuthenticated ? `/practice?tab=${course.tab}` : '/login'}
+                className="bg-[#fcfbf7] bg-notebook-card bg-notebook bg-repeat border-2 border-[#1b263b] rounded-2xl p-6 shadow-md hover:shadow-lg hover:scale-[1.01] hover:translate-y-[-2px] transition-all relative flex flex-col justify-between min-h-[190px] text-left block group"
+              >
                 {/* Red divider margin line inside cards */}
                 <div className="absolute left-3 top-0 bottom-0 w-px bg-[#e0565b]/40" />
                 
                 <div className="pl-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider">IELTS Core System</span>
-                    <span className="text-[9px] bg-sky-100 text-[#4682b4] border border-[#1b263b] font-bold px-2 py-0.5 rounded uppercase">Active Mode</span>
+                    <span className="text-[9px] bg-sky-100 text-[#4682b4] border border-[#1b263b] font-bold px-2 py-0.5 rounded uppercase group-hover:bg-[#c92a2a] group-hover:text-white group-hover:border-[#1b263b] transition-all">Go Practice ➔</span>
                   </div>
                   <h3 className="text-xl font-serif text-[#1b263b] font-bold">{course.title}</h3>
                   <p className="text-xs text-gray-500 font-medium">{course.tutor} • {course.place}</p>
@@ -221,7 +234,7 @@ export default function HomeNewTests() {
                     <span>{course.stats}</span>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </section>
@@ -439,10 +452,10 @@ export default function HomeNewTests() {
                   IELTS Modules
                 </span>
                 <ul className="space-y-2 text-xs font-bold text-gray-700">
-                  <li><Link to="/login" className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>✎</span> Speaking Coach</Link></li>
-                  <li><Link to="/login" className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>✎</span> Writing Evaluator</Link></li>
-                  <li><Link to="/login" className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>✎</span> Reading Simulator</Link></li>
-                  <li><Link to="/login" className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>✎</span> Listening Simulator</Link></li>
+                  <li><Link to={isAuthenticated ? "/practice?tab=speaking" : "/login"} className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>✎</span> Speaking Coach</Link></li>
+                  <li><Link to={isAuthenticated ? "/practice?tab=writing" : "/login"} className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>✎</span> Writing Evaluator</Link></li>
+                  <li><Link to={isAuthenticated ? "/practice?tab=reading" : "/login"} className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>✎</span> Reading Simulator</Link></li>
+                  <li><Link to={isAuthenticated ? "/practice?tab=listening" : "/login"} className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>✎</span> Listening Simulator</Link></li>
                 </ul>
               </div>
 
@@ -452,9 +465,9 @@ export default function HomeNewTests() {
                   Portal & System
                 </span>
                 <ul className="space-y-2 text-xs font-bold text-gray-700">
-                  <li><Link to="/login" className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>◎</span> Student Portal</Link></li>
-                  <li><Link to="/login" className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>◎</span> Mentor Scheduling</Link></li>
-                  <li><Link to="/admin" className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>◎</span> Admin Dashboard 👑</Link></li>
+                  <li><Link to={isAuthenticated ? "/practice" : "/login"} className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>◎</span> Student Portal</Link></li>
+                  <li><Link to={isAuthenticated ? "/practice?tab=mentors" : "/login"} className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>◎</span> Mentor Scheduling</Link></li>
+                  <li><Link to={isAuthenticated ? "/admin" : "/login"} className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>◎</span> Admin Dashboard 👑</Link></li>
                   <li><Link to="/login" className="hover:text-[#c92a2a] transition-colors flex items-center gap-1"><span>◎</span> Account Login</Link></li>
                 </ul>
               </div>
