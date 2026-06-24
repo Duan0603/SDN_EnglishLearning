@@ -55,8 +55,8 @@ export default function LoginScreen() {
           { 
             theme: 'outline', 
             size: 'large', 
-            width: 334,
-            text: 'continue_with',
+            width: btnContainer.offsetWidth || 350,
+            text: 'signin',
             shape: 'rectangular',
             logo_alignment: 'left'
           }
