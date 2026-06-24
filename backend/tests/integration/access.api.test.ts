@@ -116,10 +116,7 @@ describe('Access API Integration Tests', () => {
         .post('/api/v1/auth/logout')
         .send();
 
-      // The authUtils will throw an error or call next(error), which becomes a 401 or 500.
-      // Wait, let's see what the authUtils actually does. If it crashes with 500, we should expect 500, 
-      // but let's assume it returns an error with status. The current result is 500. Let's just expect 500 for missing header logic.
-      expect(response.status).toBe(500); 
+      expect(response.status).toBe(401); 
     });
   });
 });

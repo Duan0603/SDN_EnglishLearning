@@ -12,7 +12,18 @@ jest.mock('react-native-safe-area-context', () => {
 });
 
 jest.mock('@expo/vector-icons', () => ({
+  Ionicons: () => null,
   MaterialCommunityIcons: () => null,
+  MaterialIcons: () => null,
+  Feather: () => null,
+}));
+
+jest.mock('expo-auth-session/providers/google', () => ({
+  useIdTokenAuthRequest: () => [null, null, jest.fn()],
+}));
+
+jest.mock('expo-web-browser', () => ({
+  maybeCompleteAuthSession: jest.fn(),
 }));
 
 jest.mock('../../src/store/useAuthStore', () => ({
@@ -37,26 +48,26 @@ describe('LoginScreen', () => {
   it('renders correctly', () => {
     const { getByText, getByPlaceholderText } = render(<LoginScreen navigation={mockNavigation} />);
     
-    expect(getByText('Sign In')).toBeTruthy();
-    expect(getByPlaceholderText('name@example.com')).toBeTruthy();
-    expect(getByPlaceholderText('Enter your password')).toBeTruthy();
+    expect(getByText('Welcome Back 👋')).toBeTruthy();
+    expect(getByPlaceholderText('Nhập email hoặc tên người dùng')).toBeTruthy();
+    expect(getByPlaceholderText('Nhập mật khẩu của bạn')).toBeTruthy();
   });
 
-  it('calls login with email and password when Continue is pressed', () => {
+  it('calls login with email and password when Đăng nhập is pressed', () => {
     const { getByText, getByPlaceholderText } = render(<LoginScreen navigation={mockNavigation} />);
     
-    fireEvent.changeText(getByPlaceholderText('name@example.com'), 'test@example.com');
-    fireEvent.changeText(getByPlaceholderText('Enter your password'), 'password123');
+    fireEvent.changeText(getByPlaceholderText('Nhập email hoặc tên người dùng'), 'test@example.com');
+    fireEvent.changeText(getByPlaceholderText('Nhập mật khẩu của bạn'), 'password123');
     
-    fireEvent.press(getByText('Continue'));
+    fireEvent.press(getByText('Đăng nhập'));
     
     expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123');
   });
 
-  it('navigates to Register screen when Create account is pressed', () => {
+  it('navigates to Register screen when Đăng ký ngay is pressed', () => {
     const { getByText } = render(<LoginScreen navigation={mockNavigation} />);
     
-    fireEvent.press(getByText('Create account'));
+    fireEvent.press(getByText('Đăng ký ngay'));
     
     expect(mockNavigation.navigate).toHaveBeenCalledWith('Register');
   });
