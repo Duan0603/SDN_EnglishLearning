@@ -22,7 +22,15 @@ class Database {
         }
 
         // Strip replicaSet param — Mongoose works with standalone MongoDB
-        const standaloneUrl = connectString.replace(/[?&]replicaSet=[^&]*/g, '').replace(/[?&]directConnection=[^&]*/g, '').replace(/\?$/, '');
+        let standaloneUrl = connectString.replace(/[?&]replicaSet=[^&]*/g, '').replace(/\?$/, '');
+
+        // Ensure directConnection=true is present for local development to bypass replica set discovery issues
+        if ((standaloneUrl.includes('localhost') || standaloneUrl.includes('127.0.0.1')) && !standaloneUrl.includes('directConnection=true')) {
+            const separator = standaloneUrl.includes('?') ? '&' : '?';
+            standaloneUrl += `${separator}directConnection=true`;
+        }
+
+        console.log("[Mongoose] Connecting to:", standaloneUrl);
 
         mongoose.connect(standaloneUrl, {
             maxPoolSize: 50

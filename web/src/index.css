@@ -10,7 +10,7 @@
   }
 
   body {
-    @apply bg-background text-accent-dark;
+    @apply bg-[#f5f3dc] text-[#1b263b];
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -22,21 +22,26 @@
   }
 }
 
-@layer components {
-  /* Apex IELTS Design System — Card component */
-  .card {
-    @apply bg-background-card rounded-card shadow-sm;
-  }
+/* Custom utilities fallbacks if needed */
 
-  /* Primary action button */
-  .btn-primary {
-    @apply bg-primary-dark text-white font-semibold px-6 py-3 rounded-full
-           hover:bg-primary transition-all duration-200 active:scale-95;
-  }
+/* Explicit font family mapping to ensure correct loading on all browsers */
+.font-handwriting {
+  font-family: 'Caveat', cursive, sans-serif !important;
+}
 
-  /* Secondary action button */
-  .btn-secondary {
-    @apply bg-primary text-white font-semibold px-6 py-3 rounded-full
-           hover:opacity-90 transition-all duration-200 active:scale-95;
-  }
+.font-serif {
+  font-family: 'Fraunces', Georgia, serif !important;
+}
+
+.font-sans {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+}
+
+/* Custom Pencil Cursor for the entire landing page and interactive elements */
+.custom-pencil-cursor,
+.custom-pencil-cursor a,
+.custom-pencil-cursor button,
+.custom-pencil-cursor label,
+.custom-pencil-cursor select {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24'><polygon points='0,0 2,5 5,2' fill='%231b263b' /><polygon points='2,5 5,2 8,5 5,8' fill='%23eae7cd' stroke='%231b263b' stroke-width='1' /><polygon points='5,8 8,5 17,14 14,17' fill='%23ffd54f' stroke='%231b263b' stroke-width='1' /><polygon points='14,17 17,14 19,16 16,19' fill='%239ca3af' stroke='%231b263b' stroke-width='1' /><polygon points='16,19 19,16 22,19 19,22' fill='%23fbcfe8' stroke='%231b263b' stroke-width='1' /></svg>") 2 2, auto !important;
 }

@@ -22,8 +22,20 @@ export default {
         },
       },
       borderRadius: {
-        'card': '32px',         // rounded-3xl for main content cards
-        'input': '16px',        // rounded-2xl for input fields
+        'card': '32px',
+        'input': '16px',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        serif: ['Fraunces', 'Georgia', 'serif'],
+        handwriting: ['Caveat', 'cursive'],
+      },
+      backgroundImage: {
+        'notebook-paper': "linear-gradient(to right, transparent 79px, #e0565b 79px, #e0565b 81px, transparent 81px), url('/notebook-line.png')",
+        'notebook-card': "url('/notebook-line.png')",
+      },
+      backgroundSize: {
+        'notebook': '100% 100%, auto',
       },
     },
   },

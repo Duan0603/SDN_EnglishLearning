@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from './store/store'
 import { initializeAuth } from './features/auth/authSlice'
 import LoginScreen from './features/auth/LoginScreen'
 import AdminDashboard from './features/admin/AdminDashboard'
+import HomeNewTests from './features/landing/HomeNewTests'
 
 // Strict Admin Role Guard
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -124,7 +125,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<HomeNewTests />} />
         <Route path="/login" element={<LoginScreen />} />
         <Route
           path="/admin"
