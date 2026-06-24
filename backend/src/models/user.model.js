@@ -39,10 +39,6 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
-    birthday: {
-        type: String,
-        default: ''
-    },
     phone: {
         type: String,
         default: ''

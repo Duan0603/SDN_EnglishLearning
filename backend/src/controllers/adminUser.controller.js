@@ -47,7 +47,7 @@ export class AdminUserController {
 
   // POST /api/v1/admin/users — Create a new user (admin-created, any role)
   static createUser = async (req, res, next) => {
-    const { username, email, password, fullName, role = 'STUDENT', birthday = '', phone = '', identityNumber = '' } = req.body;
+    const { username, email, password, fullName, role = 'STUDENT', phone = '' } = req.body;
 
     if (!username || !email || !password || !fullName) {
       throw new BadRequestError('username, email, password and fullName are required');
@@ -67,9 +67,7 @@ export class AdminUserController {
       password: hashedPassword,
       fullName,
       role,
-      birthday,
       phone,
-      identityNumber,
       status: 'active',
       verify: true, // Admin-created users are auto-verified
     });
@@ -84,7 +82,7 @@ export class AdminUserController {
 
   // PATCH /api/v1/admin/users/:id — Update user fields
   static updateUser = async (req, res, next) => {
-    const { fullName, email, username, role, status, birthday, phone, identityNumber, password } = req.body;
+    const { fullName, email, username, role, status, phone, password } = req.body;
 
     const user = await userModel.findById(req.params.id);
     if (!user) throw new NotFoundError('User not found');
@@ -106,9 +104,7 @@ export class AdminUserController {
     if (username !== undefined) user.username = username;
     if (role !== undefined) user.role = role;
     if (status !== undefined) user.status = status;
-    if (birthday !== undefined) user.birthday = birthday;
     if (phone !== undefined) user.phone = phone;
-    if (identityNumber !== undefined) user.identityNumber = identityNumber;
     if (password) user.password = await bcrypt.hash(password, 10);
 
     await user.save();

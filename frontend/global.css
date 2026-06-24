@@ -7,9 +7,14 @@
 @tailwind utilities;
 
 @layer base {
-  body, html, div, span, p, a, input, textarea, button, p, h1, h2, h3, h4, h5, h6 {
-    font-family: 'Outfit_500Medium', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  /* Do not use !important on global selectors or it breaks vector icons! */
+  body, html {
+    font-family: 'Outfit_400Regular', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
 }
 
-
+/* Hide Edge/Chrome's default password reveal button and clear button */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+}
