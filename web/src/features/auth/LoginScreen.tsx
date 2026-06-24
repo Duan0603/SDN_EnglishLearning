@@ -17,6 +17,81 @@ export default function LoginScreen() {
   const navigate = useNavigate();
   const { loading, error } = useAppSelector((state) => state.auth);
 
+  const handleGoogleCredentialResponse = async (response: any) => {
+    const idToken = response.credential;
+    dispatch(loginStart());
+    try {
+      const res = await apiClient.post('/auth/google-login', { idToken });
+      const metadata = res.data?.metadata || res.data;
+      
+      const user = metadata.user;
+      const token = metadata.tokens?.accessToken || metadata.accessToken || 'mock-token';
+
+      dispatch(loginSuccess({ user, token }));
+      
+      if (user.role === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
+    } catch (err: any) {
+      console.error('Google login failed:', err.message);
+      dispatch(loginFailure(err.response?.data?.message || 'Đăng nhập bằng Google thất bại.'));
+    }
+  };
+
+  React.useEffect(() => {
+    let containerCheckInterval: any = null;
+
+    const renderGoogleButton = () => {
+      const btnContainer = document.getElementById('google-signin-btn');
+      if (btnContainer && (window as any).google) {
+        (window as any).google.accounts.id.initialize({
+          client_id: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
+          callback: handleGoogleCredentialResponse,
+        });
+        (window as any).google.accounts.id.renderButton(
+          btnContainer,
+          { 
+            theme: 'outline', 
+            size: 'large', 
+            width: 334,
+            text: 'continue_with',
+            shape: 'rectangular',
+            logo_alignment: 'left'
+          }
+        );
+        return true;
+      }
+      return false;
+    };
+
+    const handleScriptLoad = () => {
+      containerCheckInterval = setInterval(() => {
+        if (renderGoogleButton()) {
+          clearInterval(containerCheckInterval);
+        }
+      }, 100);
+    };
+
+    const existingScript = document.getElementById('google-gsi-script');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.id = 'google-gsi-script';
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = handleScriptLoad;
+      document.head.appendChild(script);
+    } else {
+      handleScriptLoad();
+    }
+
+    return () => {
+      if (containerCheckInterval) clearInterval(containerCheckInterval);
+    };
+  }, []);
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
@@ -224,32 +299,10 @@ export default function LoginScreen() {
                     <div className="flex-grow border-t-2 border-dashed border-[#1b263b]/20"></div>
                   </div>
 
-                  {/* Google Login Button */}
-                  <button
-                    type="button"
-                    onClick={() => alert("Google Single Sign-On (SSO) is being configured. Please use local credentials for developer verification.")}
-                    className="w-full bg-[#fefefe] text-[#1b263b] font-black text-xs py-3.5 rounded-xl border-2 border-[#1b263b] hover:bg-gray-50 active:scale-[0.98] transition-all shadow-[3px_3px_0px_0px_#1b263b] flex items-center justify-center gap-2 uppercase tracking-wider"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.69c-.29 1.5-.14 2.69-.78 3.56l3.11 2.42c1.82-1.68 2.72-4.15 2.72-7.83z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.11-2.42c-.86.58-1.97.92-3.21.92-3.14 0-5.8-2.12-6.75-4.97L1.62 18.16C3.6 22.1 7.6 24 12 24z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.25 14.62c-.25-.76-.39-1.57-.39-2.4 0-.83.14-1.64.39-2.4L1.62 7.29C.8 8.94.33 10.79.33 12.7c0 1.9.47 3.75 1.29 5.4l3.63-2.48z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.6 0 3.6 1.9 1.62 5.84l3.63 2.82c.95-2.85 3.61-4.91 6.75-4.91z"
-                      />
-                    </svg>
-                    Continue with Google
-                  </button>
+                  {/* Google Login Button Container */}
+                  <div className="w-full flex justify-center py-1">
+                    <div id="google-signin-btn" className="w-full" style={{ minHeight: '44px' }} />
+                  </div>
 
                   <div className="pt-2 text-center text-xs font-bold text-gray-500">
                     Chưa có tài khoản?{' '}
