@@ -26,7 +26,7 @@ export default function LoginScreen() {
 
     dispatch(loginStart());
     try {
-      const res = await apiClient.post('/auth/login', { username, password });
+      const res = await apiClient.post('/auth/login', { email: username, password });
       const metadata = res.data?.metadata || res.data;
       
       const user = metadata.user;
