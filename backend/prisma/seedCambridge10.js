@@ -221,45 +221,371 @@ const readingExams = [
       {
         sectionOrder: 1,
         title: "Passage 1: Stepwells",
-        passageText: "A millennium ago, stepwells were fundamental to life in the driest parts of India. Richard Cox travelled to north-western India to document these spectacular monuments from a bygone era...",
+        passageText: `A millennium ago, stepwells were fundamental to life in the driest parts of India. Richard Cox travelled to north-western India to document these spectacular monuments from a bygone era.\n\nDuring the sixth and seventh centuries, the inhabitants of the modern-day states of Gujarat and Rajasthan in North-western India developed a method of gaining access to clean, fresh groundwater during the dry season for drinking, bathing, watering animals and irrigation. However, the significance of this invention – the stepwell – goes beyond its utilitarian application.\n\nUnique to the region, stepwells are often architecturally complex and vary widely in size and shape. During their heyday, they were places of gathering, of leisure, of relaxation and of worship for villagers of all but the lowest castes. Most stepwells are found dotted around the desert areas of Gujarat (where they are called vav) and Rajasthan (where they are known as baori), while a few also survive in Delhi. Some were located in or near villages as public spaces for the community; others were positioned beside roads as resting places for travellers.\n\nAs their name suggests, stepwells comprise a series of stone steps descending from ground level to the water source (normally an underground aquifer) as it recedes following the rains. When the water level was high, the user needed only to descend a few steps to reach it; when it was low, several levels would have to be negotiated.\n\nSome wells are vast, open craters with hundreds of steps paving each sloping side, often in tiers. Others are more elaborate, with long stepped passages leading to the water via several storeys built from stone and supported by pillars, they also included pavilions that sheltered visitors from the relentless heat. But perhaps the most impressive features are the intricate decorative sculptures that embellish many stepwells, showing activities from fighting and dancing to everyday acts such as women combing their hair and churning butter.\n\nDown the centuries, thousands of wells were constructed throughout northwestern India, but the majority have now fallen into disuse; many are derelict and dry, as groundwater has been diverted for industrial use and the wells no longer reach the water table. Their condition hasn’t been helped by recent dry spells: southern Rajasthan suffered an eight-year drought between 1996 and 2004. However, some important sites in Gujarat have recently undergone major restoration, and the state government announced in June last year that it plans to restore the stepwells throughout the state.\n\nIn Patan, the state’s ancient capital, the stepwell of Rani Ki Vav (Queen’s Stepwell) is perhaps the finest current example. It was built by Queen Udayamati during the late 11th century, but became silted up following a flood during the 13th century. But the Archaeological Survey of India began restoring it in the 1960s, and today it’s in pristine condition. At 65 metres long, 20 metres wide and 27 metres deep, Rani Ki Vav features 500 distinct sculptures carved into niches throughout the monument, depicting gods such as Vishnu and Parvati in various incarnations. Incredibly, in January 2001, this ancient structure survived a devastating earthquake that measured 7.6 on the Richter scale.\n\nAnother example is the Surya Kund in Modhera, northern Gujarat, next to the Sun Temple, built by King Bhima I in 1026 to honour the sun god Surya. It actually resembles a tank (kund means reservoir or pond) rather than a well, but displays the hallmarks of stepwell architecture, including four sides of steps that descend to the bottom in a stunning geometrical formation. The terraces house 108 small, intricately carved shrines between the sets of steps.\n\nRajasthan also has a wealth of wells. The ancient city of Bundi, 200 kilometres south of Jaipur, is renowned for its architecture, including its stepwells. One of the larger examples is Raniji Ki Baori, which was built by the queen of the region, Nathavatji, in 1699. At 46 metres deep, 20 metres wide and 40 metres long, the intricately carved monument is one of 21 baoris commissioned in the Bundi area by Nathavatji.\n\nIn the old ruined town of Abhaneri, about 95 kilometres east of Jaipur, is Chand Baori, one of India’s oldest and deepest wells; aesthetically, it’s perhaps one of the most dramatic. Built in around 850 AD next to the temple of Harshat Mata, the baori comprises hundreds of zigzagging steps that run along three of its sides, steeply descending 11 storeys, resulting in a striking geometric pattern when seen from afar. On the fourth side, covered verandas supported by ornate pillars overlook the steps.\n\nStill in public use is Neemrana Ki Baori, located just off the Jaipur–Dehli highway. Constructed in around 1700, it’s nine storeys deep, with the last two levels underwater. At ground level, there are 86 colonnaded openings from where the visitor descends 170 steps to the deepest water source.\n\nToday, following years of neglect, many of these monuments to medieval engineering have been saved by the Archaeological Survey of India, which has recognised the importance of preserving them as part of the country’s rich history. Tourists flock to wells in far-flung corners of northwestern India to gaze in wonder at these architectural marvels from 1,000 years ago, which serve as a reminder of both the ingenuity and artistry of ancient civilisations and of the value of water to human existence.`,
         questions: [
-          { questionNumber: 1, type: "TRUE_FALSE_NOT_GIVEN", content: "Examples of ancient stepwells can be found all over the world.", answer: "FALSE", explanation: "The passage states stepwells are unique to this region of north-western India." },
+          { questionNumber: 1, type: "TRUE_FALSE_NOT_GIVEN", content: "Examples of ancient stepwells can be found all over the world.", answer: "FALSE", explanation: "The passage states that stepwells are unique to this region (north-western India)." },
           { questionNumber: 2, type: "TRUE_FALSE_NOT_GIVEN", content: "Stepwells had a range of functions, in addition to those related to water collection.", answer: "TRUE", explanation: "They were also gathering places, places of leisure, relaxation and worship." },
           { questionNumber: 3, type: "TRUE_FALSE_NOT_GIVEN", content: "The few stepwells in Delhi are more attractive than those found elsewhere.", answer: "NOT GIVEN", explanation: "The text mentions some stepwells survive in Delhi, but does not compare their attractiveness." },
           { questionNumber: 4, type: "TRUE_FALSE_NOT_GIVEN", content: "It took workers many years to build the stone steps characteristic of stepwells.", answer: "NOT GIVEN", explanation: "The text describes the steps but doesn't mention how long they took to build." },
-          { questionNumber: 5, type: "TRUE_FALSE_NOT_GIVEN", content: "The number of steps above the water level in a stepwell altered during the course of a year.", answer: "TRUE", explanation: "The water level receded following the rains, meaning the number of steps to reach water varied." }
+          { questionNumber: 5, type: "TRUE_FALSE_NOT_GIVEN", content: "The number of steps above the water level in a stepwell altered during the course of a year.", answer: "TRUE", explanation: "The water level receded following the rains, meaning the number of steps to reach water varied." },
+          { questionNumber: 6, type: "SHORT_ANSWER", content: "Which part of some stepwells provided shade for people?", answer: "pavilions", explanation: "The passage states they included pavilions that sheltered visitors from the relentless heat." },
+          { questionNumber: 7, type: "SHORT_ANSWER", content: "What type of serious climatic event, which took place in southern Rajasthan, is mentioned in the article?", answer: "drought", explanation: "The passage states that southern Rajasthan suffered an eight-year drought between 1996 and 2004." },
+          { questionNumber: 8, type: "SHORT_ANSWER", content: "Who are frequent visitors to stepwells nowadays?", answer: "tourists", explanation: "The text mentions that tourists flock to wells in far-flung corners of northwestern India." },
+          { questionNumber: 9, type: "FILL_IN_BLANKS", content: "Rani Ki Vav: Restored in 1960s; excellent condition despite the 9. _______ of 2001.", answer: "earthquake", explanation: "The text states that Rani Ki Vav survived a devastating earthquake in January 2001." },
+          { questionNumber: 10, type: "FILL_IN_BLANKS", content: "Surya Kund: Steps on the 10. _______ produce a geometrical pattern.", answer: "four sides", explanation: "The text mentions four sides of steps that descend to the bottom in a stunning geometrical formation." },
+          { questionNumber: 11, type: "FILL_IN_BLANKS", content: "Surya Kund: Looks more like a 11. _______ than a well.", answer: "tank", explanation: "The text states that Surya Kund actually resembles a tank rather than a well." },
+          { questionNumber: 12, type: "FILL_IN_BLANKS", content: "Chand Baori: Steps on three sides; 12. _______ on the fourth side.", answer: "verandas", explanation: "The text states that covered verandas supported by ornate pillars overlook the steps on the fourth side." },
+          { questionNumber: 13, type: "FILL_IN_BLANKS", content: "Neemrana Ki Baori: Nine storeys; two levels 13. _______.", answer: "underwater", explanation: "The text states Neemrana Ki Baori is nine storeys deep, with the last two levels underwater." }
         ]
       },
       {
         sectionOrder: 2,
         title: "Passage 2: European Transport Systems 1990-2010",
-        passageText: "It is difficult to conceive of vigorous economic growth without an efficient transport system. Although modern information technologies can reduce the demand for physical transport, the requirement for transport continues to increase...",
+        passageText: `It is difficult to conceive of vigorous economic growth without an efficient transport system. Although modern information technologies can reduce the demand for physical transport by facilitating teleworking and teleservices, the requirement for transport continues to increase. There are two key factors behind this trend. For passenger transport, the determining factor is the spectacular growth in car use. The number of cars on European Union (EU) roads saw an increase of three million cars each year from 1990 to 2010, and in the next decade the EU will see a further substantial increase in its fleet.\n\nAs far as goods transport is concerned, growth is due to a large extent to changes in the European economy and its system of production. In the last 20 years, as internal frontiers have been abolished, the EU has moved from a “stock” economy to a “flow” economy. This phenomenon has been emphasised by the relocation of some industries, particularly those which are labour-intensive, to reduce production costs, even though the production site is hundreds or even thousands of kilometres away from the final assembly plant or away from users.\n\nThe strong economic growth expected in countries which are candidates for entry to the EU will also increase transport flows, in particular road haulage traffic. In 1998, some of these countries already exported more than twice their 1990 volumes and imported more than five times their 1990 volumes. And although many candidate countries inherited a transport system which encourages rail, the distribution between modes has tipped sharply in favour of road transport since the 1990s. Between 1990 and 1998, road haulage increased by 19.4%, while during the same period rail haulage decreased by 43.5%, although – and this could benefit the enlarged EU – it is still on average at a much higher level than in existing member states.\n\nHowever, a new imperative – sustainable development – offers an opportunity for adapting the EU’s common transport policy. This objective, agreed by the Gothenburg European Council, has to be achieved by integrating environmental considerations into Community policies, and shifting the balance between modes of transport lies at the heart of its strategy. The ambitious objective can only be fully achieved by 2020, but proposed measures are nonetheless a first essential step towards a sustainable transport system which will ideally be in place in 30 years’ time, that is by 2040.\n\nIn 1998, energy consumption in the transport sector was to blame for 28% of emissions of CO2, the leading greenhouse gas. According to the latest estimates, if nothing is done to reverse the traffic growth trend, CO2 emissions from transport can be expected to increase by around 50% to 1,113 billion tonnes by 2020, compared with the 739 billion tonnes recorded in 1990. Once again, road transport is the main culprit since it alone accounts for 84% of the CO2 emissions attributable to transport. Using alternative fuels and improving energy efficiency is thus both an ecological necessity and a technological challenge.\n\nAt the same time greater efforts must be made to achieve a modal shift. Such a change cannot be achieved overnight, all the less so after over half a century of constant deterioration in favour of road. This has reached such a pitch that today rail freight services are facing marginalisation, with just 8% of market share, and with international goods trains struggling along at an average speed of 18km/h. Three possible options have emerged.\n\nThe first approach would consist of focusing on road transport solely through pricing. This option would not be accompanied by complementary measures in the other modes of transport. In the short term it might curb the growth in road transport through the better loading ratio of goods vehicles and occupancy rates of passenger vehicles expected as a result of the increase in the price of transport. However, the lack of measures available to revitalise other modes of transport would make it impossible for more sustainable modes of transport to take up the baton.\n\nThe second approach also concentrates on road transport pricing but is accompanied by measures to increase the efficiency of the other modes (better quality of services, logistics, technology). However, this approach does not include investment in new infrastructure, nor does it guarantee better regional cohesion. It could help to achieve greater uncoupling than the first approach, but road transport would keep the lion’s share of the market and continue to concentrate on saturated arteries, despite being the most polluting of the modes. It is therefore not enough to guarantee the necessary shift of the balance.\n\nThe third approach, which is not new, comprises a series of measures ranging from pricing to revitalising alternative modes of transport and targeting investment in the trans-European network. This integrated approach would allow the market shares of the other modes to return to their 1998 levels and thus make a shift of balance. It is far more ambitious than it looks, bearing in mind the historical imbalance in favour of roads for the last fifty years, but would achieve a marked break in the link between road transport growth and economic growth, without placing restrictions on the mobility of people and goods.`,
         questions: [
-          { questionNumber: 14, type: "TRUE_FALSE_NOT_GIVEN", content: "The need for transport is growing, despite technological developments.", answer: "TRUE", explanation: "The passage notes that although IT can reduce demand, the requirement for transport continues to increase." },
-          { questionNumber: 15, type: "TRUE_FALSE_NOT_GIVEN", content: "To reduce production costs, some industries have been moved closer to their relevant consumers.", answer: "FALSE", explanation: "The text says they relocated to reduce costs, even though the production site is hundreds or thousands of kilometres away from assembly or users." },
-          { questionNumber: 16, type: "TRUE_FALSE_NOT_GIVEN", content: "Cars are prohibitively expensive in some EU candidate countries.", answer: "NOT GIVEN", explanation: "The text mentions cars and road transport tip, but not the price of cars." }
+          {
+            questionNumber: 14,
+            type: "MULTIPLE_CHOICE",
+            content: "Choose the correct heading for Paragraph A from the list of headings below.",
+            options: [
+              "i. A fresh and important long-term goal",
+              "ii. Charging for roads and improving other transport methods",
+              "iii. Changes affecting the distances goods may be transported",
+              "iv. Taking all the steps necessary to change transport patterns",
+              "v. The environmental costs of road transport",
+              "vi. Port development and domestic shipping",
+              "vii. The need to achieve transport rebalance",
+              "viii. The rapid growth of private transport",
+              "ix. Plans to reduce wealth inequality",
+              "x. Restricting road use through charging policies alone",
+              "xi. Transport trends in countries awaiting EU admission"
+            ],
+            answer: "H",
+            explanation: "Paragraph A focuses on the rapid growth of private car use as the key driver of passenger transport."
+          },
+          {
+            questionNumber: 15,
+            type: "MULTIPLE_CHOICE",
+            content: "Choose the correct heading for Paragraph B from the list of headings below.",
+            options: [
+              "i. A fresh and important long-term goal",
+              "ii. Charging for roads and improving other transport methods",
+              "iii. Changes affecting the distances goods may be transported",
+              "iv. Taking all the steps necessary to change transport patterns",
+              "v. The environmental costs of road transport",
+              "vi. Port development and domestic shipping",
+              "vii. The need to achieve transport rebalance",
+              "viii. The rapid growth of private transport",
+              "ix. Plans to reduce wealth inequality",
+              "x. Restricting road use through charging policies alone",
+              "xi. Transport trends in countries awaiting EU admission"
+            ],
+            answer: "C",
+            explanation: "Paragraph B discusses how the relocation of industries hundreds or thousands of kilometres away has increased the distance goods are transported."
+          },
+          {
+            questionNumber: 16,
+            type: "MULTIPLE_CHOICE",
+            content: "Choose the correct heading for Paragraph C from the list of headings below.",
+            options: [
+              "i. A fresh and important long-term goal",
+              "ii. Charging for roads and improving other transport methods",
+              "iii. Changes affecting the distances goods may be transported",
+              "iv. Taking all the steps necessary to change transport patterns",
+              "v. The environmental costs of road transport",
+              "vi. Port development and domestic shipping",
+              "vii. The need to achieve transport rebalance",
+              "viii. The rapid growth of private transport",
+              "ix. Plans to reduce wealth inequality",
+              "x. Restricting road use through charging policies alone",
+              "xi. Transport trends in countries awaiting EU admission"
+            ],
+            answer: "K",
+            explanation: "Paragraph C details the transport trends in EU candidate countries awaiting admission."
+          },
+          {
+            questionNumber: 17,
+            type: "MULTIPLE_CHOICE",
+            content: "Choose the correct heading for Paragraph D from the list of headings below.",
+            options: [
+              "i. A fresh and important long-term goal",
+              "ii. Charging for roads and improving other transport methods",
+              "iii. Changes affecting the distances goods may be transported",
+              "iv. Taking all the steps necessary to change transport patterns",
+              "v. The environmental costs of road transport",
+              "vi. Port development and domestic shipping",
+              "vii. The need to achieve transport rebalance",
+              "viii. The rapid growth of private transport",
+              "ix. Plans to reduce wealth inequality",
+              "x. Restricting road use through charging policies alone",
+              "xi. Transport trends in countries awaiting EU admission"
+            ],
+            answer: "A",
+            explanation: "Paragraph D introduces the new long-term goal of sustainable development to be fully achieved by 2020 or 2040."
+          },
+          {
+            questionNumber: 18,
+            type: "MULTIPLE_CHOICE",
+            content: "Choose the correct heading for Paragraph E from the list of headings below.",
+            options: [
+              "i. A fresh and important long-term goal",
+              "ii. Charging for roads and improving other transport methods",
+              "iii. Changes affecting the distances goods may be transported",
+              "iv. Taking all the steps necessary to change transport patterns",
+              "v. The environmental costs of road transport",
+              "vi. Port development and domestic shipping",
+              "vii. The need to achieve transport rebalance",
+              "viii. The rapid growth of private transport",
+              "ix. Plans to reduce wealth inequality",
+              "x. Restricting road use through charging policies alone",
+              "xi. Transport trends in countries awaiting EU admission"
+            ],
+            answer: "E",
+            explanation: "Paragraph E covers the environmental costs (specifically CO2 greenhouse gas emissions) of road transport."
+          },
+          {
+            questionNumber: 19,
+            type: "MULTIPLE_CHOICE",
+            content: "Choose the correct heading for Paragraph G from the list of headings below.",
+            options: [
+              "i. A fresh and important long-term goal",
+              "ii. Charging for roads and improving other transport methods",
+              "iii. Changes affecting the distances goods may be transported",
+              "iv. Taking all the steps necessary to change transport patterns",
+              "v. The environmental costs of road transport",
+              "vi. Port development and domestic shipping",
+              "vii. The need to achieve transport rebalance",
+              "viii. The rapid growth of private transport",
+              "ix. Plans to reduce wealth inequality",
+              "x. Restricting road use through charging policies alone",
+              "xi. Transport trends in countries awaiting EU admission"
+            ],
+            answer: "J",
+            explanation: "Paragraph G describes the first approach: restricting road use through pricing policies alone."
+          },
+          {
+            questionNumber: 20,
+            type: "MULTIPLE_CHOICE",
+            content: "Choose the correct heading for Paragraph H from the list of headings below.",
+            options: [
+              "i. A fresh and important long-term goal",
+              "ii. Charging for roads and improving other transport methods",
+              "iii. Changes affecting the distances goods may be transported",
+              "iv. Taking all the steps necessary to change transport patterns",
+              "v. The environmental costs of road transport",
+              "vi. Port development and domestic shipping",
+              "vii. The need to achieve transport rebalance",
+              "viii. The rapid growth of private transport",
+              "ix. Plans to reduce wealth inequality",
+              "x. Restricting road use through charging policies alone",
+              "xi. Transport trends in countries awaiting EU admission"
+            ],
+            answer: "B",
+            explanation: "Paragraph H describes the second approach: charging for roads accompanied by measures to improve other transport methods."
+          },
+          {
+            questionNumber: 21,
+            type: "MULTIPLE_CHOICE",
+            content: "Choose the correct heading for Paragraph I from the list of headings below.",
+            options: [
+              "i. A fresh and important long-term goal",
+              "ii. Charging for roads and improving other transport methods",
+              "iii. Changes affecting the distances goods may be transported",
+              "iv. Taking all the steps necessary to change transport patterns",
+              "v. The environmental costs of road transport",
+              "vi. Port development and domestic shipping",
+              "vii. The need to achieve transport rebalance",
+              "viii. The rapid growth of private transport",
+              "ix. Plans to reduce wealth inequality",
+              "x. Restricting road use through charging policies alone",
+              "xi. Transport trends in countries awaiting EU admission"
+            ],
+            answer: "D",
+            explanation: "Paragraph I outlines the third approach: taking all the steps necessary (integrated approach) to change transport patterns."
+          },
+          { questionNumber: 22, type: "TRUE_FALSE_NOT_GIVEN", content: "The need for transport is growing, despite technological developments.", answer: "TRUE", explanation: "Paragraph A states that although information technologies can reduce the demand, the requirement for transport continues to increase." },
+          { questionNumber: 23, type: "TRUE_FALSE_NOT_GIVEN", content: "To reduce production costs, some industries have been moved closer to their relevant consumers.", answer: "FALSE", explanation: "Paragraph B states that industries moved to reduce production costs, even though the production site is hundreds or thousands of kilometres away from users." },
+          { questionNumber: 24, type: "TRUE_FALSE_NOT_GIVEN", content: "Cars are prohibitively expensive in some EU candidate countries.", answer: "NOT GIVEN", explanation: "The text discusses road transport and candidate countries but does not mention the price of cars." },
+          { questionNumber: 25, type: "TRUE_FALSE_NOT_GIVEN", content: "The Gothenburg European Council was set up 30 years ago.", answer: "NOT GIVEN", explanation: "The text mentions the sustainable development objective agreed by the council and a 30-year target timeline, but not when the council itself was established." },
+          { questionNumber: 26, type: "TRUE_FALSE_NOT_GIVEN", content: "By the end of this decade, CO2 emissions from transport are predicted to reach 739 billion tonnes.", answer: "FALSE", explanation: "The text predicts CO2 emissions will reach 1,113 billion tonnes, while 739 billion tonnes was the amount recorded in 1990." }
         ]
       },
       {
         sectionOrder: 3,
         title: "Passage 3: The Psychology of Innovation",
-        passageText: "Why are so few companies truly innovative? Innovation is key to business survival, and companies put substantial resources into inspiring employees to develop new ideas...",
+        passageText: `Innovation is key to business survival, and companies put substantial resources into inspiring employees to develop new ideas. There are, nevertheless, people working in luxurious, state-of-the-art centres designed to stimulate innovation who find that their environment doesn’t make them feel at all creative. And there are those who don’t have a budget, or much space, but who innovate successfully.\n\nFor Robert B. Cialdini, Professor of Psychology at Arizona State University, one reason that companies don’t succeed as often as they should is that innovation starts with recruitment. Research shows that the fit between an employee’s values and a company’s values makes a difference to what contribution they make and whether, two years after they join, they’re still at the company. Studies at Harvard Business School show that, although some individuals may be more creative than others, almost every individual can be creative in the right circumstances.\n\nOne of the most famous photographs in the story of rock’n’roll emphasises Cialdini’s views. The 1956 picture of singers Elvis Presley, Carl Perkins, Johnny Cash and Jerry Lee Lewis jamming at a piano in Sun Studios in Memphis tells a hidden story. Sun’s ‘million-dollar quartet’ could have been a quintet. Missing from the picture is Roy Orbison, a greater natural singer than Lewis, Perkins or Cash. Sam Phillips, who owned Sun, wanted to revolutionise popular music with songs that fused black and white music, and country and blues. Presley, Cash, Perkins and Lewis instinctively understood Phillips’s ambition and believed in it. Orbison wasn’t inspired by the goal, and only ever achieved one hit with the Sun label.\n\nThe value fit matters, says Cialdini, because innovation is, in part, a process of change, and under that pressure we, as a species, behave differently, ‘When things change, we are hard-wired to play it safe.’ Managers should therefore adopt an approach that appears counterintuitive – they should explain what stands to be lost if the company fails to seize a particular opportunity. Studies show that we invariably take more gambles when threatened with a loss than when offered a reward.\n\nManaging innovation is a delicate art. It’s easy for a company to be pulled in conflicting directions as the marketing, product development, and finance departments each get different feedback from different sets of people. And without a system which ensures collaborative exchanges within the company, it’s also easy for small ‘pockets of innovation’ to disappear. Innovation is a contact sport. You can’t brief people just by saying, ‘We’re going in this direction and I’m going to take you with me.’\n\nCialdini believes that this ‘follow-the-leader syndrome’ is dangerous, not least because it encourages bosses to go it alone. ‘It’s been scientifically proven that three people will be better than one at solving problems, even if that one person is the smartest person in the field.’ To prove his point, Cialdini cites an interview with molecular biologist James Watson. Watson, together with Francis Crick, discovered the structure of DNA, the genetic information carrier of all living organisms. ‘When asked how they had cracked the code ahead of an array of highly accomplished rival investigators, he said something that stunned me. He said he and Crick had succeeded because they were aware that they weren’t the most intelligent of the scientists pursuing the answer. The smartest scientist was called Rosalind Franklin who, Watson said, “was so intelligent she rarely sought advice”.\n\nTeamwork taps into one of the basic drivers of human behaviour. ‘The principle of social proof is so pervasive that we don’t even recognise it,’ says Cialdini. ‘If your project is being resisted, for example, by a group of veteran employees, ask another old-timer to speak up for it.’ Cialdini is not alone in advocating this strategy. Research shows that peer power, used horizontally not vertically, is much more powerful than any boss’s speech.\n\nWriting, visualising and prototyping can stimulate the flow of new ideas. Cialdini cites scores of research papers and historical events that prove that even something as simple as writing deepens every individual’s engagement in the project. It is, he says, the reason why all those competitions on breakfast cereal packets encouraged us to write in saying, in no more than 10 words: ‘I like Kellogg’s Corn Flakes because… .’ The very act of writing makes us more likely to believe it.\n\nAuthority doesn’t have to inhibit innovation but it often does. The wrong kind of leadership will lead to what Cialdini calls ‘captainitis, the regrettable tendency of team members to opt out of team responsibilities that are properly theirs. He calls it captainitis because, he says, ‘crew members of multipilot aircraft exhibit a sometimes deadly passivity when the flight captain makes a clearly wrong-headed decision”. This behaviour is not, he says, unique to air travel, but can happen in any workplace where the leader is overbearing.\n\nAt the other end of the scale is the 1980s Memphis design collective, a group of young designers for whom ‘the only rule was that there were no rules’. This environment encouraged a free interchange of ideas, which led to more creativity with form, function, colour and materials that revolutionised attitudes to furniture design.\n\nMany theorists believe the ideal boss should lead from behind, taking pride in collective accomplishment and giving credit where it is due. Cialdini says: “Leaders should encourage everyone to contribute and simultaneously assure all concerned that every recommendation is important to making the right decision and will be given full attention” The frustrating thing about innovation is that there are many approaches, but no magic formula. However, a manager who wants to create a truly innovative culture can make their job a lot easier by recognising these psychological realities.`,
         questions: [
           {
             questionNumber: 27,
             type: "MULTIPLE_CHOICE",
             content: "The example of the 'million-dollar quartet' underlines the writer's point about",
-            options: ["A. recognising talent.", "B. working as a team.", "C. having a shared objective.", "D. being an effective leader."],
+            options: [
+              "A. recognising talent.",
+              "B. working as a team.",
+              "C. having a shared objective.",
+              "D. being an effective leader."
+            ],
             answer: "C",
-            explanation: "The quartet illustrates the value fit and having a shared objective."
+            explanation: "The quartet illustrates value fit and having a shared objective, which Roy Orbison did not share."
           },
           {
             questionNumber: 28,
             type: "MULTIPLE_CHOICE",
             content: "James Watson suggests that he and Francis Crick won the race to discover the DNA code because they",
-            options: ["A. were conscious of their own limitations.", "B. brought complementary skills to their partnership.", "C. were determined to outperform their brighter rivals.", "D. encouraged each other to realise their joint ambition."],
+            options: [
+              "A. were conscious of their own limitations.",
+              "B. brought complementary skills to their partnership.",
+              "C. were determined to outperform their brighter rivals.",
+              "D. encouraged each other to realise their joint ambition."
+            ],
             answer: "A",
-            explanation: "Watson says they succeeded because they knew they weren't the smartest, so they sought advice."
+            explanation: "Watson said they succeeded because they knew they weren't the smartest, so they sought advice."
+          },
+          {
+            questionNumber: 29,
+            type: "MULTIPLE_CHOICE",
+            content: "The writer mentions competitions on breakfast cereal packets as an example of how to",
+            options: [
+              "A. inspire creative thinking.",
+              "B. generate concise writing.",
+              "C. promote loyalty to a group.",
+              "D. strengthen commitment to an idea."
+            ],
+            answer: "D",
+            explanation: "The act of writing makes people more likely to believe what they write, strengthening commitment."
+          },
+          {
+            questionNumber: 30,
+            type: "MULTIPLE_CHOICE",
+            content: "In the last paragraph, the writer suggests that it is important for employees to",
+            options: [
+              "A. be aware of their company's goals.",
+              "B. feel that their contributions are valued.",
+              "C. have respect for their co-workers' achievements.",
+              "D. understand why certain management decisions are made."
+            ],
+            answer: "B",
+            explanation: "Managers should ensure every recommendation is treated as important to make them feel valued."
+          },
+          {
+            questionNumber: 31,
+            type: "MULTIPLE_CHOICE",
+            content: "Employees whose values match those of their employers are more likely to",
+            options: [
+              "A. take chances.",
+              "B. share their ideas.",
+              "C. become competitive.",
+              "D. get promotion.",
+              "E. avoid risk.",
+              "F. ignore their duties.",
+              "G. remain in their jobs."
+            ],
+            answer: "G",
+            explanation: "Matching values dictates whether an employee remains at the company (remain in their jobs)."
+          },
+          {
+            questionNumber: 32,
+            type: "MULTIPLE_CHOICE",
+            content: "At times of change, people tend to",
+            options: [
+              "A. take chances.",
+              "B. share their ideas.",
+              "C. become competitive.",
+              "D. get promotion.",
+              "E. avoid risk.",
+              "F. ignore their duties.",
+              "G. remain in their jobs."
+            ],
+            answer: "E",
+            explanation: "When things change, we are hard-wired to play it safe (avoid risk)."
+          },
+          {
+            questionNumber: 33,
+            type: "MULTIPLE_CHOICE",
+            content: "If people are aware of what they might lose, they will often",
+            options: [
+              "A. take chances.",
+              "B. share their ideas.",
+              "C. become competitive.",
+              "D. get promotion.",
+              "E. avoid risk.",
+              "F. ignore their duties.",
+              "G. remain in their jobs."
+            ],
+            answer: "A",
+            explanation: "People take more gambles (take chances) when threatened with a loss."
+          },
+          {
+            questionNumber: 34,
+            type: "MULTIPLE_CHOICE",
+            content: "People working under a dominant boss are liable to",
+            options: [
+              "A. take chances.",
+              "B. share their ideas.",
+              "C. become competitive.",
+              "D. get promotion.",
+              "E. avoid risk.",
+              "F. ignore their duties.",
+              "G. remain in their jobs."
+            ],
+            answer: "F",
+            explanation: "Dominant bosses lead to 'captainitis' where team members opt out of responsibilities (ignore their duties)."
+          },
+          {
+            questionNumber: 35,
+            type: "MULTIPLE_CHOICE",
+            content: "Employees working in organisations with few rules are more likely to",
+            options: [
+              "A. take chances.",
+              "B. share their ideas.",
+              "C. become competitive.",
+              "D. get promotion.",
+              "E. avoid risk.",
+              "F. ignore their duties.",
+              "G. remain in their jobs."
+            ],
+            answer: "B",
+            explanation: "An environment with no rules encourages a free interchange of ideas (share their ideas)."
+          },
+          {
+            questionNumber: 36,
+            type: "TRUE_FALSE_NOT_GIVEN",
+            content: "The physical surroundings in which a person works play a key role in determining their creativity.",
+            options: ["YES", "NO", "NOT GIVEN"],
+            answer: "NO",
+            explanation: "The text mentions that some in luxurious centres don't feel creative, while others in limited space succeed."
+          },
+          {
+            questionNumber: 37,
+            type: "TRUE_FALSE_NOT_GIVEN",
+            content: "Most people have the potential to be creative.",
+            options: ["YES", "NO", "NOT GIVEN"],
+            answer: "YES",
+            explanation: "The text says 'almost every individual can be creative in the right circumstances.'"
+          },
+          {
+            questionNumber: 38,
+            type: "TRUE_FALSE_NOT_GIVEN",
+            content: "Teams work best when their members are of equally matched intelligence.",
+            options: ["YES", "NO", "NOT GIVEN"],
+            answer: "NOT GIVEN",
+            explanation: "The passage does not comment on whether team members should have equally matched intelligence."
+          },
+          {
+            questionNumber: 39,
+            type: "TRUE_FALSE_NOT_GIVEN",
+            content: "It is easier for smaller companies to be innovative.",
+            options: ["YES", "NO", "NOT GIVEN"],
+            answer: "NOT GIVEN",
+            explanation: "The passage doesn't mention whether it is easier for small companies to innovate compared to large ones."
+          },
+          {
+            questionNumber: 40,
+            type: "TRUE_FALSE_NOT_GIVEN",
+            content: "A manager's approval of an idea is more persuasive than that of a colleague.",
+            options: ["YES", "NO", "NOT GIVEN"],
+            answer: "NO",
+            explanation: "The text states 'peer power... is much more powerful than any boss's speech.'"
           }
         ]
       }
