@@ -7,10 +7,9 @@ const getBaseURL = () => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
-  // Fallback to production URL if env variable is missing
+  // Hardcoded for current LAN testing to bypass .env cache issues
   if (__DEV__) {
-    if (Platform.OS === 'android') return 'http://10.0.2.2:5000/api/v1';
-    return 'http://localhost:5000/api/v1';
+    return 'http://192.168.155.238:5000/api/v1';
   }
   return 'https://api.apex-ielts.com/api/v1';
 };
