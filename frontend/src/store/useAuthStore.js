@@ -38,7 +38,9 @@ const useAuthStore = create((set) => ({
       await storage.setItem('userId', user._id || user.id);
       set({ user, token, isLoading: false, isBootstrapping: false });
     } catch (error) {
-      const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản hoặc mật khẩu.';
+      const errorMessage = error.response?.data?.error?.message 
+        || error.response?.data?.message 
+        || `Lỗi mạng/Hệ thống: ${error.message}`;
       set({ 
         error: errorMessage, 
         isLoading: false 
