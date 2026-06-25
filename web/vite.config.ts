@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 8081,
-    strictPort: true, // Fail if port 8081 is already in use
+    strictPort: true,
     proxy: {
       // Proxy API requests to backend — avoids CORS issues in dev
       '/api': {
