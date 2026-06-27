@@ -145,64 +145,73 @@ export class AccessController {
     }
 
     static uploadAvatar = async (req, res, next) => {
-        const { image } = req.body;
-        if (!image) {
-            throw new Error("No image data provided");
-        }
-
-        const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-        const apiKey = process.env.CLOUDINARY_API_KEY;
-        const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
-        if (!cloudName || !apiKey || !apiSecret) {
-            throw new Error("Cloudinary credentials are not configured");
-        }
-
-        // Generate signature
-        const timestamp = Math.round(new Date().getTime() / 1000);
-        const paramsToSign = `timestamp=${timestamp}`;
-        const crypto = await import("crypto");
-        const signature = crypto
-            .createHash("sha1")
-            .update(paramsToSign + apiSecret)
-            .digest("hex");
-
-        // Send upload request to Cloudinary REST API
-        const axios = (await import("axios")).default;
-        const response = await axios.post(
-            `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-            {
-                file: image,
-                api_key: apiKey,
-                timestamp: timestamp,
-                signature: signature
+        try {
+            const { image } = req.body;
+            if (!image) {
+                throw new Error("No image data provided");
             }
-        );
 
-        const avatarUrl = response.data.secure_url;
+            // Reload dotenv dynamically to ensure new env variables are read without restarting server
+            const dotenv = await import("dotenv");
+            dotenv.config();
 
-        // Save to Database using prisma
-        const { prisma } = await import("../config/prisma.config.js");
-        const updatedUser = await prisma.user.update({
-            where: { id: req.user.userId },
-            data: { avatar: avatarUrl }
-        });
+            const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+            const apiKey = process.env.CLOUDINARY_API_KEY;
+            const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
-        new OK({
-            message: "Avatar uploaded successfully!",
-            metadata: {
-                avatar: avatarUrl,
-                user: {
-                    _id: updatedUser.id,
-                    username: updatedUser.username,
-                    fullName: updatedUser.fullName,
-                    email: updatedUser.email,
-                    role: updatedUser.role,
-                    avatar: updatedUser.avatar,
-                    birthday: updatedUser.birthday,
-                    phone: updatedUser.phone
+            if (!cloudName || !apiKey || !apiSecret) {
+                throw new Error("Cloudinary credentials are not configured");
+            }
+
+            // Generate signature
+            const timestamp = Math.round(new Date().getTime() / 1000);
+            const paramsToSign = `timestamp=${timestamp}`;
+            const crypto = await import("crypto");
+            const signature = crypto
+                .createHash("sha1")
+                .update(paramsToSign + apiSecret)
+                .digest("hex");
+
+            // Send upload request to Cloudinary REST API
+            const axios = (await import("axios")).default;
+            const response = await axios.post(
+                `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+                {
+                    file: image,
+                    api_key: apiKey,
+                    timestamp: timestamp,
+                    signature: signature
                 }
-            }
-        }).send(res);
+            );
+
+            const avatarUrl = response.data.secure_url;
+
+            // Save to Database using prisma
+            const { prisma } = await import("../config/prisma.config.js");
+            const updatedUser = await prisma.user.update({
+                where: { id: req.user.userId },
+                data: { avatar: avatarUrl }
+            });
+
+            new OK({
+                message: "Avatar uploaded successfully!",
+                metadata: {
+                    avatar: avatarUrl,
+                    user: {
+                        _id: updatedUser.id,
+                        username: updatedUser.username,
+                        fullName: updatedUser.fullName,
+                        email: updatedUser.email,
+                        role: updatedUser.role,
+                        avatar: updatedUser.avatar,
+                        birthday: updatedUser.birthday,
+                        phone: updatedUser.phone
+                    }
+                }
+            }).send(res);
+        } catch (err) {
+            console.error("Error in uploadAvatar controller:", err);
+            next(err);
+        }
     }
 }
