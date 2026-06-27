@@ -6,6 +6,7 @@ import LoginScreen from './features/auth/LoginScreen'
 import AdminDashboard from './features/admin/AdminDashboard'
 import HomeNewTests from './features/landing/HomeNewTests'
 import PracticeWorkspace from './features/practice/PracticeWorkspace'
+import ProfilePage from './features/profile/ProfilePage'
 
 // Protected Route Guard
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -85,6 +86,14 @@ function App() {
           element={
             <ProtectedRoute>
               <PracticeWorkspace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

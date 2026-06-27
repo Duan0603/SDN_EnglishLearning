@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAppSelector } from '../../store/store';
+import { useAppSelector, useAppDispatch } from '../../store/store';
+import { logout } from '../auth/authSlice';
 
 export default function HomeNewTests() {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleLogout = () => {
+    dispatch(logout());
+  };
+
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [newNote, setNewNote] = useState('');
@@ -83,10 +92,52 @@ export default function HomeNewTests() {
             
             {isAuthenticated && user ? (
               <>
-                <div className="flex items-center gap-2 bg-[#a7f3d0] border-2 border-[#1b263b] px-3 py-1 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                  <span className="font-sans font-black text-[#005c42] normal-case text-[10px]">{user.fullName}</span>
+                <div className="relative">
+                  <button 
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="flex items-center gap-2 bg-[#a7f3d0] border-2 border-[#1b263b] px-3 py-1 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_#1b263b] transition-all cursor-pointer select-none"
+                  >
+                    {user.avatar ? (
+                      <img src={user.avatar} alt="Avatar" className="w-4 h-4 rounded-full object-cover border border-[#1b263b]" />
+                    ) : (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                    )}
+                    <span className="font-sans font-black text-[#005c42] normal-case text-[10px]">{user.fullName}</span>
+                    <span className="text-[8px] text-[#005c42] select-none">▼</span>
+                  </button>
+
+                  {isDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
+                      <div className="absolute right-0 mt-2 w-48 bg-[#fcfbf7] border-2 border-[#1b263b] rounded-xl shadow-[3px_3px_0px_0px_#1b263b] z-50 overflow-hidden text-left py-1">
+                        <Link
+                          to="/profile?tab=overview"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="w-full px-4 py-2 text-xs font-black text-[#1b263b] hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all text-left flex items-center gap-2 border-b border-[#1b263b]/10 cursor-pointer block"
+                        >
+                          👤 My Profile
+                        </Link>
+                        <Link
+                          to="/profile?tab=settings"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="w-full px-4 py-2 text-xs font-black text-[#1b263b] hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all text-left flex items-center gap-2 border-b border-[#1b263b]/10 cursor-pointer block"
+                        >
+                          ⚙️ Settings
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setIsDropdownOpen(false);
+                            handleLogout();
+                          }}
+                          className="w-full px-4 py-2 text-xs font-black text-[#c92a2a] hover:bg-[#c92a2a] hover:text-white transition-all text-left flex items-center gap-2 cursor-pointer"
+                        >
+                          🚪 Log Out
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
+
                 <Link to="/practice" className="border-2 border-[#1b263b] px-4 py-1.5 rounded-xl hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all bg-[#ffd54f] shadow-[2px_2px_0px_0px_#1b263b]">
                   ✍️ Practice Portal
                 </Link>
@@ -509,6 +560,7 @@ export default function HomeNewTests() {
         </footer>
 
       </div>
+
     </div>
   );
 }
