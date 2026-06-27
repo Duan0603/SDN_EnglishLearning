@@ -41,7 +41,7 @@ export default function ProfilePage() {
         const currentUser = JSON.parse(userStr);
         const userId = currentUser.id || currentUser._id;
 
-        const res = await apiClient.post('/users/upload-avatar', 
+        const res = await apiClient.post('/auth/upload-avatar', 
           { image: base64Image },
           {
             headers: {
