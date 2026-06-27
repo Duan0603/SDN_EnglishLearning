@@ -156,7 +156,7 @@ export default function ProfilePage() {
 
   return (
     <div 
-      className="min-h-screen bg-[#f6f3db] text-[#1b263b] font-sans antialiased relative overflow-x-hidden custom-pencil-cursor flex flex-col pl-[95px]"
+      className="min-h-screen bg-[#f6f3db] text-[#1b263b] font-sans antialiased relative overflow-x-hidden custom-pencil-cursor flex flex-col"
       style={{
         backgroundImage: 'linear-gradient(#eae6ca 1px, transparent 1px)',
         backgroundSize: '100% 2.75rem'
@@ -179,8 +179,8 @@ export default function ProfilePage() {
       <div className="absolute left-[79px] top-0 bottom-0 w-0.5 bg-[#e0565b]/50 pointer-events-none z-10" />
 
       {/* HEADER SECTION - Solid Background to overlap lines */}
-      <div className="bg-[#f6f3db] border-b-2 border-[#1b263b]/10 z-30 mr-6 md:mr-12 rounded-bl-3xl">
-        <header className="max-w-7xl mx-auto py-5 flex items-center justify-between gap-4">
+      <div className="bg-[#f6f3db] border-b-2 border-[#1b263b]/10 z-30">
+        <header className="max-w-7xl mx-auto pl-[110px] pr-6 md:pr-12 py-5 flex items-center justify-between gap-4">
           
           {/* Logo */}
           <div className="flex items-center gap-3">
@@ -222,7 +222,7 @@ export default function ProfilePage() {
       </div>
 
       {/* BODY CONTENT - Ruled Lines showing through */}
-      <div className="max-w-7xl w-full py-10 flex-1 flex flex-col gap-10 z-10 pr-6 md:pr-12">
+      <div className="max-w-7xl w-full mx-auto pl-[110px] pr-6 md:pr-12 py-10 flex-1 flex flex-col gap-10 z-10">
         
         {/* PROFILE SECTION */}
         <section className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-[#1b263b]/10">
