@@ -156,16 +156,31 @@ export default function ProfilePage() {
 
   return (
     <div 
-      className="min-h-screen bg-[#f6f3db] text-[#1b263b] font-sans antialiased relative overflow-x-hidden custom-pencil-cursor flex flex-col"
+      className="min-h-screen bg-[#f6f3db] text-[#1b263b] font-sans antialiased relative overflow-x-hidden custom-pencil-cursor flex flex-col pl-[95px]"
       style={{
         backgroundImage: 'linear-gradient(#eae6ca 1px, transparent 1px)',
         backgroundSize: '100% 2.75rem'
       }}
     >
       
+      {/* Real Spiral Binder Graphic on the Left side */}
+      <div className="absolute left-3 top-0 bottom-0 w-10 flex flex-col justify-around pointer-events-none z-20 opacity-90 select-none py-6">
+        {Array.from({ length: 32 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-1.5 h-6">
+            {/* Dark ring binding loop hole */}
+            <div className="w-4 h-4 rounded-full bg-gray-300 border border-gray-400/50 shadow-inner" />
+            {/* Metal wire loop binding */}
+            <div className="w-8 h-2 bg-gradient-to-r from-gray-400 via-gray-300 to-gray-500 rounded-full shadow-md border-t border-white/20 transform -translate-x-1" />
+          </div>
+        ))}
+      </div>
+
+      {/* Red vertical margin line of notebook paper */}
+      <div className="absolute left-[79px] top-0 bottom-0 w-0.5 bg-[#e0565b]/50 pointer-events-none z-10" />
+
       {/* HEADER SECTION - Solid Background to overlap lines */}
-      <div className="bg-[#f6f3db] border-b-2 border-[#1b263b]/10 z-30">
-        <header className="max-w-7xl mx-auto px-6 md:px-12 py-5 flex items-center justify-between gap-4">
+      <div className="bg-[#f6f3db] border-b-2 border-[#1b263b]/10 z-30 mr-6 md:mr-12 rounded-bl-3xl">
+        <header className="max-w-7xl mx-auto py-5 flex items-center justify-between gap-4">
           
           {/* Logo */}
           <div className="flex items-center gap-3">
@@ -207,7 +222,7 @@ export default function ProfilePage() {
       </div>
 
       {/* BODY CONTENT - Ruled Lines showing through */}
-      <div className="max-w-7xl w-full mx-auto px-6 md:px-12 py-10 flex-1 flex flex-col gap-10 z-10">
+      <div className="max-w-7xl w-full py-10 flex-1 flex flex-col gap-10 z-10 pr-6 md:pr-12">
         
         {/* PROFILE SECTION */}
         <section className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-[#1b263b]/10">
@@ -383,8 +398,8 @@ export default function ProfilePage() {
           )}
 
           {activeTab === 'notes' && (
-            /* NOTES LOG TAB */
-            <div className="space-y-6 text-left max-w-3xl">
+            /* NOTES LOG TAB - Ruled notebook styling */
+            <div className="space-y-6 text-left max-w-4xl">
               
               <div className="flex items-center justify-between border-b border-[#1b263b]/10 pb-4">
                 <span className="text-emerald-700 font-black text-xs uppercase tracking-widest flex items-center gap-1">
@@ -392,38 +407,64 @@ export default function ProfilePage() {
                 </span>
               </div>
 
-              {/* Simulated Paper Log Cards */}
-              <div className="space-y-6">
+              {/* Grid of notes looking like gorgeous spiral notebooks and post-its */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {[
                   {
                     date: 'June 25, 2026',
-                    title: 'IELTS Speaking Part 2 template mastered',
-                    summary: 'Practiced speaking about a historical building. Focused on fluent transitions like "Moving on to my next point" and "It is also worth noting". Overall grade: 7.5.',
-                    tag: 'Speaking'
+                    title: 'Speaking cue card: Historical Places 🏛️',
+                    content: 'Today I practiced speaking about historical locations. I structured my ideas around the Temple of Literature in Hanoi. Key vocabulary used: "architectural grandeur", "cultural heritage", "intellectual hub". My fluency score reached 7.5!',
+                    bgColor: '#fdfbf7',
+                    tapeColor: 'rgba(70, 130, 180, 0.2)',
+                    rotate: '-1deg'
                   },
                   {
                     date: 'June 23, 2026',
-                    title: 'Essay submission - Education System essay',
-                    summary: 'Wrote an opinion essay on online learning vs classroom learning. AI marked at 6.5. Need to expand lexical resource and avoid repetitive vocabulary like "good" or "bad".',
-                    tag: 'Writing'
+                    title: 'Writing Task 2: Online Learning Feedback ✍️',
+                    content: 'Submitted an essay on the comparison between classroom learning and virtual models. AI flagged a few subject-verb agreement issues in paragraph 3. Band score: 6.5. Must review cohesive devices next week.',
+                    bgColor: '#ffd54f',
+                    tapeColor: 'rgba(201, 42, 42, 0.2)',
+                    rotate: '1deg'
                   },
                   {
                     date: 'June 21, 2026',
-                    title: 'Reading Test: Section 3 Headings',
-                    summary: 'Completed Cambridge IELTS 17 Test 2 Section 3. Tricky keywords, but managed to identify paragraph headings. Accuracy rate: 8/10.',
-                    tag: 'Reading'
+                    title: 'Reading simulator progress: Headings Match 📖',
+                    content: 'Completed matching headings tasks in Section 3 of Cambridge IELTS 17. The vocabulary was dense but checking negative qualifiers and synonyms helped. Accuracy rate: 8/10.',
+                    bgColor: '#fdfbf7',
+                    tapeColor: 'rgba(5, 150, 105, 0.2)',
+                    rotate: '-1.5deg'
+                  },
+                  {
+                    date: 'June 18, 2026',
+                    title: 'Vocabulary expansion list 📓',
+                    content: 'Adding formal synonyms for essay writing:\n- "Very important" → "Paramount", "Crucial"\n- "In my opinion" → "From my standpoint"\n- "Solve a problem" → "Address/Mitigate an issue"',
+                    bgColor: '#a7f3d0',
+                    tapeColor: 'rgba(217, 119, 6, 0.2)',
+                    rotate: '2deg'
                   }
                 ].map((note, idx) => (
-                  <div key={idx} className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] relative">
-                    <span className="absolute top-4 right-4 bg-[#f1f5f9] border border-[#1b263b]/20 px-2.5 py-0.5 rounded-full text-[9px] font-black text-gray-500 uppercase">
-                      {note.tag}
-                    </span>
-                    <p className="text-[10px] font-black text-gray-400 uppercase">{note.date}</p>
-                    <h5 className="text-base font-serif font-black text-[#1b263b] mt-1 mb-2">
+                  <div 
+                    key={idx} 
+                    style={{ backgroundColor: note.bgColor, transform: `rotate(${note.rotate})` }}
+                    className="border-2 border-[#1b263b] rounded-2xl p-6 shadow-[4px_4px_0px_0px_#1b263b] relative overflow-hidden transition-all hover:rotate-0 hover:scale-[1.01]"
+                  >
+                    {/* Tape decoration at the top center */}
+                    <div 
+                      className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-6 -translate-y-2 border border-[#1b263b]/10 shadow-sm"
+                      style={{ backgroundColor: note.tapeColor }}
+                    />
+                    
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{note.date}</p>
+                    <h5 className="text-base font-serif font-black text-[#1b263b] mt-2 mb-3">
                       {note.title}
                     </h5>
-                    <p className="text-xs font-bold text-gray-600 leading-relaxed">
-                      {note.summary}
+                    <p 
+                      className="text-sm font-bold text-gray-600 leading-relaxed font-handwriting"
+                      style={{ fontFamily: "'Caveat', cursive", fontSize: '1.25rem', lineHeight: '1.75rem' }}
+                    >
+                      {note.content.split('\n').map((line, lIdx) => (
+                        <span key={lIdx} className="block">{line}</span>
+                      ))}
                     </p>
                   </div>
                 ))}
