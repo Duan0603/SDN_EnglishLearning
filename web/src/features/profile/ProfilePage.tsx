@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../store/store';
-import { logout } from '../auth/authSlice';
+import { logout, loginSuccess } from '../auth/authSlice';
+import { apiClient } from '../../services/api.client';
 
 export default function ProfilePage() {
   const { user } = useAppSelector((state) => state.auth);
@@ -11,6 +12,65 @@ export default function ProfilePage() {
 
   // Get active tab from URL or default to 'courses' (Your Shelf)
   const [activeTab, setActiveTab] = useState<'courses' | 'notes' | 'settings'>('courses');
+
+  // Avatar Upload States
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Kích thước ảnh phải nhỏ hơn 5MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      const base64Image = reader.result as string;
+      setUploadingAvatar(true);
+
+      try {
+        const token = localStorage.getItem('auth_token');
+        const userStr = localStorage.getItem('auth_user');
+        if (!token || !userStr) {
+          throw new Error("Bạn cần đăng nhập để tải ảnh đại diện");
+        }
+        const currentUser = JSON.parse(userStr);
+        const userId = currentUser.id || currentUser._id;
+
+        const res = await apiClient.post('/users/upload-avatar', 
+          { image: base64Image },
+          {
+            headers: {
+              'x-client-id': userId,
+              'authorization': `Bearer ${token}`
+            }
+          }
+        );
+
+        const newAvatarUrl = res.data.metadata.avatar;
+        
+        // Update user state in redux store
+        dispatch(loginSuccess({ 
+          user: { ...currentUser, avatar: newAvatarUrl }, 
+          token 
+        }));
+        
+        alert("Cập nhật ảnh đại diện thành công!");
+      } catch (err: any) {
+        console.error("Avatar upload failed:", err);
+        alert("Lỗi khi tải ảnh đại diện lên: " + (err.response?.data?.message || err.message));
+      } finally {
+        setUploadingAvatar(false);
+      }
+    };
+    reader.onerror = () => {
+      alert("Không thể đọc tệp tin hình ảnh");
+    };
+  };
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
@@ -230,9 +290,41 @@ export default function ProfilePage() {
           {/* Avatar and Info */}
           <div className="flex items-center gap-6">
             {/* Circular avatar */}
-            <div className="w-24 h-24 rounded-full bg-[#b03030] border-2 border-[#1b263b] flex items-center justify-center text-white font-serif font-black text-4xl shadow-[4px_4px_0px_0px_#1b263b]">
-              {initials}
+            <div 
+              onClick={() => avatarInputRef.current?.click()}
+              className="w-24 h-24 rounded-full bg-[#b03030] border-2 border-[#1b263b] flex items-center justify-center text-white font-serif font-black text-4xl shadow-[4px_4px_0px_0px_#1b263b] relative group cursor-pointer overflow-hidden select-none"
+              title="Nhấn để đổi ảnh đại diện"
+            >
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
+              
+              {/* Hover overlay with camera icon */}
+              <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {uploadingAvatar ? (
+                  <span className="text-[10px] text-white font-black animate-pulse">UPLOADING...</span>
+                ) : (
+                  <>
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span className="text-[8px] text-white font-bold tracking-wider mt-1">CHANGE AVATAR</span>
+                  </>
+                )}
+              </div>
             </div>
+            
+            {/* Hidden File Input */}
+            <input 
+              type="file" 
+              ref={avatarInputRef} 
+              onChange={handleAvatarChange} 
+              accept="image/*" 
+              className="hidden" 
+            />
 
             {/* User Details */}
             <div className="text-left space-y-1">

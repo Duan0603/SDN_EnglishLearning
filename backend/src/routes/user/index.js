@@ -18,3 +18,5 @@ userRouter.post('/reset-password', asyncHandler(PasswordController.resetPassword
 // Authentication required
 userRouter.use(authentication)
 userRouter.get('/profile', asyncHandler(AccessController.getProfile))
+userRouter.patch('/profile', asyncHandler(AccessController.updateProfile))
+userRouter.post('/upload-avatar', asyncHandler(AccessController.uploadAvatar))

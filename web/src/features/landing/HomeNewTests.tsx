@@ -97,7 +97,11 @@ export default function HomeNewTests() {
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="flex items-center gap-2 bg-[#a7f3d0] border-2 border-[#1b263b] px-3 py-1 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_#1b263b] transition-all cursor-pointer select-none"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                    {user.avatar ? (
+                      <img src={user.avatar} alt="Avatar" className="w-4 h-4 rounded-full object-cover border border-[#1b263b]" />
+                    ) : (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                    )}
                     <span className="font-sans font-black text-[#005c42] normal-case text-[10px]">{user.fullName}</span>
                     <span className="text-[8px] text-[#005c42] select-none">▼</span>
                   </button>
