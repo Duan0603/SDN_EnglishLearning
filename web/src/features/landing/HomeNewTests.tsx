@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../store/store';
 import { logout } from '../auth/authSlice';
@@ -8,20 +8,6 @@ export default function HomeNewTests() {
   const dispatch = useAppDispatch();
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [activeModalTab, setActiveModalTab] = useState<'profile' | 'settings'>('profile');
-
-  const [formFullName, setFormFullName] = useState(user?.fullName || 'Nguyễn Minh Anh');
-  const [formEmail, setFormEmail] = useState(user?.email || 'minhanh@gmail.com');
-  const [formPhone, setFormPhone] = useState('0912345678');
-  const [formBirthDate, setFormBirthDate] = useState('15/08/2002');
-
-  useEffect(() => {
-    if (user) {
-      setFormFullName(user.fullName);
-      setFormEmail(user.email);
-    }
-  }, [user]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -120,26 +106,20 @@ export default function HomeNewTests() {
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
                       <div className="absolute right-0 mt-2 w-48 bg-[#fcfbf7] border-2 border-[#1b263b] rounded-xl shadow-[3px_3px_0px_0px_#1b263b] z-50 overflow-hidden text-left py-1">
-                        <button
-                          onClick={() => {
-                            setIsDropdownOpen(false);
-                            setActiveModalTab('profile');
-                            setIsProfileModalOpen(true);
-                          }}
-                          className="w-full px-4 py-2 text-xs font-black text-[#1b263b] hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all text-left flex items-center gap-2 border-b border-[#1b263b]/10 cursor-pointer"
+                        <Link
+                          to="/profile?tab=overview"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="w-full px-4 py-2 text-xs font-black text-[#1b263b] hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all text-left flex items-center gap-2 border-b border-[#1b263b]/10 cursor-pointer block"
                         >
                           👤 My Profile
-                        </button>
-                        <button
-                          onClick={() => {
-                            setIsDropdownOpen(false);
-                            setActiveModalTab('settings');
-                            setIsProfileModalOpen(true);
-                          }}
-                          className="w-full px-4 py-2 text-xs font-black text-[#1b263b] hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all text-left flex items-center gap-2 border-b border-[#1b263b]/10 cursor-pointer"
+                        </Link>
+                        <Link
+                          to="/profile?tab=settings"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="w-full px-4 py-2 text-xs font-black text-[#1b263b] hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all text-left flex items-center gap-2 border-b border-[#1b263b]/10 cursor-pointer block"
                         >
                           ⚙️ Settings
-                        </button>
+                        </Link>
                         <button
                           onClick={() => {
                             setIsDropdownOpen(false);
@@ -576,190 +556,6 @@ export default function HomeNewTests() {
         </footer>
 
       </div>
-
-      {/* PROFILE & SETTINGS MODAL */}
-      {isProfileModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
-          {/* Main Modal Container */}
-          <div className="bg-[#f5f3dc] max-w-md w-full rounded-[32px] border-2 border-[#1b263b] shadow-[6px_6px_0px_0px_#1b263b] relative overflow-hidden flex flex-col min-h-[500px]">
-            
-            {/* Ruled red margin line */}
-            <div className="absolute left-10 top-0 bottom-0 w-0.5 bg-[#e0565b]/30 z-10" />
-
-            {/* Spiral binder on the left */}
-            <div className="absolute left-2 top-0 bottom-0 w-6 flex flex-col justify-around pointer-events-none z-20 opacity-80 select-none py-4">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-1 h-4">
-                  <div className="w-2.5 h-2.5 rounded-full bg-gray-300 border border-gray-400/50 shadow-inner" />
-                  <div className="w-4 h-1 bg-gradient-to-r from-gray-400 to-gray-500 rounded-full" />
-                </div>
-              ))}
-            </div>
-
-            {/* Modal Header */}
-            <div className="pl-14 pr-6 pt-6 pb-4 border-b-2 border-[#1b263b] flex items-center justify-between">
-              <div>
-                <span className="text-2xl font-serif font-black tracking-tight text-[#1b263b]">
-                  {activeModalTab === 'profile' ? 'Student Profile' : 'Account Settings'}
-                </span>
-                <p className="text-[8px] text-[#1b263b]/70 uppercase tracking-widest font-black">Marginalia IELTS System</p>
-              </div>
-              <button 
-                onClick={() => setIsProfileModalOpen(false)}
-                className="w-8 h-8 rounded-full border-2 border-[#1b263b] bg-[#fcfbf7] hover:bg-[#c92a2a] hover:text-white transition-all font-black text-xs flex items-center justify-center cursor-pointer shadow-[2px_2px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b]"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Tabs */}
-            <div className="pl-14 pr-6 pt-3 flex gap-2">
-              <button
-                onClick={() => setActiveModalTab('profile')}
-                className={`px-4 py-1.5 border-2 border-[#1b263b] rounded-t-xl text-[10px] font-black uppercase transition-all cursor-pointer ${
-                  activeModalTab === 'profile' 
-                    ? 'bg-[#1b263b] text-[#f5f3dc] border-b-transparent translate-y-[2px]' 
-                    : 'bg-[#fcfbf7] text-[#1b263b] hover:bg-gray-100'
-                }`}
-              >
-                Profile Card
-              </button>
-              <button
-                onClick={() => setActiveModalTab('settings')}
-                className={`px-4 py-1.5 border-2 border-[#1b263b] rounded-t-xl text-[10px] font-black uppercase transition-all cursor-pointer ${
-                  activeModalTab === 'settings' 
-                    ? 'bg-[#1b263b] text-[#f5f3dc] border-b-transparent translate-y-[2px]' 
-                    : 'bg-[#fcfbf7] text-[#1b263b] hover:bg-gray-100'
-                }`}
-              >
-                Details Settings
-              </button>
-            </div>
-
-            {/* Scrollable Content */}
-            <div className="pl-14 pr-6 py-6 flex-1 overflow-y-auto max-h-[400px]">
-              {activeModalTab === 'profile' ? (
-                /* PROFILE TAB CONTENT */
-                <div className="space-y-6">
-                  {/* Profile Header info */}
-                  <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-4 shadow-[3px_3px_0px_0px_#1b263b] flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-[#a7f3d0] border-2 border-[#1b263b] flex items-center justify-center text-emerald-800 font-serif font-black text-2xl shadow-[2px_2px_0px_0px_#1b263b]">
-                      {user ? user.fullName.split(' ').slice(-1)[0][0] : 'S'}
-                    </div>
-                    <div>
-                      <h4 className="text-base font-serif font-black text-[#1b263b]">{user?.fullName}</h4>
-                      <p className="text-[10px] text-gray-500 font-bold">{user?.email}</p>
-                      <span className="inline-block mt-2 bg-[#ffd54f] border border-[#1b263b] text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
-                        {user?.role || 'STUDENT'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Bands */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white border-2 border-[#1b263b] rounded-xl p-3 text-left">
-                      <p className="text-[8px] font-black text-gray-400">CURRENT BAND</p>
-                      <p className="text-2xl font-serif font-black text-[#c92a2a] mt-1">6.75</p>
-                    </div>
-                    <div className="bg-white border-2 border-[#1b263b] rounded-xl p-3 border-dashed text-left">
-                      <p className="text-[8px] font-black text-gray-400">TARGET BAND</p>
-                      <p className="text-2xl font-serif font-black text-[#1b263b] mt-1">7.5</p>
-                    </div>
-                  </div>
-
-                  {/* Stats Grid */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { icon: '🔥', label: 'Streak', value: '42 Days', bg: '#fbcfe8' },
-                      { icon: '📚', label: 'Completed', value: '34 Tests', bg: '#e0f2fe' },
-                      { icon: '💬', label: 'AI Scored', value: '28 Logs', bg: '#a7f3d0' },
-                      { icon: '🏅', label: 'Badges', value: '3 Badges', bg: '#fef3c7' },
-                    ].map((stat, idx) => (
-                      <div key={idx} style={{ backgroundColor: stat.bg }} className="border-2 border-[#1b263b] rounded-xl p-3 shadow-[2px_2px_0px_0px_#1b263b] text-left">
-                        <span className="text-sm">{stat.icon}</span>
-                        <p className="text-[8px] font-black text-gray-500 uppercase mt-1">{stat.label}</p>
-                        <p className="text-xs font-black text-[#1b263b] mt-0.5">{stat.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                /* SETTINGS TAB CONTENT */
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  if (user) {
-                    const updatedUser = { ...user, fullName: formFullName, email: formEmail };
-                    localStorage.setItem('auth_user', JSON.stringify(updatedUser));
-                    alert('Thay đổi đã được lưu thành công!');
-                    setIsProfileModalOpen(false);
-                    window.location.reload();
-                  }
-                }} className="space-y-4 text-left">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase text-gray-500">Họ tên</label>
-                    <input
-                      type="text"
-                      required
-                      value={formFullName}
-                      onChange={(e) => setFormFullName(e.target.value)}
-                      className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase text-gray-500">Email</label>
-                    <input
-                      type="email"
-                      required
-                      value={formEmail}
-                      onChange={(e) => setFormEmail(e.target.value)}
-                      className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase text-gray-500">Số điện thoại</label>
-                    <input
-                      type="text"
-                      value={formPhone}
-                      onChange={(e) => setFormPhone(e.target.value)}
-                      placeholder="0912345678"
-                      className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase text-gray-500">Ngày sinh</label>
-                    <input
-                      type="text"
-                      value={formBirthDate}
-                      onChange={(e) => setFormBirthDate(e.target.value)}
-                      placeholder="15/08/2002"
-                      className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none"
-                    />
-                  </div>
-
-                  <div className="pt-4 space-y-2">
-                    <button
-                      type="submit"
-                      className="w-full bg-[#a7f3d0] text-[#005c42] border-2 border-[#1b263b] py-2.5 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#91e8c1] transition-all shadow-[2px_2px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] text-center cursor-pointer"
-                    >
-                      Save Changes
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsProfileModalOpen(false);
-                        handleLogout();
-                      }}
-                      className="w-full bg-[#fbcfe8] text-[#c92a2a] border-2 border-[#1b263b] py-2.5 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#faafd6] transition-all text-center cursor-pointer"
-                    >
-                      🚪 Sign Out
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );
