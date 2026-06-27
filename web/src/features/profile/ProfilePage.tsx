@@ -399,7 +399,7 @@ export default function ProfilePage() {
 
           {activeTab === 'notes' && (
             /* NOTES LOG TAB - Ruled notebook styling */
-            <div className="space-y-6 text-left max-w-4xl">
+            <div className="space-y-6 text-left max-w-4xl mx-auto w-full">
               
               <div className="flex items-center justify-between border-b border-[#1b263b]/10 pb-4">
                 <span className="text-emerald-700 font-black text-xs uppercase tracking-widest flex items-center gap-1">
