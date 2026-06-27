@@ -621,7 +621,6 @@ const styles = StyleSheet.create({
   modalBtnCancelText: { fontFamily: 'Outfit_900Black', fontSize: 11, color: '#1b263b' },
   modalBtnDanger: { flex: 1, backgroundColor: '#c92a2a', borderWidth: 2, borderColor: '#1b263b', borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   modalBtnDangerText: { fontFamily: 'Outfit_900Black', fontSize: 11, color: '#fff' },
-});'Outfit_900Black', fontSize: 12, color: '#fff' },
 });
 
 export default ProfileScreen;
