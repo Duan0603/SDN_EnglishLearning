@@ -475,7 +475,7 @@ export default function ProfilePage() {
 
           {activeTab === 'settings' && (
             /* SETTINGS TAB (EDIT PROFILE) */
-            <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-8 shadow-[5px_5px_0px_0px_#1b263b] text-left max-w-xl">
+            <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-8 shadow-[5px_5px_0px_0px_#1b263b] text-left max-w-2xl mx-auto w-full">
               <h4 className="font-serif font-black text-xl text-[#1b263b] mb-2">Planner & Profile settings</h4>
               <p className="text-xs font-bold text-gray-500 mb-6">Modify your profile details and target band indicators below.</p>
 
