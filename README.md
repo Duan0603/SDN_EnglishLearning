@@ -5,7 +5,9 @@ Dự án học tiếng Anh IELTS tích hợp AI.
 ## Liên kết dự án
 
 - Jira: [Jira board của nhóm](https://knightdragon184.atlassian.net/jira/software/projects/EMAL/boards/1)
-- SRS: [Tài liệu SRS của nhóm] (https://docs.google.com/document/d/1KBLJLe8Z7QSNdK9XqvogO0MOMtQrduZYJ1euGcqtld8/edit?tab=t.0)
+- SRS: [Tài liệu SRS của nhóm](https://docs.google.com/document/d/1KBLJLe8Z7QSNdK9XqvogO0MOMtQrduZYJ1euGcqtld8/edit?tab=t.0)
+- Paper Draft: [Bản thảo bài báo khoa học (Paper Draft)](docs/paper_draft.md)
+- Google Drive: [Thư mục tài liệu của nhóm](https://drive.google.com/drive/folders/1urDFKghlIHYq8umarsMMz3xHF15hPWYZ?usp=sharing)
 
    ## Mục tiêu nghiên cứu & phạm vi đề tài
 
