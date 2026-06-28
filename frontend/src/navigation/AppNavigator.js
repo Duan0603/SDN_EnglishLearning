@@ -31,7 +31,9 @@ import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ResetPasswordScreen  from '../screens/ResetPasswordScreen';
 import HomeScreen     from '../screens/HomeScreen';
 import PracticeScreen from '../screens/PracticeScreen';
+import ProgressScreen from '../screens/ProgressScreen';
 import ProfileScreen  from '../screens/ProfileScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 import ExamScreen     from '../screens/ExamScreen';
 import SpeakingScreen from '../screens/SpeakingScreen';
 import AdminScreen    from '../screens/AdminScreen';
@@ -94,7 +96,7 @@ const MainTabNavigator = () => (
     />
     <Tab.Screen
       name="Progress"
-      component={ProfileScreen}
+      component={ProgressScreen}
       options={{
         title: 'Tiến độ',
         tabBarIcon: ({ focused }) => (
@@ -196,6 +198,9 @@ const AppNavigator = () => {
               options={{ animation: 'slide_from_right' }}
             />
             <Stack.Screen name="Mentors" component={MentorsScreen} />
+            <Stack.Screen name="Settings" component={SettingsScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
           </>
         )}
       </Stack.Navigator>

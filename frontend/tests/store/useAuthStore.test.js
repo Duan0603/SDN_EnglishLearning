@@ -45,7 +45,7 @@ describe('useAuthStore', () => {
     expect(client.post).toHaveBeenCalledWith('/auth/login', {
       email: 'test@example.com',
       password: 'password123',
-    });
+    }, { hideToast: true });
     expect(storage.setItem).toHaveBeenCalledWith('userToken', 'access-token');
     expect(useAuthStore.getState().user).toEqual({ id: 'user-1', email: 'test@example.com' });
     expect(useAuthStore.getState().token).toBe('access-token');
@@ -53,9 +53,13 @@ describe('useAuthStore', () => {
   });
 
   it('restores the user session from storage', async () => {
-    storage.getItem.mockResolvedValue('stored-token');
+    storage.getItem.mockImplementation((key) => {
+      if (key === 'userToken') return Promise.resolve('stored-token');
+      if (key === 'userId') return Promise.resolve('user-2');
+      return Promise.resolve(null);
+    });
     client.get.mockResolvedValue({
-      data: { id: 'user-2', email: 'restore@example.com' },
+      data: { metadata: { id: 'user-2', email: 'restore@example.com' } },
     });
 
     await useAuthStore.getState().restoreToken();

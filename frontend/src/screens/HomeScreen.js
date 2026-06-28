@@ -1,9 +1,3 @@
-// ============================================================
-// HomeScreen - Mobile First Dashboard
-// Duolingo / ELSA Speak inspired
-// NO web layouts, NO sidebars, NO desktop cards
-// ============================================================
-
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -13,62 +7,46 @@ import {
   TouchableOpacity,
   StatusBar,
   RefreshControl,
-  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { Menu, Divider } from 'react-native-paper';
+import { Ionicons } from '@expo/vector-icons';
 
-import AppIcon from '../shared/icons/AppIcon';
 import useAuthStore from '../store/useAuthStore';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../theme';
 
-
-// ── Quick Action Card ────────────────────────────────────────
-const QuickAction = ({ iconName, label, color, bg, onPress }) => (
-  <TouchableOpacity style={[S.qaCard, { backgroundColor: bg }]} onPress={onPress} activeOpacity={0.85}>
-    <View style={[S.qaIconWrap, { backgroundColor: color + '22' }]}>
-      <AppIcon name={iconName} size={24} color={color} />
+// Brutalist shadow wrapper
+const BrutalistShadow = ({ children, style, offset = 4 }) => (
+  <View style={[style, { position: 'relative' }]}>
+    <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#1b263b', borderRadius: style.borderRadius || 0, top: offset, left: offset }]} />
+    <View style={{ backgroundColor: style.backgroundColor || '#fff', borderWidth: 2, borderColor: '#1b263b', borderRadius: style.borderRadius || 0, overflow: 'hidden' }}>
+      {children}
     </View>
-    <Text style={[S.qaLabel, { color }]} numberOfLines={2}>{label}</Text>
-  </TouchableOpacity>
-);
-
-// ── Score Band Circle ─────────────────────────────────────────
-const BandCircle = ({ score, label, color }) => (
-  <View style={S.bandCircleWrap}>
-    <View style={[S.bandCircle, { borderColor: color }]}>
-      <Text style={[S.bandScore, { color }]}>{score}</Text>
-    </View>
-    <Text style={S.bandLabel}>{label}</Text>
   </View>
 );
 
-// ── Skill Progress Row ────────────────────────────────────────
-const SkillRow = ({ iconName, label, score, pct, color, onPress }) => (
-  <TouchableOpacity style={S.skillRow} onPress={onPress} activeOpacity={0.85}>
-    <View style={[S.skillIcon, { backgroundColor: color + '18' }]}>
-      <AppIcon name={iconName} size={20} color={color} />
-    </View>
-    <View style={S.skillInfo}>
-      <View style={S.skillLabelRow}>
-        <Text style={S.skillLabel}>{label}</Text>
-        <Text style={[S.skillScore, { color }]}>{score}</Text>
-      </View>
-      <View style={S.progressTrack}>
-        <View style={[S.progressFill, { width: `${pct}%`, backgroundColor: color }]} />
-      </View>
-    </View>
-    <AppIcon name="chevron-right" size={18} color={COLORS.textTertiary} />
-  </TouchableOpacity>
-);
+const ModuleCard = ({ title, tutor, bg, color, onPress, progress }) => (
+  <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={styles.moduleCardContainer}>
+    <BrutalistShadow style={styles.moduleCard} offset={4}>
+      <View style={[styles.moduleCardInner, { backgroundColor: bg }]}>
+        {/* Red divider margin line */}
+        <View style={styles.moduleRedLine} />
+        
+        <View style={styles.moduleHeader}>
+          <Text style={styles.moduleBadge}>MODULE</Text>
+          <Ionicons name="arrow-forward-circle" size={20} color={color} />
+        </View>
+        <Text style={styles.moduleTitle}>{title}</Text>
+        <Text style={styles.moduleTutor}>{tutor}</Text>
 
-// ── Streak Badge ──────────────────────────────────────────────
-const StreakBadge = ({ days }) => (
-  <View style={S.streakBadge}>
-    <AppIcon name="flame" size={18} color="#F97316" />
-    <Text style={S.streakText}>{days} ngày</Text>
-  </View>
+        <View style={styles.progressContainer}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: color }]} />
+          </View>
+          <Text style={styles.progressText}>{progress}% COMPLETE</Text>
+        </View>
+      </View>
+    </BrutalistShadow>
+  </TouchableOpacity>
 );
 
 const HomeScreen = ({ navigation }) => {
@@ -84,200 +62,170 @@ const HomeScreen = ({ navigation }) => {
     setTimeout(() => setRefreshing(false), 1500);
   }, []);
 
-  const firstName = user?.fullName?.split(' ').slice(-1)[0] || 'Học viên';
+  const firstName = user?.fullName?.split(' ').slice(-1)[0] || 'Guest';
   const initial   = user?.fullName?.charAt(0)?.toUpperCase() || 'U';
 
   const navigate = (screen, params) => navigation.navigate(screen, params);
 
   return (
-    <SafeAreaView style={S.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fcfbf7" />
 
-      {/* ── Top App Bar ──────────────────────────────────── */}
-      <View style={S.appBar}>
-        <View style={S.appBarLeft}>
-          <View style={S.logo}>
-            <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <Path d="M12 2L2 7l10 5 10-5-10-5z" fill={COLORS.primary} />
-              <Path d="M6 12.5V17c0 1.66 2.69 3 6 3s6-1.34 6-3v-4.5l-6 3-6-3z" fill={COLORS.accent} />
-            </Svg>
+      {/* Top App Bar */}
+      <View style={styles.appBar}>
+        <View style={styles.appBarLeft}>
+          <View style={styles.logoBox}>
+            <Text style={styles.logoText}>A</Text>
           </View>
-          <Text style={S.appBarTitle}>Apex IELTS</Text>
+          <Text style={styles.appBarTitle}>Apex IELTS</Text>
         </View>
 
-        <View style={S.appBarRight}>
-          {/* Notification */}
-          <TouchableOpacity style={S.iconBtn} activeOpacity={0.8}>
-            <AppIcon name="notifications-outline" size={22} color={COLORS.textSecondary} />
-            <View style={S.notifDot} />
+        <View style={styles.appBarRight}>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Ionicons name="notifications-outline" size={24} color="#1b263b" />
+            <View style={styles.notifDot} />
           </TouchableOpacity>
 
-          {/* Avatar & Menu */}
           {user ? (
             <Menu
               visible={menuVisible}
               onDismiss={closeMenu}
               anchor={
-                <TouchableOpacity
-                  style={S.avatar}
-                  onPress={openMenu}
-                  activeOpacity={0.8}
-                >
-                  <Text style={S.avatarText}>{initial}</Text>
+                <TouchableOpacity style={styles.avatar} onPress={openMenu}>
+                  <Text style={styles.avatarText}>{initial}</Text>
                 </TouchableOpacity>
               }
-              contentStyle={{ backgroundColor: COLORS.surface, borderRadius: RADIUS.md }}
+              contentStyle={{ backgroundColor: '#fcfbf7', borderRadius: 12, borderWidth: 2, borderColor: '#1b263b' }}
             >
-              <Menu.Item 
-                onPress={() => { closeMenu(); navigate('Profile'); }} 
-                title="Hồ sơ cá nhân" 
-                leadingIcon="account-outline"
-              />
-              <Menu.Item 
-                onPress={() => { closeMenu(); navigate('Settings'); }} 
-                title="Cài đặt" 
-                leadingIcon="cog-outline"
-              />
-              <Divider />
-              <Menu.Item 
-                onPress={() => { closeMenu(); logout(); }} 
-                title="Đăng xuất" 
-                titleStyle={{ color: COLORS.error }}
-                leadingIcon="logout"
-              />
+              <Menu.Item onPress={() => { closeMenu(); navigate('Profile'); }} title="Hồ sơ cá nhân" titleStyle={styles.menuItem} />
+              <Menu.Item onPress={() => { closeMenu(); navigate('Settings'); }} title="Cài đặt" titleStyle={styles.menuItem} />
+              <Divider style={{ backgroundColor: '#1b263b', height: 2 }} />
+              <Menu.Item onPress={() => { closeMenu(); logout(); }} title="Đăng xuất" titleStyle={[styles.menuItem, { color: '#c92a2a' }]} />
             </Menu>
           ) : (
-            <TouchableOpacity
-              style={S.loginChip}
-              onPress={() => navigate('Login')}
-            >
-              <Text style={S.loginChipText}>Đăng nhập</Text>
+            <TouchableOpacity style={styles.loginBtn} onPress={() => navigate('Login')}>
+              <Text style={styles.loginBtnText}>SIGN IN</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
       <ScrollView
-        style={S.scroll}
+        style={styles.scroll}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1b263b" />}
+        contentContainerStyle={{ paddingBottom: 40 }}
       >
-        {/* ── Greeting ─────────────────────────────────── */}
-        <View style={S.greetingSection}>
-          <View style={S.greetingRow}>
-            <View>
-              <Text style={S.greetingHi}>
-                {user ? `Xin chào, ${firstName} 👋` : 'Chào mừng bạn 👋'}
-              </Text>
-              <Text style={S.greetingSub}>Hôm nay bạn sẽ luyện kỹ năng gì?</Text>
-            </View>
-            {user && <StreakBadge days={7} />}
-          </View>
-
-          {/* Hero banner */}
-          <View style={S.heroBanner}>
-            <View style={S.heroBannerText}>
-              <Text style={S.heroBadge}>🎯 Mục tiêu hôm nay</Text>
-              <Text style={S.heroTitle}>Đạt Band 7.5+{'\n'}trong 3 tháng</Text>
-              <TouchableOpacity
-                style={S.heroBtn}
-                onPress={() => navigate(user ? 'Practice' : 'Login')}
-              >
-                <Text style={S.heroBtnText}>Bắt đầu ngay</Text>
-                <AppIcon name="chevron-right" size={16} color={COLORS.textInverse} />
-              </TouchableOpacity>
-            </View>
-            <View style={S.heroBannerIllustration}>
-              <Svg width="90" height="90" viewBox="0 0 90 90" fill="none">
-                <Circle cx="45" cy="45" r="45" fill={COLORS.primary + '20'} />
-                <Path d="M45 20L25 32.5V55c0 12.43 8.95 24.07 20 26.87C56.05 79.07 65 67.43 65 55V32.5L45 20z" fill={COLORS.primary} opacity="0.3" />
-                <Path d="M45 28L30 38.13V55c0 8.83 6.37 17.1 15 19.45C58.63 72.1 65 63.83 65 55V38.13L45 28z" fill={COLORS.primary} opacity="0.5" />
-                <Path d="M40 52l5 5 10-10" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
-            </View>
-          </View>
-        </View>
-
-        {/* ── Quick Actions ─────────────────────────────── */}
-        <View style={S.section}>
-          <Text style={S.sectionTitle}>Luyện tập nhanh</Text>
-          <View style={S.qaGrid}>
-            <View style={S.qaRow}>
-              <QuickAction iconName="speaking"  label="AI Speaking" color="#EF4444" bg="#FFF5F5" onPress={() => navigate(user ? 'Practice' : 'Login')} />
-              <QuickAction iconName="writing"   label="AI Writing"  color="#F59E0B" bg="#FFFBEB" onPress={() => navigate(user ? 'Practice' : 'Login')} />
-            </View>
-            <View style={S.qaRow}>
-              <QuickAction iconName="reading"   label="Reading"     color="#3B82F6" bg="#EFF6FF" onPress={() => navigate(user ? 'Practice' : 'Login')} />
-              <QuickAction iconName="listening" label="Listening"   color="#8B5CF6" bg="#F5F3FF" onPress={() => navigate(user ? 'Practice' : 'Login')} />
-            </View>
-          </View>
-        </View>
-
-        {/* ── Progress Summary ─────────────────────────── */}
-        <View style={S.section}>
-          <View style={S.sectionHeader}>
-            <Text style={S.sectionTitle}>Điểm số tổng quan</Text>
-            <TouchableOpacity onPress={() => navigate(user ? 'Profile' : 'Login')}>
-              <Text style={S.seeAll}>Xem chi tiết</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={S.bandCard}>
-            <View style={S.overallBand}>
-              <Text style={S.overallLabel}>Overall Band</Text>
-              <Text style={S.overallScore}>7.5</Text>
-              <View style={S.overallBadge}>
-                <AppIcon name="trophy" size={14} color="#F59E0B" />
-                <Text style={S.overallBadgeText}>Good User</Text>
+        {/* Sticky Note Hero Banner */}
+        <View style={styles.heroSection}>
+          <View style={styles.stickyNote}>
+            <View style={styles.tape} />
+            <Text style={styles.stickyGreeting}>Hey {firstName} –</Text>
+            <Text style={styles.stickyText}>
+              Ready to crush your IELTS today? Type sits on the rule, ink lives in the margin.
+            </Text>
+            <View style={styles.stickyFooter}>
+              <Text style={styles.stickyBadge}>IELTS WEEK 09</Text>
+              <View style={styles.streakBadge}>
+                <Ionicons name="flame" size={12} color="#c92a2a" />
+                <Text style={styles.streakText}>7 Days</Text>
               </View>
             </View>
-            <View style={S.bandRow}>
-              <BandCircle score="7.5" label="Reading" color={COLORS.reading} />
-              <BandCircle score="8.5" label="Listening" color={COLORS.listening} />
-              <BandCircle score="6.5" label="Writing" color={COLORS.writing} />
-              <BandCircle score="7.0" label="Speaking" color={COLORS.speaking} />
+          </View>
+        </View>
+
+        {/* IELTS Modules */}
+        <View style={styles.section}>
+          <Text style={styles.sectionBadge}>✎ YOUR SHELF</Text>
+          <Text style={styles.sectionTitle}>Four modules, one page.</Text>
+          
+          <View style={styles.grid}>
+            <ModuleCard 
+              title="AI Speaking" 
+              tutor="Whisper & Gemini" 
+              bg="#fcfbf7" 
+              color="#c92a2a" 
+              progress={62}
+              onPress={() => navigate(user ? 'Practice' : 'Login')} 
+            />
+            <ModuleCard 
+              title="AI Writing" 
+              tutor="Criteria Grader" 
+              bg="#fcfbf7" 
+              color="#d97706" 
+              progress={45}
+              onPress={() => navigate(user ? 'Practice' : 'Login')} 
+            />
+            <ModuleCard 
+              title="Reading Test" 
+              tutor="Cambridge Pool" 
+              bg="#fcfbf7" 
+              color="#4682b4" 
+              progress={78}
+              onPress={() => navigate(user ? 'Practice' : 'Login')} 
+            />
+            <ModuleCard 
+              title="Listening Test" 
+              tutor="Audio Stream" 
+              bg="#fcfbf7" 
+              color="#005c42" 
+              progress={33}
+              onPress={() => navigate(user ? 'Practice' : 'Login')} 
+            />
+          </View>
+        </View>
+
+        {/* Score Report Card */}
+        <View style={styles.section}>
+          <Text style={styles.sectionBadge}>✎ TRACKER</Text>
+          <Text style={styles.sectionTitle}>Band score report.</Text>
+
+          <BrutalistShadow style={styles.scoreCard} offset={6}>
+            <View style={styles.scoreCardInner}>
+              <View style={styles.scoreHeader}>
+                <Text style={styles.scoreTitle}>OVERALL BAND</Text>
+                <Text style={styles.scoreDate}>UPDATED TODAY</Text>
+              </View>
+              
+              <View style={styles.scoreMain}>
+                <Text style={styles.scoreBig}>7.5</Text>
+                <View style={styles.stampBox}>
+                  <Text style={styles.stampText}>A+</Text>
+                </View>
+              </View>
+
+              <View style={styles.scoreList}>
+                <View style={styles.scoreItem}>
+                  <Text style={styles.scoreItemLabel}>Reading</Text>
+                  <Text style={[styles.scoreItemVal, { color: '#4682b4' }]}>7.5</Text>
+                </View>
+                <View style={styles.scoreItem}>
+                  <Text style={styles.scoreItemLabel}>Listening</Text>
+                  <Text style={[styles.scoreItemVal, { color: '#005c42' }]}>8.5</Text>
+                </View>
+                <View style={styles.scoreItem}>
+                  <Text style={styles.scoreItemLabel}>Writing</Text>
+                  <Text style={[styles.scoreItemVal, { color: '#d97706' }]}>6.5</Text>
+                </View>
+                <View style={styles.scoreItem}>
+                  <Text style={styles.scoreItemLabel}>Speaking</Text>
+                  <Text style={[styles.scoreItemVal, { color: '#c92a2a' }]}>7.0</Text>
+                </View>
+              </View>
+
             </View>
-          </View>
+          </BrutalistShadow>
         </View>
 
-        {/* ── Skills Progress ───────────────────────────── */}
-        <View style={S.section}>
-          <View style={S.sectionHeader}>
-            <Text style={S.sectionTitle}>Tiến độ kỹ năng</Text>
-            <TouchableOpacity onPress={() => navigate('Practice')}>
-              <Text style={S.seeAll}>Luyện tập</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={S.skillsCard}>
-            <SkillRow iconName="reading"   label="Reading"   score="7.5" pct={75} color={COLORS.reading}   onPress={() => navigate('Practice')} />
-            <SkillRow iconName="listening" label="Listening" score="8.5" pct={85} color={COLORS.listening} onPress={() => navigate('Practice')} />
-            <SkillRow iconName="writing"   label="Writing"   score="6.5" pct={65} color={COLORS.writing}   onPress={() => navigate('Practice')} />
-            <SkillRow iconName="speaking"  label="Speaking"  score="7.0" pct={70} color={COLORS.speaking}  onPress={() => navigate('Practice')} />
-          </View>
-        </View>
-
-        {/* ── AI Features Banner ────────────────────────── */}
-        <View style={[S.section, { marginBottom: SPACING['3xl'] }]}>
-          <View style={S.aiBanner}>
-            <AppIcon name="ai" size={32} color={COLORS.primary} />
-            <View style={{ flex: 1, marginLeft: SPACING.md }}>
-              <Text style={S.aiBannerTitle}>AI Đánh giá bài làm</Text>
-              <Text style={S.aiBannerSub}>Nhận phản hồi chi tiết từ AI về Writing & Speaking</Text>
-            </View>
-            <TouchableOpacity
-              style={S.aiBannerBtn}
-              onPress={() => navigate(user ? 'Practice' : 'Login')}
-            >
-              <Text style={S.aiBannerBtnText}>Thử ngay</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* ── Admin Quick Access ────────────────────────── */}
+        {/* Admin Quick Access */}
         {user?.role === 'ADMIN' && (
-          <TouchableOpacity style={S.adminChip} onPress={() => navigate('Admin')}>
-            <AppIcon name="admin" size={20} color={COLORS.primary} />
-            <Text style={S.adminChipText}>Admin Portal</Text>
-            <AppIcon name="chevron-right" size={18} color={COLORS.primary} />
+          <TouchableOpacity style={styles.adminBtnContainer} onPress={() => navigate('Admin')} activeOpacity={0.8}>
+            <BrutalistShadow style={{ borderRadius: 16 }} offset={4}>
+              <View style={styles.adminBtn}>
+                <Text style={styles.adminBtnText}>👑 GO TO ADMIN PANEL</Text>
+                <Ionicons name="arrow-forward" size={20} color="#1b263b" />
+              </View>
+            </BrutalistShadow>
           </TouchableOpacity>
         )}
 
@@ -286,221 +234,247 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
-const S = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: COLORS.background },
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: '#f5f3dc' },
   scroll: { flex: 1 },
 
-  // ── App Bar ────────────────────────────────────────────
+  // App Bar
   appBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.base,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#fcfbf7',
+    borderBottomWidth: 2,
+    borderBottomColor: '#1b263b',
   },
-  appBarLeft:  { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  appBarRight: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  logo: {
-    width: 36,
-    height: 36,
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+  appBarLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logoBox: {
+    width: 32, height: 32,
+    backgroundColor: '#c92a2a',
+    borderWidth: 2, borderColor: '#1b263b',
+    borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center',
   },
-  appBarTitle: { fontSize: TYPOGRAPHY.md, fontFamily: TYPOGRAPHY.fontBlack, color: COLORS.textPrimary },
-
-  iconBtn:  { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  logoText: { color: '#fff', fontFamily: 'Outfit_900Black', fontSize: 18 },
+  appBarTitle: { fontSize: 20, fontFamily: 'Outfit_900Black', color: '#1b263b' },
+  
+  appBarRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  iconBtn: { position: 'relative' },
   notifDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.error,
-    borderWidth: 1.5,
-    borderColor: COLORS.surface,
+    position: 'absolute', top: -2, right: -2,
+    width: 10, height: 10,
+    borderRadius: 5, backgroundColor: '#c92a2a',
+    borderWidth: 2, borderColor: '#fcfbf7',
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: COLORS.primary,
+    width: 36, height: 36,
+    borderRadius: 18, backgroundColor: '#a7f3d0',
+    borderWidth: 2, borderColor: '#1b263b',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarText: { fontSize: 16, fontFamily: 'Outfit_900Black', color: '#005c42' },
+  loginBtn: {
+    backgroundColor: '#1b263b',
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderRadius: 8,
+  },
+  loginBtnText: { color: '#fff', fontFamily: 'Outfit_900Black', fontSize: 12 },
+  menuItem: { fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#1b263b' },
+
+  // Hero Section
+  heroSection: {
+    padding: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.sm,
+    marginTop: 10,
   },
-  avatarText: { fontSize: TYPOGRAPHY.base, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textInverse },
-  loginChip: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.full,
+  stickyNote: {
+    backgroundColor: '#ffd54f',
+    width: '90%',
+    padding: 24,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    transform: [{ rotate: '2deg' }],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  loginChipText: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textInverse },
-
-  // ── Section ────────────────────────────────────────────
-  section:       { paddingHorizontal: SPACING.base, marginBottom: SPACING.lg },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.md },
-  sectionTitle:  { fontSize: TYPOGRAPHY.lg, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary },
-  seeAll:        { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontSemiBold, color: COLORS.primary },
-
-  // ── Greeting ───────────────────────────────────────────
-  greetingSection: { backgroundColor: COLORS.surface, padding: SPACING.base, paddingBottom: 0 },
-  greetingRow:     { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: SPACING.base },
-  greetingHi:      { fontSize: TYPOGRAPHY.xl, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary },
-  greetingSub:     { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontRegular, color: COLORS.textSecondary, marginTop: 2 },
-
-  streakBadge:   { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF7ED', borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, gap: 4, borderWidth: 1, borderColor: '#FED7AA' },
-  streakText:    { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontBold, color: '#F97316' },
-
-  // ── Hero Banner ────────────────────────────────────────
-  heroBanner: {
-    backgroundColor: COLORS.accent,
-    borderRadius: RADIUS['2xl'],
-    padding: SPACING.xl,
+  tape: {
+    position: 'absolute',
+    top: -12, left: '50%',
+    marginLeft: -40,
+    width: 80, height: 24,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    borderWidth: 1, borderColor: '#ddd',
+    transform: [{ rotate: '-3deg' }],
+  },
+  stickyGreeting: {
+    fontFamily: 'Outfit_700Bold', // Handwriting fallback
+    fontSize: 24,
+    color: '#c92a2a',
+    marginBottom: 8,
+  },
+  stickyText: {
+    fontFamily: 'Outfit_700Bold', // Handwriting fallback
+    fontSize: 16,
+    color: '#1b263b',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  stickyFooter: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.base,
-    overflow: 'hidden',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(27,38,59,0.2)',
+    paddingTop: 12,
   },
-  heroBannerText:         { flex: 1 },
-  heroBadge:              { fontSize: TYPOGRAPHY.xs, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.primaryBorder, marginBottom: SPACING.sm },
-  heroTitle:              { fontSize: TYPOGRAPHY.xl, fontFamily: TYPOGRAPHY.fontBlack, color: COLORS.textInverse, lineHeight: TYPOGRAPHY.xl * 1.3, marginBottom: SPACING.base },
-  heroBtn: {
+  stickyBadge: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 10,
+    color: 'rgba(27,38,59,0.6)',
+  },
+  streakBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#fff',
+    borderWidth: 1, borderColor: '#1b263b',
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 12,
+  },
+  streakText: {
+    fontFamily: 'Outfit_900Black', fontSize: 10, color: '#1b263b',
+  },
+
+  // Sections
+  section: {
+    paddingHorizontal: 20,
+    marginBottom: 32,
+  },
+  sectionBadge: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 10,
+    color: '#4682b4',
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  sectionTitle: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 24,
+    color: '#1b263b',
+    marginBottom: 16,
+  },
+
+  // Grid
+  grid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    alignSelf: 'flex-start',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    gap: 4,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
-  heroBtnText:            { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textInverse },
-  heroBannerIllustration: { marginLeft: SPACING.md },
+  moduleCardContainer: {
+    width: '48%',
+    marginBottom: 16,
+  },
+  moduleCard: {
+    borderRadius: 16,
+  },
+  moduleCardInner: {
+    padding: 16,
+    paddingLeft: 20,
+    minHeight: 140,
+    justifyContent: 'space-between',
+  },
+  moduleRedLine: {
+    position: 'absolute',
+    left: 10, top: 0, bottom: 0,
+    width: 2, backgroundColor: 'rgba(224, 86, 91, 0.4)',
+  },
+  moduleHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: 8,
+  },
+  moduleBadge: {
+    fontFamily: 'Outfit_900Black', fontSize: 9, color: '#999',
+  },
+  moduleTitle: {
+    fontFamily: 'Outfit_900Black', fontSize: 16, color: '#1b263b',
+    lineHeight: 20,
+  },
+  moduleTutor: {
+    fontFamily: 'Outfit_700Bold', fontSize: 10, color: '#666',
+    marginTop: 4, marginBottom: 12,
+  },
+  progressContainer: {
+    marginTop: 'auto',
+  },
+  progressTrack: {
+    height: 6, backgroundColor: '#f5f3dc',
+    borderWidth: 1, borderColor: '#1b263b',
+    borderRadius: 4, overflow: 'hidden',
+    marginBottom: 4,
+  },
+  progressFill: {
+    height: '100%',
+  },
+  progressText: {
+    fontFamily: 'Outfit_900Black', fontSize: 9, color: '#1b263b', textAlign: 'right',
+  },
 
-  // ── Quick Actions ──────────────────────────────────────────
-  qaGrid: { gap: SPACING.sm },
-  qaRow:  { flexDirection: 'row', gap: SPACING.sm },
-  qaCard: {
-    flex: 1,
-    minHeight: 80,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
+  // Score Card
+  scoreCard: { borderRadius: 24 },
+  scoreCardInner: {
+    backgroundColor: '#fcfbf7',
+    padding: 24,
   },
-  qaIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: RADIUS.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
+  scoreHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    borderBottomWidth: 2, borderBottomColor: '#1b263b', paddingBottom: 12, marginBottom: 16,
   },
-  qaLabel: {
-    flex: 1,
-    fontSize: TYPOGRAPHY.sm,
-    fontFamily: TYPOGRAPHY.fontBold,
-    lineHeight: TYPOGRAPHY.sm * 1.4,
+  scoreTitle: { fontFamily: 'Outfit_900Black', fontSize: 14, color: '#1b263b' },
+  scoreDate: { fontFamily: 'Outfit_900Black', fontSize: 10, color: '#999' },
+  
+  scoreMain: {
+    flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 24,
+  },
+  scoreBig: {
+    fontFamily: 'Outfit_900Black', fontSize: 64, color: '#c92a2a', lineHeight: 70,
+  },
+  stampBox: {
+    borderWidth: 3, borderColor: '#c92a2a',
+    borderRadius: 30, width: 60, height: 60,
+    alignItems: 'center', justifyContent: 'center',
+    transform: [{ rotate: '-12deg' }],
+  },
+  stampText: {
+    fontFamily: 'Outfit_900Black', fontSize: 24, color: '#c92a2a',
   },
 
-  // ── Band Card ──────────────────────────────────────────
-  bandCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS['2xl'],
-    padding: SPACING.xl,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    ...SHADOWS.sm,
+  scoreList: {
+    gap: 12,
   },
-  overallBand:    { alignItems: 'center', marginBottom: SPACING.lg },
-  overallLabel:   { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontRegular, color: COLORS.textSecondary },
-  overallScore:   { fontSize: TYPOGRAPHY['5xl'], fontFamily: TYPOGRAPHY.fontBlack, color: COLORS.primary, lineHeight: 60 },
-  overallBadge:   { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEF3C7', paddingHorizontal: SPACING.md, paddingVertical: 4, borderRadius: RADIUS.full },
-  overallBadgeText: { fontSize: TYPOGRAPHY.xs, fontFamily: TYPOGRAPHY.fontBold, color: '#92400E' },
+  scoreItem: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#fefefe', borderWidth: 2, borderColor: '#1b263b',
+    paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12,
+  },
+  scoreItemLabel: { fontFamily: 'Outfit_900Black', fontSize: 14, color: '#1b263b' },
+  scoreItemVal: { fontFamily: 'Outfit_900Black', fontSize: 18 },
 
-  bandRow:        { flexDirection: 'row', justifyContent: 'space-around' },
-  bandCircleWrap: { alignItems: 'center', gap: SPACING.sm },
-  bandCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    borderWidth: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
+  // Admin Btn
+  adminBtnContainer: {
+    marginHorizontal: 20, marginBottom: 20,
   },
-  bandScore: { fontSize: TYPOGRAPHY.md, fontFamily: TYPOGRAPHY.fontBlack },
-  bandLabel: { fontSize: TYPOGRAPHY.xs, fontFamily: TYPOGRAPHY.fontRegular, color: COLORS.textSecondary },
-
-  // ── Skills ─────────────────────────────────────────────
-  skillsCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS['2xl'],
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    overflow: 'hidden',
-    ...SHADOWS.sm,
+  adminBtn: {
+    backgroundColor: '#ffd54f',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 16,
   },
-  skillRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.base,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
-    gap: SPACING.md,
+  adminBtnText: {
+    fontFamily: 'Outfit_900Black', fontSize: 14, color: '#1b263b',
   },
-  skillIcon:     { width: 44, height: 44, borderRadius: RADIUS.lg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  skillInfo:     { flex: 1 },
-  skillLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.sm },
-  skillLabel:    { fontSize: TYPOGRAPHY.base, fontFamily: TYPOGRAPHY.fontSemiBold, color: COLORS.textPrimary },
-  skillScore:    { fontSize: TYPOGRAPHY.base, fontFamily: TYPOGRAPHY.fontBold },
-  progressTrack: { height: 6, backgroundColor: COLORS.gray100, borderRadius: RADIUS.full, overflow: 'hidden' },
-  progressFill:  { height: '100%', borderRadius: RADIUS.full },
-
-  // ── AI Banner ──────────────────────────────────────────
-  aiBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: RADIUS['2xl'],
-    padding: SPACING.base,
-    borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
-  },
-  aiBannerTitle: { fontSize: TYPOGRAPHY.base, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary },
-  aiBannerSub:   { fontSize: TYPOGRAPHY.xs, fontFamily: TYPOGRAPHY.fontRegular, color: COLORS.textSecondary, marginTop: 2 },
-  aiBannerBtn: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-  },
-  aiBannerBtnText: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textInverse },
-
-  // ── Admin ──────────────────────────────────────────────
-  adminChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: SPACING.base,
-    marginBottom: SPACING.xl,
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.base,
-    gap: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
-  },
-  adminChipText: { flex: 1, fontSize: TYPOGRAPHY.base, fontFamily: TYPOGRAPHY.fontSemiBold, color: COLORS.accent },
 });
 
 export default HomeScreen;

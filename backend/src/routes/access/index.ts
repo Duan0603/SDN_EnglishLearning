@@ -30,4 +30,5 @@ accessRouter.use(authentication);
 accessRouter.post('/logout', asyncHandler(AccessController.logout));
 accessRouter.get('/profile', asyncHandler(AccessController.getProfile));
 accessRouter.patch('/profile', asyncHandler(AccessController.updateProfile));
+accessRouter.post('/upload-avatar', asyncHandler(AccessController.uploadAvatar));
 

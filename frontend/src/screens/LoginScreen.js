@@ -1,9 +1,3 @@
-// ============================================================
-// LoginScreen - Mobile First, Full Screen
-// NO web layouts, NO dual columns, NO desktop cards
-// Design: Duolingo / ELSA Speak inspired
-// ============================================================
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -14,25 +8,32 @@ import {
   Platform,
   TouchableOpacity,
   StatusBar,
-  Image,
+  TextInput,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 
-import { AppTextInput, AppButton } from '../shared/components';
-import AppIcon from '../shared/icons/AppIcon';
 import useAuthStore from '../store/useAuthStore';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const LoginScreen = ({ route, navigation }) => {
-  const [email, setEmail]       = useState(route?.params?.prefillEmail || '');
-  const [password, setPassword] = useState('');
-  const [touched, setTouched]   = useState({ email: !!route?.params?.prefillEmail, password: false });
+// Brutalist shadow wrapper specifically for mobile
+const BrutalistShadow = ({ children, style, offset = 4 }) => (
+  <View style={[style, { position: 'relative' }]}>
+    <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#1b263b', borderRadius: style.borderRadius || 0, top: offset, left: offset }]} />
+    <View style={{ backgroundColor: style.backgroundColor || '#fff', borderWidth: 2, borderColor: '#1b263b', borderRadius: style.borderRadius || 0, overflow: 'hidden' }}>
+      {children}
+    </View>
+  </View>
+);
 
+const LoginScreen = ({ route, navigation }) => {
+  const [email, setEmail] = useState(route?.params?.prefillEmail || '');
+  const [password, setPassword] = useState('');
+  
   const { login, googleLogin, clearError, isLoading, error } = useAuthStore();
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
@@ -44,28 +45,19 @@ const LoginScreen = ({ route, navigation }) => {
     if (response?.type === 'success') {
       googleLogin(response.params.id_token);
     } else if (response?.type === 'error' || response?.type === 'dismiss') {
-      // Clear any leftover error so it doesn't confuse email/password login
       clearError?.();
     }
   }, [response]);
 
-  // ── Validation ──────────────────────────────────────────
-  const isEmailValid   = email.includes('@') ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) : email.trim().length >= 3;
-  const isPasswordValid = password.length >= 6;
-
-  const emailError    = touched.email && !isEmailValid ? 'Email hoặc tên người dùng không hợp lệ' : '';
-  const passwordError = touched.password && !isPasswordValid ? 'Mật khẩu phải có ít nhất 6 ký tự' : '';
-
   const handleLogin = () => {
-    clearError?.();                          // xóa error cũ trước khi thử lại
-    setTouched({ email: true, password: true });
-    if (!isEmailValid || !isPasswordValid) return;
+    clearError?.();
+    if (!email.trim() || !password.trim()) return;
     login(email.trim(), password);
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
+      <StatusBar barStyle="dark-content" backgroundColor="#f5f3dc" />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -77,105 +69,107 @@ const LoginScreen = ({ route, navigation }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Logo & Branding ─────────────────────────── */}
-          <View style={styles.logoSection}>
-            <View style={styles.logoContainer}>
-              <Svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-                <Path d="M12 2L2 7l10 5 10-5-10-5z" fill={COLORS.primary} />
-                <Path d="M6 12.5V17c0 1.66 2.69 3 6 3s6-1.34 6-3v-4.5l-6 3-6-3z" fill={COLORS.accent} />
-              </Svg>
+          {/* Memo Header */}
+          <View style={styles.headerSection}>
+            <Text style={styles.headerBadge}>EXAM PREPARATION PORTAL</Text>
+            <Text style={styles.headerTitle}>Practice IELTS inside</Text>
+            <Text style={styles.headerSubtitle}>your digital workspace</Text>
+          </View>
+
+          {/* Main Brutalist Card */}
+          <BrutalistShadow style={styles.card} offset={6}>
+            <View style={styles.cardInner}>
+              
+              <View style={styles.cardHeader}>
+                <View style={styles.logoBoxContainer}>
+                  <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#1b263b', borderRadius: 12, top: 2, left: 2 }]} />
+                  <View style={styles.logoBox}>
+                    <Text style={styles.logoText}>A</Text>
+                  </View>
+                </View>
+                <View style={styles.titleContainer}>
+                  <Text style={styles.cardTitle}>Open your workspace</Text>
+                  <Text style={styles.cardSubtitle}>AI-POWERED EXAM DASHBOARD</Text>
+                </View>
+              </View>
+
+              {!!error && (
+                <View style={styles.errorBannerContainer}>
+                  <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#1b263b', borderRadius: 12, top: 2, left: 2 }]} />
+                  <View style={styles.errorBanner}>
+                    <Text style={styles.errorText}>⚠ {error}</Text>
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>TÊN TÀI KHOẢN HOẶC EMAIL</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. student123"
+                  placeholderTextColor="#999"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>MẬT KHẨU (PASSWORD)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  placeholderTextColor="#999"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
+              </View>
+
+              <TouchableOpacity 
+                activeOpacity={0.8} 
+                onPress={handleLogin}
+                disabled={isLoading}
+                style={styles.loginBtnContainer}
+              >
+                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#1b263b', borderRadius: 12, top: 3, left: 3 }]} />
+                <View style={styles.loginBtn}>
+                  {isLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.loginBtnText}>ĐĂNG NHẬP HỆ THỐNG ✉</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <TouchableOpacity 
+                activeOpacity={0.8} 
+                onPress={() => promptAsync()}
+                disabled={!request || isLoading}
+                style={styles.googleBtnContainer}
+              >
+                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#1b263b', borderRadius: 12, top: 2, left: 2 }]} />
+                <View style={styles.googleBtn}>
+                  <Ionicons name="logo-google" size={18} color="#1b263b" />
+                  <Text style={styles.googleBtnText}>Đăng nhập bằng Google</Text>
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Chưa có tài khoản? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+                  <Text style={styles.footerLink}>Đăng ký ngay</Text>
+                </TouchableOpacity>
+              </View>
+
             </View>
-            <Text style={styles.appName}>Apex IELTS</Text>
-            <Text style={styles.appTagline}>Master IELTS with AI</Text>
-          </View>
-
-          {/* ── Heading ─────────────────────────────────── */}
-          <View style={styles.headingSection}>
-            <Text style={styles.heading}>Welcome Back 👋</Text>
-            <Text style={styles.subheading}>
-              Đăng nhập để tiếp tục hành trình chinh phục IELTS của bạn
-            </Text>
-          </View>
-
-          {/* ── Error Banner ─────────────────────────────── */}
-          {!!error && (
-            <View style={styles.errorBanner}>
-              <AppIcon name="error-outline" size={16} color={COLORS.error} />
-              <Text style={styles.errorBannerText}>{error}</Text>
-            </View>
-          )}
-
-          {/* ── Form ────────────────────────────────────── */}
-          <View style={styles.form}>
-            <AppTextInput
-              label="Email hoặc tên người dùng"
-              placeholder="Nhập email hoặc tên người dùng"
-              value={email}
-              onChangeText={setEmail}
-              onBlur={() => setTouched(t => ({ ...t, email: true }))}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              leftIconName="email"
-              touched={touched.email}
-              error={emailError}
-            />
-
-            <AppTextInput
-              label="Mật khẩu"
-              placeholder="Nhập mật khẩu của bạn"
-              value={password}
-              onChangeText={setPassword}
-              onBlur={() => setTouched(t => ({ ...t, password: true }))}
-              leftIconName="password"
-              isPassword
-              touched={touched.password}
-              error={passwordError}
-            />
-
-            <TouchableOpacity
-              style={styles.forgotPassword}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              onPress={() => navigation.navigate('ForgotPassword')}
-            >
-              <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* ── Sign In Button ───────────────────────────── */}
-          <AppButton
-            title="Đăng nhập"
-            onPress={handleLogin}
-            loading={isLoading}
-            disabled={isLoading}
-            style={styles.loginBtn}
-          />
-
-          {/* ── Divider ──────────────────────────────────── */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>hoặc</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* ── Social Logins ────────────────────────────── */}
-          <TouchableOpacity
-            style={styles.socialBtn}
-            onPress={() => promptAsync()}
-            disabled={!request || isLoading}
-            activeOpacity={0.8}
-          >
-            <AppIcon name="google" size={22} color="#DB4437" />
-            <Text style={styles.socialBtnText}>Tiếp tục với Google</Text>
-          </TouchableOpacity>
-
-          {/* ── Sign Up Link ─────────────────────────────── */}
-          <View style={styles.signupRow}>
-            <Text style={styles.signupText}>Chưa có tài khoản? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.signupLink}>Đăng ký ngay</Text>
-            </TouchableOpacity>
-          </View>
+          </BrutalistShadow>
 
         </ScrollView>
       </KeyboardAvoidingView>
@@ -184,152 +178,193 @@ const LoginScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.surface },
+  safe: { flex: 1, backgroundColor: '#f5f3dc' },
   flex: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING['2xl'],
-    paddingBottom: SPACING['3xl'],
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 40,
   },
-
-  // ── Logo ───────────────────────────────────────────────
-  logoSection: {
-    alignItems: 'center',
-    marginBottom: SPACING['2xl'],
+  headerSection: {
+    marginBottom: 30,
+    alignItems: 'flex-start',
   },
-  logoContainer: {
-    width: 72,
-    height: 72,
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: RADIUS['2xl'],
+  headerBadge: {
+    backgroundColor: '#e0f2fe',
+    color: '#4682b4',
     borderWidth: 1.5,
-    borderColor: COLORS.primaryBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
+    borderColor: '#1b263b',
+    fontFamily: 'Outfit_900Black',
+    fontSize: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 12,
   },
-  appName: {
-    fontSize: TYPOGRAPHY['2xl'],
-    fontFamily: TYPOGRAPHY.fontBlack,
-    color: COLORS.textPrimary,
-    letterSpacing: -0.5,
+  headerTitle: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 32,
+    color: '#1b263b',
   },
-  appTagline: {
-    fontSize: TYPOGRAPHY.sm,
-    fontFamily: TYPOGRAPHY.fontRegular,
-    color: COLORS.textTertiary,
-    marginTop: 4,
+  headerSubtitle: {
+    fontFamily: 'Outfit_700Bold', // Fallback for cursive
+    fontSize: 32,
+    color: '#c92a2a',
   },
-
-  // ── Heading ────────────────────────────────────────────
-  headingSection: {
-    marginBottom: SPACING.xl,
+  card: {
+    backgroundColor: '#fcfbf7',
+    borderRadius: 24,
   },
-  heading: {
-    fontSize: TYPOGRAPHY['3xl'],
-    fontFamily: TYPOGRAPHY.fontBlack,
-    color: COLORS.textPrimary,
-    letterSpacing: -0.5,
-    marginBottom: SPACING.sm,
+  cardInner: {
+    padding: 24,
   },
-  subheading: {
-    fontSize: TYPOGRAPHY.base,
-    fontFamily: TYPOGRAPHY.fontRegular,
-    color: COLORS.textSecondary,
-    lineHeight: TYPOGRAPHY.base * TYPOGRAPHY.normal,
-  },
-
-  // ── Error ──────────────────────────────────────────────
-  errorBanner: {
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.errorBg,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.base,
-    gap: SPACING.sm,
+    marginBottom: 24,
   },
-  errorBannerText: {
+  logoBoxContainer: {
+    width: 44,
+    height: 44,
+    marginRight: 16,
+  },
+  logoBox: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#c92a2a',
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoText: {
+    color: '#fff',
+    fontFamily: 'Outfit_900Black',
+    fontSize: 22,
+  },
+  titleContainer: {
     flex: 1,
-    fontSize: TYPOGRAPHY.sm,
-    fontFamily: TYPOGRAPHY.fontMedium,
-    color: COLORS.error,
   },
-
-  // ── Form ───────────────────────────────────────────────
-  form: {
-    marginBottom: SPACING.md,
+  cardTitle: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 20,
+    color: '#1b263b',
+    marginBottom: 4,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginTop: -SPACING.sm,
-    marginBottom: SPACING.base,
+  cardSubtitle: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 10,
+    color: 'rgba(27, 38, 59, 0.7)',
+    letterSpacing: 1,
   },
-  forgotPasswordText: {
-    fontSize: TYPOGRAPHY.sm,
-    fontFamily: TYPOGRAPHY.fontSemiBold,
-    color: COLORS.primary,
+  errorBannerContainer: {
+    marginBottom: 20,
   },
-
-  // ── Buttons ────────────────────────────────────────────
+  errorBanner: {
+    backgroundColor: '#ffe3e3',
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  errorText: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 12,
+    color: '#c92a2a',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 10,
+    color: 'rgba(27, 38, 59, 0.7)',
+    marginBottom: 6,
+    marginLeft: 4,
+  },
+  input: {
+    backgroundColor: '#fefefe',
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 14,
+    color: '#1b263b',
+  },
+  loginBtnContainer: {
+    marginTop: 10,
+    marginBottom: 24,
+  },
   loginBtn: {
-    marginBottom: SPACING.lg,
+    backgroundColor: '#c92a2a',
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
   },
-
-  // ── Divider ────────────────────────────────────────────
+  loginBtnText: {
+    color: '#fff',
+    fontFamily: 'Outfit_900Black',
+    fontSize: 14,
+  },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.base,
+    marginBottom: 24,
+    overflow: 'hidden',
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.border,
+    borderTopWidth: 2,
+    borderColor: 'rgba(27, 38, 59, 0.2)',
+    borderStyle: 'dashed',
   },
   dividerText: {
-    marginHorizontal: SPACING.md,
-    fontSize: TYPOGRAPHY.sm,
-    fontFamily: TYPOGRAPHY.fontRegular,
-    color: COLORS.textTertiary,
+    marginHorizontal: 12,
+    fontFamily: 'Outfit_900Black',
+    fontSize: 10,
+    color: '#999',
   },
-
-  // ── Social ─────────────────────────────────────────────
-  socialBtn: {
+  googleBtnContainer: {
+    marginBottom: 24,
+  },
+  googleBtn: {
+    backgroundColor: '#fcfbf7',
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    borderRadius: 12,
+    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 56,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.gray50,
-    marginBottom: SPACING.md,
-    gap: SPACING.md,
   },
-  socialBtnText: {
-    fontSize: TYPOGRAPHY.base,
-    fontFamily: TYPOGRAPHY.fontSemiBold,
-    color: COLORS.textPrimary,
+  googleBtnText: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 13,
+    color: '#1b263b',
+    marginLeft: 8,
   },
-
-  // ── Sign Up ────────────────────────────────────────────
-  signupRow: {
+  footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: SPACING.lg,
   },
-  signupText: {
-    fontSize: TYPOGRAPHY.base,
-    fontFamily: TYPOGRAPHY.fontRegular,
-    color: COLORS.textSecondary,
+  footerText: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 13,
+    color: '#666',
   },
-  signupLink: {
-    fontSize: TYPOGRAPHY.base,
-    fontFamily: TYPOGRAPHY.fontBold,
-    color: COLORS.primary,
+  footerLink: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 13,
+    color: '#c92a2a',
+    textDecorationLine: 'underline',
   },
 });
 
