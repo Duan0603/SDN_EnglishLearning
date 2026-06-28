@@ -1,0 +1,22 @@
+{
+  "name": "sdn-english-learning-root",
+  "version": "1.0.0",
+  "description": "Root package runner for SDN English Learning App",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run start --prefix frontend",
+    "dev:frontend-web": "npm run web --prefix frontend",
+    "dev:web": "npm run dev --prefix web",
+    "dev:landing": "npm run dev --prefix landing",
+    "db:up": "docker compose up -d mongodb redis mongo-express",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run migrate --prefix backend",
+    "db:seed": "npm run seed --prefix backend",
+    "install:all": "npm install --prefix backend && npm install --prefix frontend && npm install --prefix web && npm install --prefix landing",
+    "dev": "concurrently --kill-others \"npm run db:up\" \"npm run dev:backend\" \"npm run dev:web\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -7,6 +7,7 @@ export interface User {
   email: string
   role: 'STUDENT' | 'MENTOR' | 'ADMIN'
   status: 'active' | 'inactive' | 'pending'
+  avatar?: string
 }
 
 interface AuthState {

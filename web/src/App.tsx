@@ -4,6 +4,20 @@ import { useAppDispatch, useAppSelector } from './store/store'
 import { initializeAuth } from './features/auth/authSlice'
 import LoginScreen from './features/auth/LoginScreen'
 import AdminDashboard from './features/admin/AdminDashboard'
+import HomeNewTests from './features/landing/HomeNewTests'
+import PracticeWorkspace from './features/practice/PracticeWorkspace'
+import ProfilePage from './features/profile/ProfilePage'
+
+// Protected Route Guard
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAppSelector((state) => state.auth)
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  return <>{children}</>
+}
 
 // Strict Admin Role Guard
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -46,73 +60,6 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>
 }
 
-// Modern Interactive Landing Page (HomePage)
-const HomePage = () => {
-  const { isAuthenticated, user } = useAppSelector((state) => state.auth)
-
-  return (
-    <div className="min-h-screen bg-[#121212] text-gray-200 flex items-center justify-center relative overflow-hidden font-sans">
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-[#00cc99]/5 blur-3xl" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-[#005C42]/10 blur-3xl" />
-
-      <div className="card max-w-lg w-full mx-4 p-8 bg-[#1a1a1a]/90 border border-[#2d2d2d] rounded-[32px] text-center shadow-2xl relative z-10 space-y-6">
-        <div className="w-20 h-20 bg-gradient-to-tr from-[#00CC99] to-[#005C42] rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-[#00cc99]/15">
-          <span className="text-white text-3xl font-black">A</span>
-        </div>
-        
-        <div>
-          <h1 className="text-3xl font-black text-white tracking-tight">Apex IELTS</h1>
-          <p className="text-xs text-gray-500 mt-1.5">AI-powered IELTS Learning Platform</p>
-        </div>
-
-        <div className="flex gap-2.5 justify-center py-2">
-          <span className="bg-[#005C42]/30 text-[#00cc99] text-[10px] font-bold border border-[#00cc99]/20 px-3 py-1 rounded-full uppercase">
-            ✓ Backend Live
-          </span>
-          <span className="bg-indigo-500/10 text-indigo-400 text-[10px] font-bold border border-indigo-500/20 px-3 py-1 rounded-full uppercase">
-            ✓ Vite + React + TS
-          </span>
-        </div>
-
-        <div className="pt-4 space-y-3">
-          {isAuthenticated && user ? (
-            <div className="space-y-4">
-              <div className="bg-[#252525] border border-[#3d3d3d] rounded-2xl p-4 text-left">
-                <p className="text-xs text-gray-500">Đăng nhập với vai trò:</p>
-                <p className="text-sm font-bold text-white mt-1">{user.fullName}</p>
-                <p className="text-xs text-[#00cc99] font-mono mt-0.5">Role: {user.role}</p>
-              </div>
-
-              <div className="flex gap-3">
-                {user.role === 'ADMIN' && (
-                  <Link
-                    to="/admin"
-                    className="flex-1 bg-[#00cc99] text-[#121212] font-black text-xs py-3.5 rounded-2xl text-center hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-[#00cc99]/10"
-                  >
-                    Vào Trang Admin 👑
-                  </Link>
-                )}
-                <Link
-                  to="/login"
-                  className="flex-1 bg-[#252525] hover:bg-[#323232] text-white font-bold text-xs py-3.5 rounded-2xl text-center active:scale-[0.98] transition-all border border-[#3d3d3d]"
-                >
-                  Đổi Tài Khoản
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <Link
-              to="/login"
-              className="block w-full bg-[#00cc99] text-[#121212] font-black text-sm py-4 rounded-2xl hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-[#00cc99]/15"
-            >
-              Đăng Nhập Hệ Thống
-            </Link>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function App() {
   const dispatch = useAppDispatch()
@@ -124,7 +71,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<HomeNewTests />} />
         <Route path="/login" element={<LoginScreen />} />
         <Route
           path="/admin"
@@ -132,6 +79,22 @@ function App() {
             <AdminRoute>
               <AdminDashboard />
             </AdminRoute>
+          }
+        />
+        <Route
+          path="/practice"
+          element={
+            <ProtectedRoute>
+              <PracticeWorkspace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
           }
         />
         {/* Fallback routing */}

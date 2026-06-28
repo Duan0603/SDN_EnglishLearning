@@ -75,7 +75,7 @@ export default function AdminDashboard() {
     username: '',
     email: '',
     password: '',
-    role: 'STUDENT' as const,
+    role: 'STUDENT' as 'STUDENT' | 'MENTOR' | 'ADMIN',
     birthday: '',
     phone: '',
     identityNumber: '',
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
     fullName: '',
     username: '',
     email: '',
-    role: 'STUDENT' as const,
+    role: 'STUDENT' as 'STUDENT' | 'MENTOR' | 'ADMIN',
     birthday: '',
     phone: '',
     identityNumber: '',
@@ -312,7 +312,7 @@ export default function AdminDashboard() {
   const handleBulkImportSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const parsed = JSON.parse(bulkJsonPayload)
+      JSON.parse(bulkJsonPayload)
       alert('Import thành công dữ liệu đề thi JSON!')
       setShowBulkImportModal(false)
       setBulkJsonPayload('')
@@ -608,6 +608,13 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
+                    {usersError && (
+                      <tr>
+                        <td colSpan={6} className="p-4 text-center text-xs bg-[#c92a2a]/10 text-[#c92a2a] border border-[#c92a2a]/20 font-bold">
+                          ⚠️ {usersError}
+                        </td>
+                      </tr>
+                    )}
                     {usersLoading ? (
                       <tr>
                         <td colSpan={6} className="p-8 text-center text-gray-500">

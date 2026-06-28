@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Use Case Diagram & Sequence Diagrams - SDN English Learning</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-card: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --border-color: #e2e8f0;
+      --accent: #00cc99; /* Emerald Green */
+      --accent-dark: #005c42; /* Dark Green */
+      --accent-light: #e6fcf5;
+      --accent-hover: #00b386;
+      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--text-primary);
+    }
+
+    .brand span {
+      background-color: var(--accent-light);
+      color: var(--accent-dark);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background-color: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .btn-primary {
+      background-color: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .main-container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 500px;
+      height: calc(100vh - 69px);
+      position: relative;
+    }
+
+    @media (max-width: 1200px) {
+      .main-container {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      .sidebar {
+        border-left: none !important;
+        border-top: 1px solid var(--border-color);
+        height: auto !important;
+      }
+    }
+
+    .canvas-container {
+      position: relative;
+      background-color: #ffffff;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 2rem;
+    }
+
+    .canvas-hint {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      background-color: var(--bg-primary);
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .mermaid-wrapper {
+      width: 100%;
+      max-width: 900px;
+      border: 1px dashed var(--border-color);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      background: #fafafa;
+    }
+
+    .sidebar {
+      background-color: var(--bg-card);
+      border-left: 1px solid var(--border-color);
+      padding: 1.5rem;
+      overflow-y: auto;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .tab-container {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 2px solid var(--accent-light);
+      padding-bottom: 0.75rem;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 0.6rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: 0.875rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .tab-btn:hover {
+      background: #f1f5f9;
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    /* Use Case details styling */
+    .detail-card {
+      background: #ffffff;
+      border-radius: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--text-secondary);
+      padding: 3rem 1.5rem;
+      border: 2px dashed var(--border-color);
+      border-radius: 0.75rem;
+      background: var(--bg-primary);
+      height: 100%;
+    }
+
+    .empty-state svg {
+      color: #94a3b8;
+      margin-bottom: 1rem;
+    }
+
+    .field-group {
+      margin-bottom: 0.5rem;
+    }
+
+    .field-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+    }
+
+    .field-value {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--text-primary);
+    }
+
+    .card-callout {
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      margin-top: 0.25rem;
+    }
+
+    .card-callout.pre {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      color: #1e40af;
+    }
+
+    .card-callout.post {
+      background-color: #f0fdf4;
+      border-left: 4px solid #22c55e;
+      color: #166534;
+    }
+
+    .card-callout.exception {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      color: #991b1b;
+    }
+
+    .step-list {
+      padding-left: 1.25rem;
+      margin-top: 0.25rem;
+    }
+
+    .step-list li {
+      margin-bottom: 0.4rem;
+      font-size: 0.925rem;
+      line-height: 1.45;
+    }
+
+    .mermaid-seq-wrapper {
+      background: #fafafa;
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      overflow-x: auto;
+      margin-top: 0.25rem;
+      min-height: 150px;
+    }
+
+    /* List of Use Cases Quick Menu */
+    .quick-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .quick-item {
+      padding: 0.6rem 0.8rem;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-align: left;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .quick-item:hover, .quick-item.active {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--accent-dark);
+    }
+
+    .quick-item .badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    .badge.student { background: #dbeafe; color: #1e40af; }
+    .badge.mentor { background: #fef3c7; color: #92400e; }
+    .badge.admin { background: #f3e8ff; color: #6b21a8; }
+    .badge.multi { background: #e2e8f0; color: #334155; }
+
+    /* Custom styles for Mermaid rendered SVG */
+    .node rect, .node polygon, .node circle, .node ellipse {
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .node:hover rect, .node:hover ellipse, .node:hover polygon {
+      fill: var(--accent-light) !important;
+      stroke: var(--accent) !important;
+      filter: drop-shadow(0 4px 6px rgba(0, 204, 153, 0.15));
+    }
+  </style>
+
+  <!-- Include Mermaid.js -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent);">
+        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+        <path d="M12 6v6l4 2"></path>
+      </svg>
+      <h1>Use Case Diagrams & Specifications</h1>
+      <span>IELTS Core Platform</span>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="window.print()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+        Print / Export PDF
+      </button>
+      <button class="btn btn-primary" id="btnExportSVG">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Export SVG
+      </button>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <!-- Diagram Canvas Area -->
+    <div class="canvas-container" id="canvasContainer">
+      <div class="canvas-hint">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        Tip: Click directly on a Use Case oval node to view its detailed specifications and sequence diagram.
+      </div>
+      
+      <div class="mermaid-wrapper">
+        <div class="mermaid" id="mermaidDiagram">
+          graph TD
+            %% Styling Configuration
+            classDef actor fill:#f8fafc,stroke:#475569,stroke-width:2px
+            classDef usecase fill:#ffffff,stroke:#00cc99,stroke-width:1.8px
+
+            %% Actors
+            Student["Student"]:::actor
+            Mentor["Mentor"]:::actor
+            Admin["Admin"]:::actor
+
+            %% System Boundary
+            subgraph System ["IELTS ONLINE EXAMINATION & MENTOR BOOKING SYSTEM - SDN"]
+                UC01(["UC-01: Register & Login"]):::usecase
+                UC02(["UC-02: Take IELTS Practice Test - Reading and Listening"]):::usecase
+                UC03(["UC-03: Practice Speaking with AI"]):::usecase
+                UC04(["UC-04: Book Mentor Session"]):::usecase
+                UC05(["UC-05: Update Availability"]):::usecase
+                UC06(["UC-06: Approve Mentor Profile"]):::usecase
+                UC07(["UC-07: Manage Exams - CRUD"]):::usecase
+                UC08(["UC-08: User Management"]):::usecase
+                UC09(["UC-09: View Results & Feedback"]):::usecase
+            end
+
+            %% Connections
+            Student --- UC01
+            Student --- UC02
+            Student --- UC03
+            Student --- UC04
+            Student --- UC09
+
+            Mentor --- UC01
+            Mentor --- UC05
+            Mentor --- UC09
+
+            Admin --- UC01
+            Admin --- UC06
+            Admin --- UC07
+            Admin --- UC08
+
+            %% Interactive Click Events
+            click UC01 call selectUseCase()
+            click UC02 call selectUseCase()
+            click UC03 call selectUseCase()
+            click UC04 call selectUseCase()
+            click UC05 call selectUseCase()
+            click UC06 call selectUseCase()
+            click UC07 call selectUseCase()
+            click UC08 call selectUseCase()
+            click UC09 call selectUseCase()
+        </div>
+      </div>
+      
+      <!-- Quick Selector below diagram -->
+      <div style="width: 100%; max-width: 900px; margin-top: 2rem;">
+        <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-secondary)">Quick Use Case Menu:</h3>
+        <div class="quick-list" id="quickList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Panel for Use Case Details -->
+    <div class="sidebar" id="sidebarPanel">
+      <div class="tab-container">
+        <button class="tab-btn active" id="tabSpec" onclick="switchTab('spec')">Specifications</button>
+        <button class="tab-btn" id="tabRules" onclick="switchTab('rules')">Business Rules</button>
+      </div>
+      
+      <div id="detailsContent" style="height: 100%; overflow-y: auto;">
+        <!-- Specs Tab (Shown by default) -->
+        <div id="specTabView" style="display: block;">
+          <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <p>No Use Case Selected.</p>
+            <p style="font-size: 0.825rem; margin-top: 0.5rem; max-width: 250px;">Click a Use Case node on the diagram or select from the list below to view specifications and sequence diagrams.</p>
+          </div>
+        </div>
+
+        <!-- Business Rules Tab (Hidden by default) -->
+        <div id="rulesTabView" style="display: none;">
+          <div class="business-rules-view" style="display: flex; flex-direction: column; gap: 1rem; padding-bottom: 2rem;">
+            <h3 style="color: var(--accent-dark); font-size: 1.1rem; border-bottom: 2px solid var(--accent-light); padding-bottom: 0.25rem; font-weight: 700;">Platform Business Rules</h3>
+            
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem;">
+              <h4 style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 0.4rem; font-weight: 600;">BR-01: Authentication & Security</h4>
+              <p style="font-size: 0.825rem; color: var(--text-secondary); line-height: 1.4;">
+                • Passwords must be hashed using bcrypt (salt rounds ≥ 10) before MongoDB storage.<br>
+                • Access tokens expire in 15 mins (Redux memory); Refresh tokens expire in 7 days (HttpOnly cookie).<br>
+                • Mentors start as "pending" and are blocked from login/listing until Admin approves them.
+              </p>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem;">
+              <h4 style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 0.4rem; font-weight: 600;">BR-02: IELTS Mock Exams</h4>
+              <p style="font-size: 0.825rem; color: var(--text-secondary); line-height: 1.4;">
+                • IELTS Reading: 3 passages, 40 questions, 60 minutes.<br>
+                • IELTS Listening: 4 sections, 1 audio file, 40 questions, 30 minutes.<br>
+                • Graded automatically based on raw score scale from Band 1.0 (0-9 right answers) to Band 9.0 (39-40 right answers).
+              </p>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem;">
+              <h4 style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 0.4rem; font-weight: 600;">BR-03: AI Speaking Practice</h4>
+              <p style="font-size: 0.825rem; color: var(--text-secondary); line-height: 1.4;">
+                • System must evaluate & grade voice inputs in &lt; 7 seconds from stopping.<br>
+                • Local/Cloudinary audio files are wiped immediately upon successful AI processing.<br>
+                • AI feedback must separately grade Fluency, Lexical, Grammar, and Pronunciation.
+              </p>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem;">
+              <h4 style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 0.4rem; font-weight: 600;">BR-04: Booking & Scheduling</h4>
+              <p style="font-size: 0.825rem; color: var(--text-secondary); line-height: 1.4;">
+                • Concurrency is handled with a Redis lock (10s expiration) on slot IDs to prevent double bookings.<br>
+                • Slots can only start ≥ 1 hour in the future.<br>
+                • Mentors can edit/delete slots only if they remain unbooked (isBooked = false).
+              </p>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem;">
+              <h4 style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 0.4rem; font-weight: 600;">BR-05: Platform Governance</h4>
+              <p style="font-size: 0.825rem; color: var(--text-secondary); line-height: 1.4;">
+                • Unapproved/inactive mentors are hidden from search lists.<br>
+                • Admins cannot edit their own roles, block themselves, or suspend other administrators.<br>
+                • Access is strict: Students view only their own records; Mentors edit only notes for slots they hosted.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching controller
+    window.switchTab = function(tabId) {
+      const tabSpec = document.getElementById('tabSpec');
+      const tabRules = document.getElementById('tabRules');
+      const specView = document.getElementById('specTabView');
+      const rulesView = document.getElementById('rulesTabView');
+      
+      if (tabId === 'spec') {
+        tabSpec.classList.add('active');
+        tabRules.classList.remove('active');
+        specView.style.display = 'block';
+        rulesView.style.display = 'none';
+      } else {
+        tabSpec.classList.remove('active');
+        tabRules.classList.add('active');
+        specView.style.display = 'none';
+        rulesView.style.display = 'block';
+      }
+    };
+
+    // Initialize Mermaid
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: 'loose',
+      theme: 'neutral',
+      flowchart: {
+        htmlLabels: true,
+          // Use Case Specifications Dataset with Sequence Diagrams
+    const useCaseData = {
+      UC01: {
+        id: "UC01",
+        title: "UC-01: Register & Login",
+        actor: "Student, Mentor, Admin",
+        roleClass: "multi",
+        createdBy: "SDN Dev Team",
+        dateCreated: "2026-06-16",
+        secondaryActors: "None",
+        trigger: "User wants to sign up for a new account or log into an existing account.",
+        desc: "Allows users to register a new account (Student/Mentor) or log in to establish an active session.",
+        pre: "PRE-1: User has internet connectivity.<br>PRE-2: Login requires an existing, active account registered in the database.",
+        post: "POST-1: System issues Access Token (Redux state) and Refresh Token (HTTP-Only Cookie).<br>POST-2: User is redirected to their role-specific Dashboard.",
+        flow: [
+          "1.0.1. User (Actor): Clicks Register or Login button on the homepage.",
+          "1.0.2. System (System): Displays the Register/Login forms with corresponding fields.",
+          "1.0.3. User (Actor): Fills in required credentials and clicks submit.",
+          "1.0.4. System (System): Validates formats, checks credentials in DB, and hashes new passwords if registering.",
+          "1.0.5. System (System): Establishes session tokens and redirects user to Dashboard."
+        ],
+        alternativeFlows: [
+          "<strong>1.1: Logout Flow</strong><br>Branches from step 1.0.5. User clicks logout on dashboard. System invalidates JWT tokens in DB, deletes HTTP-Only cookies, and redirects user back to homepage."
+        ],
+        exceptions: [
+          "1.0.E1: Duplicate Registration Info (occurs at 1.0.4; registration fails, system displays duplicate field message, database state remains unchanged).",
+          "1.0.E2: Invalid Credentials (occurs at 1.0.4; login fails, system displays invalid credentials toast; no session established).",
+          "1.0.E3: Account Pending Approval (occurs at 1.0.4; login fails, system displays warning; no session established)."
+        ],
+        priority: "High (Must Have)",
+        frequency: "Very High (Every user session)",
+        rules: "BR-01",
+        otherInfo: "Access Token expires in 15 minutes, Refresh Token expires in 7 days. In case of network failure during submission, state remains unchanged.",
+        assumptions: "User browser supports secure HTTPS protocol and cookie tracking.",
+        sequence: `sequenceDiagram
+  actor User as User
+  participant UI as Frontend (UI)
+  participant Server as Backend Server
+  participant DB as MongoDB (Database)
+  
+  User->>UI: Enter credentials & click Login
+  UI->>Server: POST /api/auth/login { email, password }
+  Server->>DB: Find User by email/username
+  DB-->>Server: Return User record (including bcrypt hash)
+  Server->>Server: Match password using bcrypt.compare()
+  alt Valid
+      Server->>DB: Create/Save KeyToken (session)
+      DB-->>Server: Acknowledge save
+      Server-->>UI: Return Access Token + Set Cookie Refresh Token
+      UI-->>User: Authentication succeeds, redirect to Dashboard
+  else Invalid
+      Server-->>UI: Return 401 Unauthorized
+      UI-->>User: Display "Invalid email or password" toast
+  end`
+      },
+      UC02: {
+        id: "UC02",
+        title: "UC-02: Take IELTS Practice Test",
+        actor: "Student",
+        roleClass: "student",
+        createdBy: "SDN Dev Team",
+        dateCreated: "2026-06-16",
+        secondaryActors: "None",
+        trigger: "Student selects an exam from the test library and clicks start.",
+        desc: "Student takes an IELTS Reading or Listening mock exam under real test conditions with a countdown timer, split-screen UI, and auto-submission on timeout.",
+        pre: "PRE-1: Student is logged in.<br>PRE-2: Selected mock test is published in the database.",
+        post: "POST-1: Student's answers and band scores are saved as a TestResult document (correct counts, Band score, duration).<br>POST-2: Exam status is marked as completed in user profile.",
+        flow: [
+          "2.0.1. Student (Actor): Selects a mock test from the test library and clicks Start.",
+          "2.0.2. System (System): Fetches questions, hides answer key, starts timer, and renders split-screen UI.",
+          "2.0.3. Student (Actor): Inputs answers into the question sheet fields.",
+          "2.0.4. System (System): Saves temporary state to LocalStorage after every field modification.",
+          "2.0.5. Student (Actor): Clicks the submit button.",
+          "2.0.6. System (System): Grades submissions against correct Answer Key, calculates IELTS Band Score, saves TestResult in DB, and returns scoreboards."
+        ],
+        alternativeFlows: [
+          "<strong>2.1: Auto-submit on Timer Expiration</strong><br>Branches off from step 2.0.3. Timer reaches zero. System disables inputs, blocks further editing, and automatically submits answers to Backend (rejoining flow at 2.0.6)."
+        ],
+        exceptions: [
+          "2.0.E1: Connection Lost during Submission (occurs at 2.0.5; system caches submission in LocalStorage, retries automatically; state completed when connection is restored).",
+          "2.0.E2: Page Refresh (F5) (occurs at 2.0.3; frontend restores answers from LocalStorage and continues countdown; no DB state lost)."
+        ],
+        priority: "High (Must Have)",
+        frequency: "High (Multiple times daily per student)",
+        rules: "BR-02",
+        otherInfo: "Explanations and correct options are hidden until submission is registered. In case of systemic crash, student answers are cached in LocalStorage.",
+        assumptions: "Student's device does not auto-delete LocalStorage files during testing.",
+        sequence: `sequenceDiagram
+  actor Student as Student
+  participant UI as Frontend (UI)
+  participant Server as Backend Server
+  participant DB as MongoDB (Database)
+  
+  Student->>UI: Select exam & Start
+  UI->>Server: GET /api/exams/:id
+  Server->>DB: Fetch Exam data (TestSections, Questions)
+  DB-->>Server: Return exam content (Answer Key hidden)
+  Server-->>UI: Render split-screen UI & start countdown
+  loop While testing
+      Student->>UI: Input answers
+      UI->>UI: Save state to LocalStorage (prevent data loss)
+  end
+  Student->>UI: Click "Submit" (or auto-submit on timeout)
+  UI->>Server: POST /api/exams/:id/submit { answers }
+  Server->>DB: Fetch original Answer Key
+  DB-->>Server: Return Answer Key
+  Server->>Server: Grade answers, calculate IELTS Band Score (1.0 - 9.0)
+  Server->>DB: Save TestResult record
+  DB-->>Server: Acknowledge save
+  Server-->>UI: Return scores & answer explanations
+  UI-->>Student: Display test results page`
+      },
+      UC03: {
+        id: "UC03",
+        title: "UC-03: Practice Speaking with AI",
+        actor: "Student",
+        roleClass: "student",
+        createdBy: "SDN Dev Team",
+        dateCreated: "2026-06-16",
+        secondaryActors: "None",
+        trigger: "Student selects a Speaking topic card and clicks start recording.",
+        desc: "Student records response for a selected Speaking Cue Card. Audio is processed, transcribed, and evaluated by Gemini API across 4 official IELTS criteria.",
+        pre: "PRE-1: Student is logged in.<br>PRE-2: Browser microphone access permission is granted.",
+        post: "POST-1: Graded speaking criteria and transcription text are saved in a SpeakingSubmission record.<br>POST-2: Audio temporary files are deleted from the server.",
+        flow: [
+          "3.0.1. Student (Actor): Selects a Speaking Cue Card and clicks Start Recording.",
+          "3.0.2. System (System): Opens audio capture stream.",
+          "3.0.3. Student (Actor): Speaks their response into the microphone.",
+          "3.0.4. System (System): Streams audio buffers to Backend in real-time via Socket.io.",
+          "3.0.5. Student (Actor): Clicks Stop Recording.",
+          "3.0.6. System (System): Sends audio to Speech-to-Text service, requests Gemini API scoring, saves details to DB, and displays scores."
+        ],
+        alternativeFlows: [
+          "<strong>3.1: Duration Limit Exceeded</strong><br>Branches off from step 3.0.3. Recording duration reaches the 2-minute maximum limit. System automatically terminates recording and sends stop signal to Backend (rejoining flow at 3.0.6)."
+        ],
+        exceptions: [
+          "3.0.E1: Microphone Permission Denied (occurs at 3.0.2; System displays warning toast requesting mic permissions, stops flow; no database state change).",
+          "3.0.E2: AI API Timeout (occurs at 3.0.6; request fails; system retries up to 3 times; if failure persists, student is notified and audio cache deleted; database state remains unchanged)."
+        ],
+        priority: "High (Must Have)",
+        frequency: "High (Student practice loops)",
+        rules: "BR-03",
+        otherInfo: "Performance SLA: AI feedback returned in under 7 seconds. Audio cache cleared immediately upon final grading.",
+        assumptions: "Voice inputs are recorded in a relatively low-noise environment for correct speech transcription.",
+        sequence: `sequenceDiagram
+  actor Student as Student
+  participant UI as Frontend (UI)
+  participant Server as Backend Server
+  participant STT as Speech-to-Text Service
+  participant Gemini as Gemini AI API
+  
+  Student->>UI: Click "Start Recording" & speak
+  loop Stream audio data
+      UI->>Server: Send audio chunks via Socket.io
+  end
+  Student->>UI: Click "Stop Recording" (or timeout)
+  UI->>Server: Send stop signal via Socket.io
+  Server->>STT: Request Speech-to-Text conversion (audio buffer)
+  STT-->>Server: Return Transcription text
+  Server->>Gemini: POST Prompt + Transcription
+  Note over Server, Gemini: Graded on Fluency, Lexical, Grammar, Pronunciation
+  Gemini-->>Server: Return JSON assessment details
+  Server->>Server: Save results (SpeakingSubmission)
+  Server-->>UI: Send detailed AI evaluation
+  UI-->>Student: Display score & qualitative feedback (Under 7 seconds)`
+      },
+      UC04: {
+        id: "UC04",
+        title: "UC-04: Book Mentor Session",
+        actor: "Student",
+        roleClass: "student",
+        createdBy: "SDN Dev Team",
+        dateCreated: "2026-06-16",
+        secondaryActors: "Mentor",
+        trigger: "Student selects a vacant hour slot on Mentor calendar and clicks Book Session.",
+        desc: "Student books a 1-on-1 tutoring session. Concurrency is handled via Redis lock to prevent double-booking conflicts.",
+        pre: "PRE-1: Student is logged in.<br>PRE-2: Selected availability slot is vacant (isBooked == false) and in the future.",
+        post: "POST-1: A new Booking entry is created in the database.<br>POST-2: Availability status is updated to booked (isBooked = true).",
+        flow: [
+          "4.0.1. Student (Actor): Opens Mentor availability list and selects a slot, then clicks Book Session.",
+          "4.0.2. System (System): Displays booking details confirmation dialog.",
+          "4.0.3. Student (Actor): Confirms booking slot details.",
+          "4.0.4. System (System): Sets a Redis lock on availabilityId, verifies vacancy, inserts Booking record in DB, marks availability slot as isBooked = true, and releases Redis lock.",
+          "4.0.5. System (System): Renders success page showing Google Meet link and sends confirmation alerts."
+        ],
+        alternativeFlows: [],
+        exceptions: [
+          "4.0.E1: Concurrency Race Condition (occurs at 4.0.4; Redis lock acquisition fails because slot is already being booked; system returns 409 Conflict, cancels booking creation, and rolls back database transaction; student is prompted with error)."
+        ],
+        priority: "High (Must Have)",
+        frequency: "High (Daily platform bookings)",
+        rules: "BR-04",
+        otherInfo: "Redis Lock has a 10-second TTL to avoid locking hung requests. State rollback guaranteed.",
+        assumptions: "Redis cache server operates with low latency response times.",
+        sequence: `sequenceDiagram
+  actor Student as Student
+  participant UI as Frontend (UI)
+  participant Server as Backend Server
+  participant Redis as Redis Cache (Locking)
+  participant DB as MongoDB (Database)
+  
+  Student->>UI: Select slot & Book Session
+  UI->>Server: POST /api/bookings { availabilityId }
+  Server->>Redis: SET availabilityId_lock NX PX 10000 (Lock 10s)
+  alt Lock acquired (First request)
+      Redis-->>Server: OK (Lock acquired)
+      Server->>DB: Check availability status (isBooked == false)
+      DB-->>Server: Valid (Not booked)
+      Server->>DB: Create Booking & Update Availability (isBooked = true)
+      DB-->>Server: Acknowledge save
+      Server->>Redis: DEL availabilityId_lock (Release Lock)
+      Server-->>UI: Return 200 OK
+      UI-->>Student: Show success screen & meeting room url
+  else Lock failed (Concurrent request)
+      Redis-->>Server: null (Locked)
+      Server-->>UI: Return 409 Conflict
+      UI-->>Student: Display Toast "Slot has already been booked!"
+  end`
+      },
+      UC05: {
+        id: "UC05",
+        title: "UC-05: Update Availability",
+        actor: "Mentor",
+        roleClass: "mentor",
+        createdBy: "SDN Dev Team",
+        dateCreated: "2026-06-16",
+        secondaryActors: "None",
+        trigger: "Mentor opens schedule manager and sets availability time frames.",
+        desc: "Mentor adds slot timings and provides video conference room links (Zoom/Google Meet) for students to select.",
+        pre: "PRE-1: Mentor is logged in.<br>PRE-2: Mentor verification status is marked active.",
+        post: "POST-1: New Availability records are created in DB and listed on profile search.",
+        flow: [
+          "5.0.1. Mentor (Actor): Navigates to the Availability section on dashboard.",
+          "5.0.2. System (System): Displays the calendar grid schedule builder interface.",
+          "5.0.3. Mentor (Actor): Enters slot date, start time, end time, meet link, and clicks Add Slot.",
+          "5.0.4. System (System): Validates fields, checks for duplicate overlaps in DB, and saves new slots with isBooked = false.",
+          "5.0.5. System (System): Displays new slot on the calendar grid dashboard."
+        ],
+        alternativeFlows: [
+          "<strong>5.1: Slot Removal Flow</strong><br>Branches off from step 5.0.1. Mentor selects an unbooked slot and clicks Delete. System deletes availability record from database and updates grid (rejoining flow at 5.0.5)."
+        ],
+        exceptions: [
+          "5.0.E1: Time Overlap Detected (occurs at 5.0.4; System blocks creation, prompts overlap warning toast; database state unchanged).",
+          "5.0.E2: Modify Booked Slot (occurs at 5.1; slot is booked [isBooked == true]; system disables delete button and blocks action; database state remains locked)."
+        ],
+        priority: "Medium (Should Have)",
+        frequency: "Weekly (Mentor availability scheduling)",
+        rules: "BR-04",
+        otherInfo: "Meeting URLs must match valid patterns. Overlaps are blocked completely.",
+        assumptions: "Mentor dashboard client timezone aligns with backend server timezone definitions.",
+        sequence: `sequenceDiagram
+  actor Mentor as Mentor
+  participant UI as Mentor Dashboard (UI)
+  participant Server as Backend Server
+  participant DB as MongoDB (Database)
+  
+  Mentor->>UI: Enter slot info & meeting link
+  UI->>Server: POST /api/availabilities { startTime, endTime, meetLink }
+  Server->>DB: Check for schedule overlaps
+  DB-->>Server: Return overlap check results
+  alt No Overlap
+      Server->>DB: Save new Availability slots (isBooked = false)
+      DB-->>Server: Acknowledge save
+      Server-->>UI: Return 201 Created
+      UI-->>Mentor: Display new slots on calendar grid
+  else Schedule overlap
+      Server-->>UI: Return 400 Bad Request
+      UI-->>Mentor: Display "Schedule overlap detected!" error
+  end`
+      },
+      UC06: {
+        id: "UC06",
+        title: "UC-06: Approve Mentor Profile",
+        actor: "Admin",
+        roleClass: "admin",
+        createdBy: "SDN Dev Team",
+        dateCreated: "2026-06-16",
+        secondaryActors: "Mentor",
+        trigger: "Admin views pending Mentor applications on user manager dashboard.",
+        desc: "Admin reviews credentials of new mentors, then approves and activates their account.",
+        pre: "PRE-1: Admin is logged in.<br>PRE-2: Target Mentor registration status is pending in DB.",
+        post: "POST-1: Mentor account status transitions to active (verify = true, status = active) in DB.<br>POST-2: Welcome onboarding email is sent to Mentor.",
+        flow: [
+          "6.0.1. Admin (Actor): Navigates to User tab, filtering by MENTOR and status PENDING.",
+          "6.0.2. System (System): Displays list of pending applications, showing attachments.",
+          "6.0.3. Admin (Actor): Reviews attachments, qualifications, and clicks Approve.",
+          "6.0.4. System (System): Updates mentor status to active (verify = true, status = active) and sends welcome notification.",
+          "6.0.5. System (System): Hides the approved mentor from pending applications dashboard list."
+        ],
+        alternativeFlows: [
+          "<strong>6.1: Reject Profile</strong><br>Branches off from step 6.0.3. Admin clicks Reject, entering rejection comment. System updates mentor status to inactive, verify = false, sends rejection email notice (rejoining flow at 6.0.5)."
+        ],
+        exceptions: [
+          "6.0.E1: Document Loading failure (occurs at 6.0.2; system fails to pull files from Cloudinary storage; admin is prompted to retry; DB state remains pending)."
+        ],
+        priority: "Medium (Should Have)",
+        frequency: "Low (Triggered only on new registration applications)",
+        rules: "BR-01, BR-05",
+        otherInfo: "Only approved mentors appear in student searches. Profile documents are stored securely on Cloudinary.",
+        assumptions: "Admin has verified accuracy of mentor identity card numbers.",
+        sequence: `sequenceDiagram
+  actor Admin as Admin
+  participant UI as Admin Dashboard (UI)
+  participant Server as Backend Server
+  participant DB as MongoDB (Database)
+  
+  Admin->>UI: Open Users tab & Filter pending Mentors
+  UI->>Server: GET /api/v1/admin/users?role=MENTOR&status=pending
+  Server->>DB: Query pending Mentor records
+  DB-->>Server: Return records list
+  Server-->>UI: Render pending Mentors list
+  Admin->>UI: Review profile CV & click Approve
+  UI->>Server: PATCH /api/v1/admin/users/:id/approve-mentor
+  Server->>DB: Set status = "active", verify = true
+  DB-->>Server: Acknowledge update
+  Server-->>UI: Return 200 OK
+  UI-->>Admin: Refresh view (hide approved Mentor)`
+      },
+      UC07: {
+        id: "UC07",
+        title: "UC-07: Manage Exams (CRUD)",
+        actor: "Admin",
+        roleClass: "admin",
+        createdBy: "SDN Dev Team",
+        dateCreated: "2026-06-16",
+        secondaryActors: "None",
+        trigger: "Admin wants to import a new practice exam or update existing test sheets.",
+        desc: "Admin manages IELTS practice tests (Reading/Listening) including passages, audios, questions, answer keys, and explanations.",
+        pre: "PRE-1: Admin is logged in.<br>PRE-2: Admin has access authorization rights.",
+        post: "POST-1: Exam database structures are updated.<br>POST-2: Newly registered/edited exam is published and visible on Student dashboard.",
+        flow: [
+          "7.0.1. Admin (Actor): Navigates to Exams management page and clicks Add Exam.",
+          "7.0.2. System (System): Displays empty exam template forms.",
+          "7.0.3. Admin (Actor): Fills metadata details, uploads asset files, enters question sheets mapping, and clicks Save.",
+          "7.0.4. System (System): Validates the data schema, saves new Exam records to DB, and releases lock.",
+          "7.0.5. System (System): Returns created success message, displaying update listing."
+        ],
+        alternativeFlows: [
+          "<strong>7.1: JSON batch import</strong><br>Branches off from step 7.0.2. Admin clicks upload, choosing a JSON template. System parses structure, validates schema inputs, and saves entries (rejoining flow at 7.0.5)."
+        ],
+        exceptions: [
+          "7.0.E1: Validation Schema Mismatch (occurs at 7.0.4; System displays red validation highlights and blocks saving; database state remains unchanged).",
+          "7.0.E2: JSON Format Corruption (occurs at 7.1; system rejects import, logs the line numbers of format errors; database state remains unchanged)."
+        ],
+        priority: "Low (On content creation demands)",
+        frequency: "Regular (Admin exam additions)",
+        rules: "BR-02",
+        otherInfo: "Audio file formats are validated. Unfinished changes are discarded and not saved.",
+        assumptions: "Uploaded questions comply with official IELTS guidelines.",
+        sequence: `sequenceDiagram
+  actor Admin as Admin
+  participant UI as Admin Dashboard (UI)
+  participant Server as Backend Server
+  participant DB as MongoDB (Database)
+  
+  Admin->>UI: Enter exam info & questions (or upload JSON)
+  UI->>Server: POST /api/exams { Exam Payload }
+  Server->>Server: Validate schema and structures
+  alt Valid Schema
+      Server->>DB: Save exam, test sections & questions records
+      DB-->>Server: Acknowledge save
+      Server-->>UI: Return 201 Created
+      UI-->>Admin: Display success toast & updated exams list
+  else Invalid Schema
+      Server-->>UI: Return 400 Bad Request
+      UI-->>Admin: Detail missing parameters or errors
+  end`
+      },
+      UC08: {
+        id: "UC08",
+        title: "UC-08: User Management",
+        actor: "Admin",
+        roleClass: "admin",
+        createdBy: "SDN Dev Team",
+        dateCreated: "2026-06-16",
+        secondaryActors: "None",
+        trigger: "Admin wishes to search users, edit details, or suspend/unsuspend accounts.",
+        desc: "Admin searches users, filters by role (Student/Mentor) or status, and performs modifications or toggle locks.",
+        pre: "PRE-1: Admin is logged in.<br>PRE-2: Admin holds User Admin role configuration parameters.",
+        post: "POST-1: Target user status (active/inactive) is updated in DB.<br>POST-2: Banned user sessions are invalidated immediately.",
+        flow: [
+          "8.0.1. Admin (Actor): Accesses the User List section on dashboard.",
+          "8.0.2. System (System): Displays paginated active users table with search bar.",
+          "8.0.3. Admin (Actor): Searches username, finds target, and clicks Toggle Block Status.",
+          "8.0.4. System (System): Disables user status in DB, revokes existing JSON token cookies, and records lock activity logs.",
+          "8.0.5. System (System): Updates page status labels instantly."
+        ],
+        alternativeFlows: [],
+        exceptions: [
+          "8.0.E1: Self-Suspension or Admin-Ban Attempt (occurs at 8.0.4; Admin tries to toggle block on their own account or another Administrator; backend returns 400 Bad Request and blocks execution; database remains unchanged)."
+        ],
+        priority: "Medium (Should Have)",
+        frequency: "Regular (Daily admin surveillance checks)",
+        rules: "BR-05",
+        otherInfo: "Banned accounts cannot register new credentials with the same email or phone details.",
+        assumptions: "Admin has proper authority levels before issuing lock actions.",
+        sequence: `sequenceDiagram
+  actor Admin as Admin
+  participant UI as Admin Dashboard (UI)
+  participant Server as Backend Server
+  participant DB as MongoDB (Database)
+  
+  Admin->>UI: Search user & Toggle Status (Block)
+  UI->>Server: PATCH /api/v1/admin/users/:id/status { status: "inactive" }
+  Server->>DB: Fetch User details by ID
+  DB-->>Server: Return User record
+  Server->>Server: Verify role privileges
+  alt Target is ADMIN
+      Server-->>UI: Return 400 Bad Request
+      UI-->>Admin: Show "Cannot block administrative accounts" warning
+  else Target is Student/Mentor
+      Server->>DB: Set status = "inactive"
+      DB-->>Server: Acknowledge update
+      Server-->>UI: Return 200 OK
+      UI-->>Admin: Set status label to "inactive"
+  end`
+      },
+      UC09: {
+        id: "UC09",
+        title: "UC-09: View Results & Feedback",
+        actor: "Student, Mentor",
+        roleClass: "multi",
+        createdBy: "SDN Dev Team",
+        dateCreated: "2026-06-16",
+        secondaryActors: "None",
+        trigger: "Student reviews past tests or mentor reviews; Mentor opens history to input session notes.",
+        desc: "Student reviews graded tests (correctness maps, explanations, paraphrase tags) or reads mentor notes. Mentor inputs feedback for completed slots.",
+        pre: "PRE-1: User is logged in.<br>PRE-2: Target mock test session or booked mentor appointment has concluded.",
+        post: "POST-1: System renders detailed scoreboard, correctness outlines, explanations, and mentor comments.<br>POST-2: Mentor notes are updated in Booking documents.",
+        flow: [
+          "9.0.1. Student (Actor): Clicks Exam History tab on portal page and selects a completed test record.",
+          "9.0.2. System (System): Fetches test results and question sheets metadata, calculating correct counts.",
+          "9.0.3. Student (Actor): Highlights a specific answer index to check explanations.",
+          "9.0.4. System (System): Displays correct explanation text and overlay highlights for paraphrased text."
+        ],
+        alternativeFlows: [
+          "<strong>9.1: Mentor Review Input</strong><br>Branches off from step 9.0.1. Mentor opens tutoring session log list, selects a slot, types comments, and clicks Save. System saves qualitative review in Booking model, making it visible to students (rejoining flow at 9.0.4)."
+        ],
+        exceptions: [
+          "9.0.E1: Data Corruption on Exam Results (occurs at 9.0.2; backend fails to fetch exam answers key; system outputs error notification; state remains unchanged)."
+        ],
+        priority: "High (Must Have)",
+        frequency: "High (Every finished session check)",
+        rules: "BR-02, BR-05",
+        otherInfo: "Students cannot modify mentor feedback. If network drops during saving, the note is rolled back to previous version.",
+        assumptions: "User exam submission logs are correctly persisted and non-null in DB.",
+        sequence: `sequenceDiagram
+  actor Student as Student
+  participant UI as Student Portal (UI)
+  participant Server as Backend Server
+  participant DB as MongoDB (Database)
+  
+  Student->>UI: Select past test result from history list
+  UI->>Server: GET /api/test-results/:id
+  Server->>DB: Fetch TestResult & related Exam data
+  DB-->>Server: Return result data, questions list, answer keys
+  Server->>Server: Map correct/incorrect answers & query paraphrasing data
+  Server-->>UI: Return detailed scores, correct flags & paraphrasing overlays
+  UI-->>Student: Display scorecard, question list with explanation highlights & paraphrasing overlays`
+      }
+    };
+
+    // Populate Quick List menu
+    const quickListContainer = document.getElementById('quickList');
+    Object.values(useCaseData).forEach(uc => {
+      const item = document.createElement('button');
+      item.className = 'quick-item';
+      item.id = `btn-${uc.id}`;
+      item.onclick = () => selectUseCase(uc.id);
+      
+      let badgeLabel = uc.actor;
+      if (uc.roleClass === 'student') badgeLabel = 'Student';
+      else if (uc.roleClass === 'mentor') badgeLabel = 'Mentor';
+      else if (uc.roleClass === 'admin') badgeLabel = 'Admin';
+      else badgeLabel = 'Shared';
+
+      item.innerHTML = `
+        <span>${uc.title}</span>
+        <span class="actor-badge ${uc.roleClass}">${badgeLabel}</span>
+      `;
+      quickListContainer.appendChild(item);
+    });
+
+    // Handle Use Case Selection (called from Mermaid node click and Quick List click)
+    window.selectUseCase = async function(nodeId) {
+      // Clean ID format if it comes from Mermaid (e.g. "UC01")
+      const ucId = nodeId.replace(/_.*$/, '');
+      const uc = useCaseData[ucId];
+      if (!uc) return;
+
+      // Auto switch back to specifications tab
+      switchTab('spec');
+
+      // Update active state in quick list
+      document.querySelectorAll('.quick-item').forEach(item => item.classList.remove('active'));
+      const activeBtn = document.getElementById(`btn-${ucId}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      // Build steps HTML
+      let stepsHtml = '<ol class="step-list" style="margin-left: 1.25rem;">';
+      uc.flow.forEach(step => {
+        stepsHtml += `<li>${step}</li>`;
+      });
+      stepsHtml += '</ol>';
+
+      // Build exceptions HTML
+      let exceptionsHtml = '<ul class="step-list" style="margin-left: 1.25rem;">';
+      uc.exceptions.forEach(ex => {
+        exceptionsHtml += `<li>${ex}</li>`;
+      });
+      exceptionsHtml += '</ul>';
+
+      // Build alternative flows HTML
+      let alternativeFlowsHtml = "None";
+      if (uc.alternativeFlows && uc.alternativeFlows.length > 0) {
+        alternativeFlowsHtml = '<ul class="step-list" style="margin-left: 1.25rem;">';
+        uc.alternativeFlows.forEach(af => {
+          alternativeFlowsHtml += `<li>${af}</li>`;
+        });
+        alternativeFlowsHtml += '</ul>';
+      }
+
+      // Update Spec Tab View Content
+      const specTabView = document.getElementById('specTabView');
+      specTabView.innerHTML = `
+        <div class="detail-card" style="animation: fadeIn 0.3s ease; padding-bottom: 2rem;">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; border: 2.5px solid var(--text-primary); font-size: 0.85rem; line-height: 1.4;">
+            <tr>
+              <td style="width: 25%; font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">UC ID and Name:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color); font-weight: 700; color: var(--accent-dark);">${uc.title}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Created By:</td>
+              <td style="width: 25%; padding: 8px; border: 1.5px solid var(--border-color);">${uc.createdBy}</td>
+              <td style="width: 20%; font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Date Created:</td>
+              <td style="width: 30%; padding: 8px; border: 1.5px solid var(--border-color);">${uc.dateCreated}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Primary Actor:</td>
+              <td style="padding: 8px; border: 1.5px solid var(--border-color); font-weight: 600;">${uc.actor}</td>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Secondary Actors:</td>
+              <td style="padding: 8px; border: 1.5px solid var(--border-color);">${uc.secondaryActors}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Trigger:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color);">${uc.trigger}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Description:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color);">${uc.desc}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Preconditions:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color); background-color: #eff6ff; color: #1e40af; border-left: 4px solid #3b82f6;">${uc.pre}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Postconditions:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color); background-color: #f0fdf4; color: #166534; border-left: 4px solid #22c55e;">${uc.post}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Normal Flow:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color);">${stepsHtml}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Alternative Flows:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color);">${alternativeFlowsHtml}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Exceptions:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color); background-color: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444;">${exceptionsHtml}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Priority:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color); font-weight: 600;">${uc.priority}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Frequency of Use:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color);">${uc.frequency}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Business Rules:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color); font-style: italic;">${uc.rules}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Other Information:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color);">${uc.otherInfo}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; background-color: var(--bg-primary); padding: 8px; border: 1.5px solid var(--border-color); color: var(--text-secondary);">Assumptions:</td>
+              <td colspan="3" style="padding: 8px; border: 1.5px solid var(--border-color);">${uc.assumptions}</td>
+            </tr>
+          </table>
+
+          <div style="font-weight: 600; font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem;">Sequence Diagram</div>
+          <div class="mermaid-seq-wrapper">
+            <div class="mermaid" id="sequenceDiagramContainer">
+              ${uc.sequence}
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Render the sequence diagram dynamically
+      const seqContainer = document.getElementById('sequenceDiagramContainer');
+      seqContainer.removeAttribute('data-processed');
+      try {
+        await mermaid.run({
+          nodes: [seqContainer]
+        });
+      } catch (e) {
+        console.error("Failed to render sequence diagram: ", e);
+      }
+
+      // Smooth scroll sidebar into view on mobile/tablet
+      if (window.innerWidth <= 1200) {
+        document.getElementById('sidebarPanel').scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+
+    // Handle SVG Export
+    document.getElementById('btnExportSVG').addEventListener('click', () => {
+      const svgElement = document.querySelector('.mermaid svg');
+      if (!svgElement) {
+        alert('The diagram is still loading. Please wait a moment.');
+        return;
+      }
+
+      // Clone SVG
+      const svgClone = svgElement.cloneNode(true);
+      
+      // Inject CSS Styles for SVG representation
+      const styleElement = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+      styleElement.textContent = `
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap');
+        text { font-family: 'Outfit', sans-serif !important; }
+        .node rect, .node ellipse { fill: #ffffff !important; stroke: #00cc99 !important; stroke-width: 1.8px !important; }
+        .node.actor rect { fill: #f8fafc !important; stroke: #475569 !important; stroke-width: 2px !important; }
+        .edgePath .path { stroke: #64748b !important; stroke-width: 1.5px !important; }
+        .cluster rect { fill: #fafafa !important; stroke: #cbd5e1 !important; stroke-dasharray: 5 5; }
+      `;
+      svgClone.insertBefore(styleElement, svgClone.firstChild);
+
+      const svgString = new XMLSerializer().serializeToString(svgClone);
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const svgUrl = URL.createObjectURL(svgBlob);
+      
+      const downloadLink = document.createElement('a');
+      downloadLink.href = svgUrl;
+      downloadLink.download = 'SDN_EnglishLearning_UseCase_Diagram.svg';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(svgUrl);
+    });
+  </script>
+</body>
+</html>
