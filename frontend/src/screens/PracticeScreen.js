@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import client from '../api/client';
 
 // Brutalist shadow wrapper
 const BrutalistShadow = ({ children, style, offset = 4 }) => (
@@ -23,6 +25,8 @@ const BrutalistShadow = ({ children, style, offset = 4 }) => (
 
 const PracticeScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('reading');
+  const [exams, setExams] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const tabs = [
     { key: 'reading', label: 'Reading', icon: 'book' },
@@ -31,16 +35,52 @@ const PracticeScreen = ({ navigation }) => {
     { key: 'speaking', label: 'Speaking', icon: 'mic' },
   ];
 
-  const exams = [
-    { id: '1', title: 'IELTS Cambridge 18 - Test 1', time: '60 Phút', type: 'reading', level: 'Hard', color: '#4682b4' },
-    { id: '2', title: 'IELTS Cambridge 18 - Test 2', time: '60 Phút', type: 'reading', level: 'Medium', color: '#4682b4' },
-    { id: '3', title: 'IELTS Cambridge 17 - Test 1', time: '60 Phút', type: 'reading', level: 'Hard', color: '#4682b4' },
-    { id: '4', title: 'IELTS Listening Practice 1', time: '30 Phút', type: 'listening', level: 'Medium', color: '#005c42' },
-    { id: '5', title: 'IELTS Writing Task 1 & 2', time: '60 Phút', type: 'writing', level: 'Hard', color: '#d97706' },
-    { id: '6', title: 'IELTS Speaking Mock Test', time: '15 Phút', type: 'speaking', level: 'Medium', color: '#c92a2a' },
-  ];
+  useEffect(() => {
+    const fetchExams = async () => {
+      setLoading(true);
+      try {
+        const response = await client.get('/exams', {
+          params: { type: activeTab.toUpperCase() }
+        });
+        if (response.data && response.data.success) {
+          const dbExams = response.data.data.exams.map(e => ({
+            id: e.id,
+            title: e.title,
+            time: `${e.duration || 60} Phút`,
+            type: e.type.toLowerCase(),
+            level: e.title.includes('18') || e.title.includes('Hard') ? 'Hard' : 'Medium',
+            color: e.type === 'READING' ? '#4682b4' : '#005c42',
+            questionsCount: e.questionsCount
+          }));
+          setExams(dbExams);
+        }
+      } catch (err) {
+        console.error('Error fetching exams:', err);
+        // Fallback to static mock data if server error
+        const mockExams = [
+          { id: '1', title: 'IELTS Cambridge 18 - Test 1', time: '60 Phút', type: 'reading', level: 'Hard', color: '#4682b4' },
+          { id: '2', title: 'IELTS Cambridge 18 - Test 2', time: '60 Phút', type: 'reading', level: 'Medium', color: '#4682b4' },
+          { id: '3', title: 'IELTS Cambridge 17 - Test 1', time: '60 Phút', type: 'reading', level: 'Hard', color: '#4682b4' },
+          { id: '4', title: 'IELTS Listening Practice 1', time: '30 Phút', type: 'listening', level: 'Medium', color: '#005c42' },
+        ];
+        setExams(mockExams.filter(e => e.type === activeTab));
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const filteredExams = exams.filter(e => e.type === activeTab);
+    if (activeTab === 'reading' || activeTab === 'listening') {
+      fetchExams();
+    } else {
+      const mockExams = [
+        { id: '5', title: 'IELTS Writing Task 1 & 2', time: '60 Phút', type: 'writing', level: 'Hard', color: '#d97706' },
+        { id: '6', title: 'IELTS Speaking Mock Test', time: '15 Phút', type: 'speaking', level: 'Medium', color: '#c92a2a' },
+      ];
+      setExams(mockExams.filter(e => e.type === activeTab));
+    }
+  }, [activeTab]);
+
+  const filteredExams = exams;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -94,42 +134,46 @@ const PracticeScreen = ({ navigation }) => {
         <Text style={styles.sectionBadge}>✎ {activeTab.toUpperCase()} EXAMS</Text>
         <Text style={styles.sectionTitle}>Available Tests</Text>
 
-        {filteredExams.map((exam) => (
-          <TouchableOpacity 
-            key={exam.id}
-            style={styles.examCardContainer}
-            activeOpacity={0.8}
-            onPress={() => {
-              if (exam.type === 'speaking') {
-                navigation.navigate('Speaking', { title: exam.title });
-              } else {
-                navigation.navigate('Exam', { testType: activeTab });
-              }
-            }}
-          >
-            <BrutalistShadow style={{ borderRadius: 16 }} offset={4}>
-              <View style={styles.examCardInner}>
-                <View style={[styles.moduleRedLine, { backgroundColor: exam.color + '40' }]} />
-                
-                <View style={styles.examCardTop}>
-                  <View style={[styles.badge, { backgroundColor: exam.color }]}>
-                    <Text style={styles.badgeText}>{exam.level}</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#1b263b" style={{ marginTop: 40 }} />
+        ) : (
+          filteredExams.map((exam) => (
+            <TouchableOpacity 
+              key={exam.id}
+              style={styles.examCardContainer}
+              activeOpacity={0.8}
+              onPress={() => {
+                if (exam.type === 'speaking') {
+                  navigation.navigate('Speaking', { title: exam.title });
+                } else {
+                  navigation.navigate('Exam', { examId: exam.id, testType: activeTab });
+                }
+              }}
+            >
+              <BrutalistShadow style={{ borderRadius: 16 }} offset={4}>
+                <View style={styles.examCardInner}>
+                  <View style={[styles.moduleRedLine, { backgroundColor: exam.color + '40' }]} />
+                  
+                  <View style={styles.examCardTop}>
+                    <View style={[styles.badge, { backgroundColor: exam.color }]}>
+                      <Text style={styles.badgeText}>{exam.level}</Text>
+                    </View>
+                    <Text style={styles.examTime}>{exam.time}</Text>
                   </View>
-                  <Text style={styles.examTime}>{exam.time}</Text>
+                  
+                  <Text style={styles.examTitle}>{exam.title}</Text>
+                  
+                  <View style={styles.examAction}>
+                    <Text style={[styles.examActionText, { color: exam.color }]}>START MOCK EXAM</Text>
+                    <Ionicons name="arrow-forward" size={16} color={exam.color} />
+                  </View>
                 </View>
-                
-                <Text style={styles.examTitle}>{exam.title}</Text>
-                
-                <View style={styles.examAction}>
-                  <Text style={[styles.examActionText, { color: exam.color }]}>START MOCK EXAM</Text>
-                  <Ionicons name="arrow-forward" size={16} color={exam.color} />
-                </View>
-              </View>
-            </BrutalistShadow>
-          </TouchableOpacity>
-        ))}
+              </BrutalistShadow>
+            </TouchableOpacity>
+          ))
+        )}
 
-        {filteredExams.length === 0 && (
+        {!loading && filteredExams.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={{ fontSize: 40, marginBottom: 12 }}>📂</Text>
             <Text style={styles.emptyText}>No exams found for this skill yet.</Text>

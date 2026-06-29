@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store/store';
 import { logout } from '../auth/authSlice';
+import { apiClient } from '../../services/api.client';
 
 export default function PracticeWorkspace() {
   const { user } = useAppSelector((state) => state.auth);
@@ -28,13 +29,214 @@ export default function PracticeWorkspace() {
   const [writingResult, setWritingResult] = useState<any>(null);
   const [writingLoading, setWritingLoading] = useState(false);
 
-  // State for Reading Practice
-  const [readingAnswers, setReadingAnswers] = useState({ q1: '', q2: '', q3: '' });
+  // State for Reading Practice (Real DB integration)
+  const [readingExams, setReadingExams] = useState<any[]>([]);
+  const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
+  const [activeExam, setActiveExam] = useState<any | null>(null);
+  const [activeSectionIdx, setActiveSectionIdx] = useState<number>(0);
+  const [readingAnswers, setReadingAnswers] = useState<Record<string, string>>({});
   const [readingResult, setReadingResult] = useState<any>(null);
+  const [readingExamsLoading, setReadingExamsLoading] = useState(false);
+  const [activeExamLoading, setActiveExamLoading] = useState(false);
+  const [submittingExam, setSubmittingExam] = useState(false);
+  const [examTimeLeft, setExamTimeLeft] = useState(3600);
 
-  // State for Listening Practice
-  const [listeningAnswers, setListeningAnswers] = useState({ q1: '', q2: '' });
-  const [listeningResult, setListeningResult] = useState<any>(null);
+  const [listeningExams, setListeningExams] = useState<any[]>([]);
+  const [listeningExamsLoading, setListeningExamsLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'reading') {
+      const fetchReadingExams = async () => {
+        setReadingExamsLoading(true);
+        try {
+          const response = await apiClient.get('/exams?type=READING');
+          if (response.data && response.data.success) {
+            setReadingExams(response.data.data.exams);
+          }
+        } catch (err) {
+          console.error('Error fetching reading exams:', err);
+        } finally {
+          setReadingExamsLoading(false);
+        }
+      };
+      fetchReadingExams();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'listening') {
+      const fetchListeningExams = async () => {
+        setListeningExamsLoading(true);
+        try {
+          const response = await apiClient.get('/exams?type=LISTENING');
+          if (response.data && response.data.success) {
+            setListeningExams(response.data.data.exams);
+          }
+        } catch (err) {
+          console.error('Error fetching listening exams:', err);
+        } finally {
+          setListeningExamsLoading(false);
+        }
+      };
+      fetchListeningExams();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedExamId) {
+      const fetchActiveExam = async () => {
+        setActiveExamLoading(true);
+        setReadingResult(null);
+        try {
+          const response = await apiClient.get(`/exams/${selectedExamId}`);
+          if (response.data && response.data.success) {
+            const exam = response.data.data;
+            setActiveExam(exam);
+            setExamTimeLeft((exam.duration || 60) * 60);
+            
+            // Pre-populate answers
+            const initialAnswers: Record<string, string> = {};
+            exam.sections.forEach((sec: any) => {
+              sec.questions.forEach((q: any) => {
+                initialAnswers[q.id] = '';
+              });
+            });
+            setReadingAnswers(initialAnswers);
+            setActiveSectionIdx(0);
+          }
+        } catch (err) {
+          console.error('Error fetching active exam:', err);
+        } finally {
+          setActiveExamLoading(false);
+        }
+      };
+      fetchActiveExam();
+    } else {
+      setActiveExam(null);
+    }
+  }, [selectedExamId]);
+
+  useEffect(() => {
+    if (!activeExam || readingResult) return;
+    
+    const timer = setInterval(() => {
+      setExamTimeLeft((t) => {
+        if (t <= 1) {
+          clearInterval(timer);
+          handleAutoSubmit();
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [activeExam, readingResult]);
+
+  const handleAutoSubmit = () => {
+    alert('Hết giờ làm bài! Bài thi sẽ tự động được nộp.');
+    submitReadingExam();
+  };
+
+  const submitReadingExam = async () => {
+    if (!activeExam) return;
+    
+    setSubmittingExam(true);
+    
+    const payload = Object.keys(readingAnswers).map(qId => ({
+      questionId: qId,
+      userAnswer: readingAnswers[qId] || ''
+    }));
+    
+    const timeTaken = (activeExam.duration || 60) * 60 - examTimeLeft;
+    
+    try {
+      const response = await apiClient.post(`/exams/${activeExam.id}/submit`, {
+        answers: payload,
+        timeTaken
+      });
+      if (response.data && response.data.success) {
+        setReadingResult(response.data.data);
+      }
+    } catch (err) {
+      console.error('Error submitting exam:', err);
+      alert('Không thể nộp bài thi. Vui lòng thử lại sau.');
+    } finally {
+      setSubmittingExam(false);
+    }
+  };
+
+
+  // Audio player state for Listening practice
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+
+  const formatAudioTime = (secs: number) => {
+    if (isNaN(secs)) return '00:00';
+    const mins = Math.floor(secs / 60);
+    const remaining = Math.floor(secs % 60);
+    return `${mins.toString().padStart(2, '0')}:${remaining.toString().padStart(2, '0')}`;
+  };
+
+  useEffect(() => {
+    // Clean up previous audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setAudioPlaying(false);
+    setAudioCurrentTime(0);
+    setAudioDuration(0);
+
+    const currentSection = activeExam?.sections[activeSectionIdx];
+    if (activeExam?.type === 'LISTENING' && currentSection?.audioUrl) {
+      const audio = new Audio(currentSection.audioUrl);
+      audioRef.current = audio;
+      
+      const handleTimeUpdate = () => {
+        setAudioCurrentTime(audio.currentTime);
+      };
+      
+      const handleLoadedMetadata = () => {
+        setAudioDuration(audio.duration);
+      };
+      
+      const handleEnded = () => {
+        setAudioPlaying(false);
+        setAudioCurrentTime(0);
+      };
+
+      audio.addEventListener('timeupdate', handleTimeUpdate);
+      audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.addEventListener('ended', handleEnded);
+
+      return () => {
+        audio.pause();
+        audio.removeEventListener('timeupdate', handleTimeUpdate);
+        audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        audio.removeEventListener('ended', handleEnded);
+      };
+    }
+  }, [activeExam, activeSectionIdx, selectedExamId]);
+
+  const toggleAudioPlay = () => {
+    if (!audioRef.current) return;
+    if (audioPlaying) {
+      audioRef.current.pause();
+      setAudioPlaying(false);
+    } else {
+      audioRef.current.play().catch(err => console.error("Play error:", err));
+      setAudioPlaying(true);
+    }
+  };
+
+  const handleAudioSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!audioRef.current) return;
+    const seekTime = parseFloat(e.target.value);
+    audioRef.current.currentTime = seekTime;
+    setAudioCurrentTime(seekTime);
+  };
 
   // State for Mentors Booking
   const [bookedSessions, setBookedSessions] = useState<string[]>([]);
@@ -95,38 +297,14 @@ export default function PracticeWorkspace() {
     }, 1800);
   };
 
-  // Reading handlers
+  // Reading handlers (Real DB Submission)
   const handleSubmitReading = (e: React.FormEvent) => {
     e.preventDefault();
-    const correct = { q1: 'B', q2: 'C', q3: 'A' };
-    let score = 0;
-    if (readingAnswers.q1 === correct.q1) score += 9;
-    if (readingAnswers.q2 === correct.q2) score += 9;
-    if (readingAnswers.q3 === correct.q3) score += 9;
-    const band = score === 27 ? 9.0 : score === 18 ? 6.5 : score === 9 ? 5.0 : 3.5;
-    
-    setReadingResult({
-      score: `${score / 9}/3`,
-      band,
-      correct: correct
-    });
+    if (window.confirm('Bạn có chắc chắn muốn nộp bài thi không?')) {
+      submitReadingExam();
+    }
   };
 
-  // Listening handlers
-  const handleSubmitListening = (e: React.FormEvent) => {
-    e.preventDefault();
-    const correct = { q1: 'education', q2: 'thursday' };
-    let score = 0;
-    if (listeningAnswers.q1.toLowerCase().trim() === correct.q1) score += 1;
-    if (listeningAnswers.q2.toLowerCase().trim() === correct.q2) score += 1;
-    const band = score === 2 ? 8.5 : score === 1 ? 6.0 : 4.0;
-
-    setListeningResult({
-      score: `${score}/2`,
-      band,
-      correct: correct
-    });
-  };
 
   const handleBookMentor = (mentorName: string) => {
     if (bookedSessions.includes(mentorName)) {
@@ -416,184 +594,338 @@ export default function PracticeWorkspace() {
             )}
 
             {/* TAB CONTENT: READING */}
-            {activeTab === 'reading' && (
-              <div className="space-y-6">
+            {activeTab === 'reading' && !selectedExamId && (
+              <div className="space-y-6 animate-fade-in">
                 <div>
-                  <span className="text-xs uppercase tracking-widest text-[#4682b4] font-black">📖 IELTS Reading simulator</span>
-                  <h2 className="text-3xl font-serif text-[#1b263b] font-black tracking-tight mt-1">Reading Practice Simulator</h2>
-                  <p className="text-xs text-gray-500 font-semibold mt-1">Đọc đoạn văn bản học thuật bên trái và trả lời các câu hỏi trắc nghiệm bên phải.</p>
+                  <span className="text-xs uppercase tracking-widest text-[#4682b4] font-black">📖 IELTS Reading List</span>
+                  <h2 className="text-3xl font-serif text-[#1b263b] font-black tracking-tight mt-1">Đề Thi Reading Thực Tế</h2>
+                  <p className="text-xs text-gray-500 font-semibold mt-1">Luyện tập các đề thi IELTS Reading chính thức từ thư viện Cambridge.</p>
                 </div>
-
-                <div className="grid md:grid-cols-2 gap-6 items-start">
-                  {/* Reading Passage Left */}
-                  <div className="bg-white border-2 border-[#1b263b] rounded-2xl p-5 shadow-inner max-h-[360px] overflow-y-auto space-y-3">
-                    <h3 className="font-serif font-black text-sm border-b border-gray-200 pb-2">Passage: The History of Printing</h3>
-                    <p className="text-xs text-gray-700 leading-relaxed font-serif">
-                      The history of printing starts as early as 3500 BCE, when the proto-Elamite and Sumerian civilizations used cylinder seals to certify documents in clay. Other early forms included block printing, rag-paper, and woodblock printing on textiles, which originated in China around 220 CE.
-                    </p>
-                    <p className="text-xs text-gray-700 leading-relaxed font-serif">
-                      However, the true revolution in communication came in the 15th century. Johannes Gutenberg, a German blacksmith and publisher, introduced the movable-type printing press to Europe. His design utilized a durable metal alloy for types and oil-based inks, enabling mass production of books for the first time in history.
-                    </p>
+                
+                {readingExamsLoading ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="w-8 h-8 border-4 border-[#1b263b] border-t-transparent rounded-full animate-spin" />
+                    <p className="text-xs text-gray-500 font-bold uppercase mt-3">Đang tải danh sách đề thi...</p>
                   </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {readingExams.map((exam) => (
+                      <div key={exam.id} className="bg-white border-2 border-[#1b263b] rounded-2xl p-5 flex flex-col justify-between min-h-[180px] shadow-[3px_3px_0px_0px_#1b263b] hover:translate-x-0.5 hover:translate-y-0.5 transition-all">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-start gap-2">
+                            <h3 className="font-serif font-black text-lg text-[#1b263b] leading-snug">{exam.title}</h3>
+                            <span className="text-[9px] bg-sky-100 text-sky-800 border border-[#1b263b] font-black px-2 py-0.5 rounded uppercase tracking-wider shrink-0">
+                              {exam.duration} Min
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 font-semibold">{exam.description || 'Practice Reading exam from Cambridge series.'}</p>
+                          <p className="text-[10px] text-gray-400 font-black uppercase">Questions: {exam.questionsCount || 40} items</p>
+                        </div>
+                        
+                        <button
+                          onClick={() => setSelectedExamId(exam.id)}
+                          className="w-full mt-4 bg-[#4682b4] text-white border-2 border-[#1b263b] py-2 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-[#3b6d97] transition-all shadow-[2px_2px_0px_0px_#1b263b]"
+                        >
+                          Bắt Đầu Làm Bài 📖
+                        </button>
+                      </div>
+                    ))}
+                    {readingExams.length === 0 && (
+                      <p className="text-sm font-semibold text-gray-500 col-span-2 text-center py-12">Không tìm thấy đề thi nào.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
-                  {/* Reading Questions Right */}
-                  <form onSubmit={handleSubmitReading} className="bg-white border-2 border-[#1b263b] rounded-2xl p-5 shadow-md space-y-4">
-                    <h3 className="font-bold text-xs uppercase text-[#c92a2a] border-b border-gray-100 pb-2">Questions Pool</h3>
-                    
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold text-gray-700">Q1. Woodblock printing originated first in which country?</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {['A. Sumeria', 'B. China', 'C. Germany'].map((opt) => (
-                          <label key={opt} className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-gray-100">
-                            <input
-                              type="radio"
-                              name="q1"
-                              checked={readingAnswers.q1 === opt.charAt(0)}
-                              onChange={() => setReadingAnswers({ ...readingAnswers, q1: opt.charAt(0) })}
-                              className="accent-[#c92a2a]"
-                              required
-                            />
-                            {opt}
-                          </label>
-                        ))}
+            {(activeTab === 'reading' || activeTab === 'listening') && selectedExamId && (
+              <div className="space-y-6 animate-fade-in">
+                {activeExamLoading || !activeExam ? (
+                  <div className="flex flex-col items-center justify-center py-24">
+                    <div className="w-10 h-10 border-4 border-[#1b263b] border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm text-gray-500 font-bold uppercase mt-4">Đang tải đề thi...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Exam Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-dashed border-[#1b263b]/20 pb-4 gap-4">
+                      <div>
+                        <span className="text-xs uppercase tracking-widest text-[#4682b4] font-black">
+                          {activeExam.type === 'LISTENING' ? '🎧 Listening Test' : '📖 Reading Test'}
+                        </span>
+                        <h2 className="text-2xl font-serif text-[#1b263b] font-black tracking-tight">{activeExam.title}</h2>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="bg-red-50 border-2 border-[#1b263b] px-4 py-1.5 rounded-xl font-mono font-black text-[#c92a2a] text-lg flex items-center gap-2">
+                          ⏱️ {formatTime(examTimeLeft)}
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (confirm('Bạn muốn thoát? Kết quả chưa nộp sẽ bị mất.')) {
+                              setSelectedExamId(null);
+                            }
+                          }}
+                          className="bg-gray-100 hover:bg-gray-200 border-2 border-[#1b263b] px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-[2px_2px_0px_0px_#1b263b]"
+                        >
+                          Thoát 🚪
+                        </button>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold text-gray-700">Q2. Who invented movable type printing press in Europe?</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {['A. Sumerians', 'B. Chinese', 'C. Gutenberg'].map((opt) => (
-                          <label key={opt} className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-gray-100">
-                            <input
-                              type="radio"
-                              name="q2"
-                              checked={readingAnswers.q2 === opt.charAt(0)}
-                              onChange={() => setReadingAnswers({ ...readingAnswers, q2: opt.charAt(0) })}
-                              className="accent-[#c92a2a]"
-                              required
-                            />
-                            {opt}
-                          </label>
-                        ))}
+                    {/* Passage Selector Tabs */}
+                    <div className="flex gap-2 border-b-2 border-[#1b263b] pb-2 overflow-x-auto">
+                      {activeExam.sections.map((sec: any, idx: number) => (
+                        <button
+                          key={sec.id}
+                          onClick={() => setActiveSectionIdx(idx)}
+                          className={`px-4 py-2 rounded-xl border-2 border-[#1b263b] text-xs font-black transition-all ${
+                            activeSectionIdx === idx
+                              ? 'bg-[#1b263b] text-white shadow-[2px_2px_0px_0px_#ffd54f]'
+                              : 'bg-white text-[#1b263b] hover:bg-gray-50'
+                          }`}
+                        >
+                          {activeExam.type === 'LISTENING' ? 'Section' : 'Passage'} {sec.sectionOrder}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Workspace Split View */}
+                    <div className="grid md:grid-cols-2 gap-8 items-start">
+                      {/* Left: Scrollable Reading Passage / Listening Audio */}
+                      <div className="bg-white border-2 border-[#1b263b] rounded-3xl p-6 shadow-inner max-h-[500px] overflow-y-auto space-y-4 relative flex flex-col justify-between">
+                        <div className="space-y-4">
+                          <h3 className="font-serif font-black text-lg border-b border-gray-200 pb-2">
+                            {activeExam.sections[activeSectionIdx].title || `${activeExam.type === 'LISTENING' ? 'Section' : 'Passage'} ${activeExam.sections[activeSectionIdx].sectionOrder}`}
+                          </h3>
+                          <div 
+                            className="text-sm text-gray-700 leading-relaxed font-serif whitespace-pre-line text-left"
+                            dangerouslySetInnerHTML={{
+                              __html: activeExam.sections[activeSectionIdx].passageText?.replace(/\\n/g, '<br/>') || ''
+                            }}
+                          />
+                        </div>
+
+                        {activeExam.type === 'LISTENING' && activeExam.sections[activeSectionIdx].audioUrl && (
+                          <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-4 flex flex-col gap-3 shadow-[3px_3px_0px_0px_#1b263b] mt-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black text-gray-500 uppercase">🎵 Section Audio Player</span>
+                              <span className="text-xs font-mono font-bold text-gray-600">
+                                {formatAudioTime(audioCurrentTime)} / {formatAudioTime(audioDuration || 0)}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={toggleAudioPlay}
+                                className="w-10 h-10 rounded-full bg-[#1b263b] text-white flex items-center justify-center text-sm hover:bg-gray-800 transition-all border-2 border-[#1b263b] shrink-0"
+                              >
+                                {audioPlaying ? '⏸' : '▶'}
+                              </button>
+                              
+                              <input
+                                type="range"
+                                min={0}
+                                max={audioDuration || 100}
+                                value={audioCurrentTime}
+                                onChange={handleAudioSeek}
+                                className="flex-grow accent-[#c92a2a] cursor-pointer h-1.5 bg-gray-200 rounded-lg appearance-none"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold text-gray-700">Q3. Johannes Gutenberg was originally what by profession?</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {['A. Blacksmith', 'B. Scholar', 'C. Monk'].map((opt) => (
-                          <label key={opt} className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-gray-100">
-                            <input
-                              type="radio"
-                              name="q3"
-                              checked={readingAnswers.q3 === opt.charAt(0)}
-                              onChange={() => setReadingAnswers({ ...readingAnswers, q3: opt.charAt(0) })}
-                              className="accent-[#c92a2a]"
-                              required
-                            />
-                            {opt}
-                          </label>
-                        ))}
+                      {/* Right: Scrollable Questions */}
+                      <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2">
+                        {readingResult ? (
+                          /* If results submitted, show results review */
+                          <div className="bg-white border-2 border-[#1b263b] rounded-3xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-4">
+                            <div className="flex items-center justify-between border-b-2 border-dashed border-gray-200 pb-3">
+                              <h4 className="font-serif text-lg font-bold text-[#1b263b]">Kết Quả Chấm Điểm</h4>
+                              <div className="bg-[#ffd54f] border-2 border-[#1b263b] px-4 py-1.5 rounded-xl font-mono font-black text-lg">
+                                Band {readingResult.bandScore}
+                              </div>
+                            </div>
+                            <p className="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 p-3 rounded-xl text-left">
+                              Bạn làm đúng {readingResult.correctCount} / {readingResult.totalQuestions} câu.
+                            </p>
+                            <button
+                              onClick={() => setSelectedExamId(null)}
+                              className="w-full bg-[#1b263b] text-white py-2 rounded-xl text-xs font-black uppercase hover:bg-gray-800 transition-all border-2 border-[#1b263b]"
+                            >
+                              Làm đề thi khác 📑
+                            </button>
+                          </div>
+                        ) : (
+                          /* Questions Form */
+                          <form onSubmit={handleSubmitReading} className="bg-white border-2 border-[#1b263b] rounded-3xl p-6 shadow-md space-y-6">
+                            <h3 className="font-bold text-sm uppercase text-[#c92a2a] border-b border-gray-100 pb-2 flex justify-between">
+                              <span>Questions Pool</span>
+                              <span>{activeExam.type === 'LISTENING' ? 'Section' : 'Passage'} {activeExam.sections[activeSectionIdx].sectionOrder}</span>
+                            </h3>
+                            
+                            <div className="space-y-6">
+                              {activeExam.sections[activeSectionIdx].questions.map((q: any) => (
+                                <div key={q.id} className="space-y-3 text-left border-b border-gray-100 pb-4 last:border-0">
+                                  <p className="text-xs font-black text-gray-700">Q{q.questionNumber}. {q.content}</p>
+                                  
+                                  {/* RENDER QUESTIONS BY TYPE */}
+                                  {q.type === 'MULTIPLE_CHOICE' && (
+                                    <div className="grid grid-cols-1 gap-2">
+                                      {q.options?.map((opt: string, optIdx: number) => {
+                                        const val = String.fromCharCode(65 + optIdx); // A, B, C...
+                                        return (
+                                          <label key={optIdx} className={`flex items-center gap-2 text-xs font-semibold text-gray-700 bg-gray-50 border-2 border-[#1b263b]/10 hover:border-[#1b263b] px-3 py-2 rounded-xl cursor-pointer transition-all ${
+                                            readingAnswers[q.id] === val ? 'bg-[#ffd54f]/40 border-[#1b263b]' : ''
+                                          }`}>
+                                            <input
+                                              type="radio"
+                                              name={`q-${q.id}`}
+                                              checked={readingAnswers[q.id] === val}
+                                              onChange={() => setReadingAnswers({ ...readingAnswers, [q.id]: val })}
+                                              className="accent-[#c92a2a]"
+                                            />
+                                            <span>{opt}</span>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  {(q.type === 'TRUE_FALSE_NOT_GIVEN' || q.type === 'YES_NO_NOT_GIVEN') && (
+                                    <div className="flex gap-2">
+                                      {(q.type === 'TRUE_FALSE_NOT_GIVEN' ? ['TRUE', 'FALSE', 'NOT GIVEN'] : ['YES', 'NO', 'NOT GIVEN']).map((choice) => (
+                                        <button
+                                          type="button"
+                                          key={choice}
+                                          onClick={() => setReadingAnswers({ ...readingAnswers, [q.id]: choice })}
+                                          className={`flex-1 border-2 border-[#1b263b] py-2 rounded-xl text-[10px] font-black uppercase transition-all ${
+                                            readingAnswers[q.id] === choice
+                                              ? 'bg-[#ffd54f] text-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b]'
+                                              : 'bg-white text-gray-700 hover:bg-gray-50'
+                                          }`}
+                                        >
+                                          {choice}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {q.type !== 'MULTIPLE_CHOICE' && q.type !== 'TRUE_FALSE_NOT_GIVEN' && q.type !== 'YES_NO_NOT_GIVEN' && (
+                                    <input
+                                      type="text"
+                                      value={readingAnswers[q.id] || ''}
+                                      onChange={(e) => setReadingAnswers({ ...readingAnswers, [q.id]: e.target.value })}
+                                      placeholder="Nhập câu trả lời..."
+                                      className="w-full bg-gray-50 border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-[#c92a2a]"
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+
+                            <button
+                              type="submit"
+                              disabled={submittingExam}
+                              className="w-full bg-[#c92a2a] disabled:bg-gray-300 disabled:cursor-not-allowed text-white border-2 border-[#1b263b] py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-[#b01e1e] transition-all shadow-[3px_3px_0px_0px_#1b263b] flex items-center justify-center gap-2"
+                            >
+                              {submittingExam ? (
+                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                `Nộp Bài Thi ${activeExam.type === 'LISTENING' ? 'Listening' : 'Reading'} ✓`
+                              )}
+                            </button>
+                          </form>
+                        )}
+
+                        {/* Question explanations list shown when result is ready */}
+                        {readingResult && (
+                          <div className="space-y-4">
+                            <h4 className="font-serif font-black text-lg text-[#1b263b] text-left">Chi tiết giải thích:</h4>
+                            {readingResult.gradedAnswers
+                              .filter((ans: any) => {
+                                return activeExam.sections[activeSectionIdx].questions.some((q: any) => q.id === ans.questionId);
+                              })
+                              .map((ans: any) => {
+                                const matchedQ = activeExam.sections[activeSectionIdx].questions.find((q: any) => q.id === ans.questionId);
+                                return (
+                                  <div key={ans.questionId} className="bg-white border-2 border-[#1b263b] rounded-2xl p-4 shadow-[2px_2px_0px_0px_#1b263b] text-left space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-black text-[#c92a2a]">Q{matchedQ?.questionNumber}</span>
+                                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border border-[#1b263b] ${
+                                        ans.isCorrect ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                                      }`}>
+                                        {ans.isCorrect ? 'Correct ✓' : 'Incorrect ✖'}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs font-semibold text-gray-700">{matchedQ?.content}</p>
+                                    <p className="text-xs font-semibold text-gray-600">
+                                      Câu trả lời của bạn: <span className={ans.isCorrect ? 'text-emerald-700 font-bold' : 'text-red-700 font-bold'}>{ans.userAnswer || '(Không trả lời)'}</span>
+                                    </p>
+                                    {!ans.isCorrect && (
+                                      <p className="text-xs font-semibold text-emerald-700">
+                                        Đáp án đúng: <span className="font-bold">{ans.correctAnswer}</span>
+                                      </p>
+                                    )}
+                                    {ans.explanation && (
+                                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-2.5 mt-2">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase">Giải thích:</p>
+                                        <p className="text-[11px] text-gray-600 font-medium italic mt-0.5">{ans.explanation}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        )}
                       </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full bg-[#c92a2a] text-white border-2 border-[#1b263b] py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider hover:bg-[#b01e1e] transition-all shadow-[2px_2px_0px_0px_#1b263b]"
-                    >
-                      Nộp Bài Thi Reading ✓
-                    </button>
-                  </form>
-                </div>
-
-                {readingResult && (
-                  <div className="bg-emerald-50 border-2 border-[#1b263b] rounded-2xl p-5 shadow-[2px_2px_0px_0px_#1b263b] flex items-center justify-between animate-fade-in">
-                    <div>
-                      <h4 className="font-serif font-black text-emerald-800 text-sm">Nộp bài thành công!</h4>
-                      <p className="text-xs text-emerald-700 font-semibold mt-1">Kết quả: {readingResult.score} câu đúng. Band score quy đổi tương đương.</p>
-                    </div>
-                    <div className="bg-[#a7f3d0] border-2 border-[#1b263b] px-4 py-1.5 rounded-xl font-mono font-black text-emerald-950 text-base">
-                      Band {readingResult.band}
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* TAB CONTENT: LISTENING */}
-            {activeTab === 'listening' && (
-              <div className="space-y-6">
+            {/* TAB CONTENT: LISTENING LIST */}
+            {activeTab === 'listening' && !selectedExamId && (
+              <div className="space-y-6 animate-fade-in">
                 <div>
-                  <span className="text-xs uppercase tracking-widest text-[#4682b4] font-black">🎧 IELTS Listening simulator</span>
-                  <h2 className="text-3xl font-serif text-[#1b263b] font-black tracking-tight mt-1">Listening Practice Simulator</h2>
-                  <p className="text-xs text-gray-500 font-semibold mt-1">Nghe audio hướng dẫn bên dưới và điền từ thích hợp vào chỗ trống.</p>
+                  <span className="text-xs uppercase tracking-widest text-[#4682b4] font-black">🎧 IELTS Listening List</span>
+                  <h2 className="text-3xl font-serif text-[#1b263b] font-black tracking-tight mt-1">Đề Thi Listening Thực Tế</h2>
+                  <p className="text-xs text-gray-500 font-semibold mt-1">Luyện tập các đề thi IELTS Listening chính thức từ thư viện Cambridge.</p>
                 </div>
-
-                <div className="bg-white border-2 border-[#1b263b] rounded-2xl p-5 shadow-md space-y-4">
-                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">🎵</span>
-                      <div>
-                        <p className="text-xs font-bold text-[#1b263b]">IELTS Listening Part 1.mp3</p>
-                        <p className="text-[10px] text-gray-400">Duration: 0:45</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => alert('Simulating Audio Playback... Audio stream is working!')}
-                      className="bg-[#1b263b] text-white px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-[#121a29]"
-                    >
-                      ▶ Play Audio
-                    </button>
+                
+                {listeningExamsLoading ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="w-8 h-8 border-4 border-[#1b263b] border-t-transparent rounded-full animate-spin" />
+                    <p className="text-xs text-gray-500 font-bold uppercase mt-3">Đang tải danh sách đề thi...</p>
                   </div>
-
-                  <form onSubmit={handleSubmitListening} className="space-y-4">
-                    <h3 className="font-bold text-xs uppercase text-[#c92a2a] border-b border-gray-100 pb-2">Fill in the blanks:</h3>
-                    
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-700">Q1. The student is enrolling in a course related to ______.</label>
-                        <input
-                          type="text"
-                          required
-                          value={listeningAnswers.q1}
-                          onChange={(e) => setListeningAnswers({ ...listeningAnswers, q1: e.target.value })}
-                          placeholder="e.g. education"
-                          className="w-full max-w-md bg-transparent border-b-2 border-[#1b263b] focus:border-[#c92a2a] outline-none py-1.5 text-xs font-bold text-[#1b263b]"
-                        />
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {listeningExams.map((exam) => (
+                      <div key={exam.id} className="bg-white border-2 border-[#1b263b] rounded-2xl p-5 flex flex-col justify-between min-h-[180px] shadow-[3px_3px_0px_0px_#1b263b] hover:translate-x-0.5 hover:translate-y-0.5 transition-all">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-start gap-2">
+                            <h3 className="font-serif font-black text-lg text-[#1b263b] leading-snug">{exam.title}</h3>
+                            <span className="text-[9px] bg-emerald-100 text-emerald-800 border border-[#1b263b] font-black px-2 py-0.5 rounded uppercase tracking-wider shrink-0">
+                              {exam.duration} Min
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 font-semibold">{exam.description || 'Practice Listening exam from Cambridge series.'}</p>
+                          <p className="text-[10px] text-gray-400 font-black uppercase">Questions: {exam.questionsCount || 40} items</p>
+                        </div>
+                        
+                        <button
+                          onClick={() => setSelectedExamId(exam.id)}
+                          className="w-full mt-4 bg-emerald-700 text-white border-2 border-[#1b263b] py-2 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-emerald-800 transition-all shadow-[2px_2px_0px_0px_#1b263b]"
+                        >
+                          Bắt Đầu Làm Bài 🎧
+                        </button>
                       </div>
-
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-700">Q2. The classes will start on ______ afternoon.</label>
-                        <input
-                          type="text"
-                          required
-                          value={listeningAnswers.q2}
-                          onChange={(e) => setListeningAnswers({ ...listeningAnswers, q2: e.target.value })}
-                          placeholder="e.g. thursday"
-                          className="w-full max-w-md bg-transparent border-b-2 border-[#1b263b] focus:border-[#c92a2a] outline-none py-1.5 text-xs font-bold text-[#1b263b]"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full bg-[#c92a2a] text-white border-2 border-[#1b263b] py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider hover:bg-[#b01e1e] transition-all shadow-[2px_2px_0px_0px_#1b263b]"
-                    >
-                      Nộp Bài Thi Listening ✓
-                    </button>
-                  </form>
-                </div>
-
-                {listeningResult && (
-                  <div className="bg-emerald-50 border-2 border-[#1b263b] rounded-2xl p-5 shadow-[2px_2px_0px_0px_#1b263b] flex items-center justify-between animate-fade-in">
-                    <div>
-                      <h4 className="font-serif font-black text-emerald-800 text-sm">Nộp bài thành công!</h4>
-                      <p className="text-xs text-emerald-700 font-semibold mt-1">Kết quả: {listeningResult.score} câu đúng. Band score quy đổi tương đương.</p>
-                    </div>
-                    <div className="bg-[#a7f3d0] border-2 border-[#1b263b] px-4 py-1.5 rounded-xl font-mono font-black text-emerald-950 text-base">
-                      Band {listeningResult.band}
-                    </div>
+                    ))}
+                    {listeningExams.length === 0 && (
+                      <p className="text-sm font-semibold text-gray-500 col-span-2 text-center py-12">Không tìm thấy đề thi nào.</p>
+                    )}
                   </div>
                 )}
               </div>
