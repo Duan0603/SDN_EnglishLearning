@@ -11,7 +11,8 @@ import {
   StatusBar,
   Modal,
   ActivityIndicator,
-  TextInput
+  TextInput,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -41,6 +42,44 @@ const ExamScreen = ({ route, navigation }) => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [results, setResults] = useState(null);
   const [showResultsModal, setShowResultsModal] = useState(false);
+
+  // State for Writing Practice
+  const [writingEssays, setWritingEssays] = useState({ 0: '', 1: '' });
+  const [writingLoading, setWritingLoading] = useState(false);
+  const [writingResults, setWritingResults] = useState({});
+
+  const handleEvaluateWriting = async () => {
+    const currentEssay = writingEssays[activeSectionIdx] || '';
+    const wordCount = currentEssay.trim().split(/\s+/).filter(Boolean).length;
+    const isTask1 = activeSectionIdx === 0;
+    const minWords = isTask1 ? 50 : 100;
+
+    if (wordCount < minWords) {
+      Alert.alert('Bài viết quá ngắn', `Vui lòng nhập tối thiểu ${minWords} từ để AI đánh giá.`);
+      return;
+    }
+
+    setWritingLoading(true);
+    try {
+      const response = await client.post('/exams/evaluate-writing', {
+        testId: exam.id,
+        prompt: activeSection.passageText,
+        essayText: currentEssay
+      });
+
+      if (response.data && response.data.success) {
+        setWritingResults({
+          ...writingResults,
+          [activeSectionIdx]: response.data.data
+        });
+      }
+    } catch (err) {
+      console.error('Error evaluating writing:', err);
+      Alert.alert('Lỗi', 'Không thể đánh giá bài viết lúc này. Vui lòng thử lại sau.');
+    } finally {
+      setWritingLoading(false);
+    }
+  };
 
   // Audio player state
   const [sound, setSound] = useState(null);
@@ -354,7 +393,11 @@ const ExamScreen = ({ route, navigation }) => {
               }}
             >
               <Text style={[styles.sectionTabText, activeSectionIdx === idx && styles.sectionTabTextActive]}>
-                {exam.type?.toLowerCase() === 'listening' ? 'Section' : 'Passage'} {sec.sectionOrder}
+                {exam.type?.toLowerCase() === 'listening' 
+                  ? 'Section' 
+                  : exam.type?.toLowerCase() === 'writing' 
+                    ? 'Task' 
+                    : 'Passage'} {sec.sectionOrder}
               </Text>
             </TouchableOpacity>
           ))}
@@ -368,7 +411,11 @@ const ExamScreen = ({ route, navigation }) => {
           onPress={() => setActiveTab('passage')}
         >
           <Text style={[styles.tabText, activeTab === 'passage' && styles.tabTextActive]}>
-            {exam.type?.toLowerCase() === 'listening' ? '🎧 LISTENING AUDIO' : '📖 READING PASSAGE'}
+            {exam.type?.toLowerCase() === 'listening' 
+              ? '🎧 LISTENING AUDIO' 
+              : exam.type?.toLowerCase() === 'writing' 
+                ? '📖 TASK PROMPT' 
+                : '📖 READING PASSAGE'}
           </Text>
         </TouchableOpacity>
         <View style={{ width: 12 }} />
@@ -376,7 +423,9 @@ const ExamScreen = ({ route, navigation }) => {
           style={[styles.tabItem, activeTab === 'questions' && styles.tabItemActive]}
           onPress={() => setActiveTab('questions')}
         >
-          <Text style={[styles.tabText, activeTab === 'questions' && styles.tabTextActive]}>✏️ QUESTIONS</Text>
+          <Text style={[styles.tabText, activeTab === 'questions' && styles.tabTextActive]}>
+            {exam.type?.toLowerCase() === 'writing' ? '✍️ YOUR ESSAY' : '✏️ QUESTIONS'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -424,24 +473,133 @@ const ExamScreen = ({ route, navigation }) => {
                   </View>
                 )}
 
-                <Text style={styles.passageText}>
-                  {activeSection.passageText ? activeSection.passageText.replace(/\\n/g, '\n') : ''}
-                </Text>
+                {exam.type?.toLowerCase() === 'writing' ? (
+                  <View style={{ flexDirection: 'row', gap: 20, alignItems: 'flex-start', marginTop: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.passageText}>
+                        {activeSection.passageText ? activeSection.passageText.replace(/\\n/g, '\n') : ''}
+                      </Text>
+                    </View>
+                    
+                    {activeSection.images && activeSection.images.length > 0 && (
+                      <View style={{ flex: 2.5, borderLeftWidth: 1, borderColor: '#eee', paddingLeft: 20, alignItems: 'center' }}>
+                        <Text style={styles.imageLabel}>Visual Prompt Diagram:</Text>
+                        <Image
+                          source={{ uri: `${client.defaults.baseURL.replace('/api/v1', '')}${activeSection.images[0]}` }}
+                          style={[styles.diagramImage, { height: 480, width: '100%' }]}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    )}
+                  </View>
+                ) : (
+                  <Text style={styles.passageText}>
+                    {activeSection.passageText ? activeSection.passageText.replace(/\\n/g, '\n') : ''}
+                  </Text>
+                )}
               </View>
             </BrutalistShadow>
           )}
 
           {activeTab === 'questions' && (
             <View>
-              {activeSection.questions && activeSection.questions.map((q) => (
-                <BrutalistShadow key={q.id} style={styles.questionCard} offset={4}>
-                  <View style={styles.questionCardInner}>
-                    <Text style={styles.questionNum}>QUESTION {q.questionNumber}</Text>
-                    <Text style={styles.questionText}>{q.content}</Text>
-                    {renderQuestionInput(q)}
-                  </View>
-                </BrutalistShadow>
-              ))}
+              {exam.type?.toLowerCase() === 'writing' ? (
+                <View style={{ gap: 16 }}>
+                  <BrutalistShadow style={styles.questionCard} offset={4}>
+                    <View style={styles.questionCardInner}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <Text style={styles.questionNum}>YOUR ESSAY RESPONSE</Text>
+                        <Text style={{ fontSize: 11, fontFamily: 'Outfit_700Bold', color: '#666' }}>
+                          Words: {(writingEssays[activeSectionIdx] || '').trim().split(/\s+/).filter(Boolean).length} / {activeSectionIdx === 0 ? 150 : 250}+
+                        </Text>
+                      </View>
+
+                      <TextInput
+                        multiline
+                        numberOfLines={12}
+                        value={writingEssays[activeSectionIdx] || ''}
+                        onChangeText={(text) => setWritingEssays({ ...writingEssays, [activeSectionIdx]: text })}
+                        placeholder={activeSectionIdx === 0 ? "Viết bài mô tả biểu đồ của bạn tại đây (tối thiểu 150 từ)..." : "Viết bài luận nghị luận xã hội của bạn tại đây (tối thiểu 250 từ)..."}
+                        placeholderTextColor="#999"
+                        style={[styles.textInput, { height: 220, textAlignVertical: 'top', paddingTop: 12 }]}
+                      />
+                      
+                      <TouchableOpacity 
+                        style={[styles.submitWritingBtn, (!writingEssays[activeSectionIdx] || writingLoading) && styles.submitWritingBtnDisabled]}
+                        disabled={!writingEssays[activeSectionIdx] || writingLoading}
+                        onPress={handleEvaluateWriting}
+                      >
+                        {writingLoading ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Text style={styles.submitWritingBtnText}>NỘP BÀI & CHẤM ĐIỂM AI ✍️</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </BrutalistShadow>
+
+                  {/* AI Evaluation result for this section */}
+                  {writingResults[activeSectionIdx] && (
+                    <BrutalistShadow style={styles.questionCard} offset={4}>
+                      <View style={[styles.questionCardInner, { backgroundColor: '#fff' }]}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderColor: '#eee', paddingBottom: 10, marginBottom: 12 }}>
+                          <Text style={[styles.questionNum, { color: '#1b263b' }]}>KẾT QUẢ CHẤM ĐIỂM AI</Text>
+                          <View style={{ backgroundColor: '#ffd54f', borderWidth: 2, borderColor: '#1b263b', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8 }}>
+                            <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 14 }}>Band {writingResults[activeSectionIdx].bandScore}</Text>
+                          </View>
+                        </View>
+
+                        {/* Criteria Scores */}
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                          {[
+                            { name: 'Task Response', score: writingResults[activeSectionIdx].taskAchievement },
+                            { name: 'Coherence', score: writingResults[activeSectionIdx].coherenceCohesion },
+                            { name: 'Vocabulary', score: writingResults[activeSectionIdx].lexicalResource },
+                            { name: 'Grammar', score: writingResults[activeSectionIdx].grammarAccuracy }
+                          ].map((item) => (
+                            <View key={item.name} style={{ flex: 1, minWidth: '45%', backgroundColor: '#f9f9f9', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#eee', alignItems: 'center' }}>
+                              <Text style={{ fontSize: 9, color: '#666', fontFamily: 'Outfit_700Bold' }}>{item.name}</Text>
+                              <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#1b263b', marginTop: 2 }}>{item.score}</Text>
+                            </View>
+                          ))}
+                        </View>
+
+                        {/* Detailed feedback */}
+                        <View style={{ gap: 8 }}>
+                          <Text style={{ fontSize: 10, fontFamily: 'Outfit_900Black', color: '#666' }}>1. TASK RESPONSE:</Text>
+                          <Text style={{ fontSize: 11, color: '#333', fontFamily: 'Outfit_500Medium' }}>{writingResults[activeSectionIdx].aiFeedback?.taskAchievement}</Text>
+                          
+                          <Text style={{ fontSize: 10, fontFamily: 'Outfit_900Black', color: '#666', marginTop: 6 }}>2. COHERENCE & COHESION:</Text>
+                          <Text style={{ fontSize: 11, color: '#333', fontFamily: 'Outfit_500Medium' }}>{writingResults[activeSectionIdx].aiFeedback?.coherenceCohesion}</Text>
+
+                          <Text style={{ fontSize: 10, fontFamily: 'Outfit_900Black', color: '#666', marginTop: 6 }}>3. LEXICAL RESOURCE:</Text>
+                          <Text style={{ fontSize: 11, color: '#333', fontFamily: 'Outfit_500Medium' }}>{writingResults[activeSectionIdx].aiFeedback?.lexicalResource}</Text>
+
+                          <Text style={{ fontSize: 10, fontFamily: 'Outfit_900Black', color: '#666', marginTop: 6 }}>4. GRAMMAR RANGE & ACCURACY:</Text>
+                          <Text style={{ fontSize: 11, color: '#333', fontFamily: 'Outfit_500Medium' }}>{writingResults[activeSectionIdx].aiFeedback?.grammarAccuracy}</Text>
+                          
+                          <View style={{ borderTopWidth: 1, borderColor: '#eee', paddingTop: 10, marginTop: 8 }}>
+                            <Text style={{ fontSize: 10, fontFamily: 'Outfit_900Black', color: '#c92a2a' }}>AI RECOMMENDATIONS:</Text>
+                            <Text style={{ fontSize: 11, color: '#1b263b', fontFamily: 'Outfit_700Bold', fontStyle: 'italic', marginTop: 2 }}>
+                              "{writingResults[activeSectionIdx].aiFeedback?.general}"
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    </BrutalistShadow>
+                  )}
+                </View>
+              ) : (
+                activeSection.questions && activeSection.questions.map((q) => (
+                  <BrutalistShadow key={q.id} style={styles.questionCard} offset={4}>
+                    <View style={styles.questionCardInner}>
+                      <Text style={styles.questionNum}>QUESTION {q.questionNumber}</Text>
+                      <Text style={styles.questionText}>{q.content}</Text>
+                      {renderQuestionInput(q)}
+                    </View>
+                  </BrutalistShadow>
+                ))
+              )}
             </View>
           )}
 
@@ -449,11 +607,13 @@ const ExamScreen = ({ route, navigation }) => {
       </KeyboardAvoidingView>
 
       {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.submitBtn} onPress={() => handleSubmit(false)}>
-          <Text style={styles.submitBtnText}>SUBMIT EXAM</Text>
-        </TouchableOpacity>
-      </View>
+      {exam && exam.type?.toLowerCase() !== 'writing' && (
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.submitBtn} onPress={() => handleSubmit(false)}>
+            <Text style={styles.submitBtnText}>SUBMIT EXAM</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Exit Confirmation Modal */}
       <Modal
@@ -934,6 +1094,45 @@ const styles = StyleSheet.create({
     backgroundColor: '#1b263b',
     position: 'absolute',
     transform: [{ translateX: -7 }],
+  },
+  submitWritingBtn: {
+    backgroundColor: '#c92a2a',
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  submitWritingBtnDisabled: {
+    backgroundColor: '#ccc',
+  },
+  submitWritingBtnText: {
+    color: '#fff',
+    fontFamily: 'Outfit_900Black',
+    fontSize: 12,
+  },
+  imageContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderColor: '#eee',
+  },
+  imageLabel: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 10,
+    color: '#666',
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  diagramImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
   },
 });
 

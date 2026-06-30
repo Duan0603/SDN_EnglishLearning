@@ -590,14 +590,15 @@ const writingExams = [
       {
         sectionOrder: 1,
         title: "Writing Task 1: Water Use by Region",
-        passageText: "The charts below show the percentage of water used for different purposes (industrial, agricultural, domestic) in six areas of the world.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-        images: ["https://example.com/charts/water_use.png"],
+        passageText: "The charts below show the percentage of water used for different purposes in six areas of the world.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
+        images: ["/images/writing_t1_c11_t1.png"],
         questions: []
       },
       {
         sectionOrder: 2,
-        title: "Writing Task 2: Government & Health",
-        passageText: "Governments should introduce laws to reduce the consumption of unhealthy foods. To what extent do you agree or disagree with this statement?",
+        title: "Writing Task 2: Railways vs Roads",
+        passageText: "Governments should spend money on railways rather than roads.\n\nTo what extent do you agree or disagree with this statement?\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        images: ["/images/writing_t2_c11_t1.png"],
         questions: []
       }
     ]
@@ -612,7 +613,14 @@ const writingExams = [
         sectionOrder: 1,
         title: "Writing Task 1: Language Ability of University Students",
         passageText: "The charts below show the proportions of British students at one university in England who were able to speak other languages in addition to English, in 2000 and 2010.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-        images: ["https://example.com/charts/languages_students.png"],
+        images: ["/images/writing_t1_c11_t2.png"],
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Writing Task 2: Waste Recycling Laws",
+        passageText: "Some people claim that not enough of the waste from homes is recycled. They say that the only way to increase recycling is for governments to make it a legal requirement.\n\nTo what extent do you agree or disagree with this statement?\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        images: ["/images/writing_t2_c11_t2.png"],
         questions: []
       }
     ]
@@ -627,7 +635,14 @@ const writingExams = [
         sectionOrder: 1,
         title: "Writing Task 1: Carbon Dioxide Emissions",
         passageText: "The graph below shows average carbon dioxide (CO2) emissions per person in the United Kingdom, Sweden, Italy and Portugal between 1967 and 2007.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-        images: ["https://example.com/charts/co2_emissions.png"],
+        images: ["/images/writing_t1_c11_t3.png"],
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Writing Task 2: Purpose of Learning Foreign Languages",
+        passageText: "Some people say that the only reason for learning a foreign language is in order to travel to or work in a foreign country. Others say that these are not the only reasons why someone should learn a foreign language.\n\nDiscuss both these views and give your own opinion.\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        images: ["/images/writing_t2_c11_t3.png"],
         questions: []
       }
     ]
@@ -642,7 +657,14 @@ const writingExams = [
         sectionOrder: 1,
         title: "Writing Task 1: Museum Visitors Survey",
         passageText: "The table below shows the numbers of visitors to Ashdown Museum during the year before and the year after it was refurbished. The charts show the results of surveys asking visitors how satisfied they were with their visit during the same two periods.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-        images: ["https://example.com/charts/museum_visitors.png"],
+        images: ["/images/writing_t1_c11_t4.png"],
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Writing Task 2: Economic Progress vs Other Progress",
+        passageText: "Many governments think that economic progress is their most important goal. Some people, however, think that other types of progress are equally important for a country.\n\nDiscuss both these views and give your own opinion.\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        images: ["/images/writing_t2_c11_t4.png"],
         questions: []
       }
     ]

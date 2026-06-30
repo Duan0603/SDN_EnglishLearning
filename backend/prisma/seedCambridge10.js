@@ -1228,7 +1228,7 @@ const speakingExams = [
 const writingExams = [
   {
     title: "Cambridge IELTS 10 Test 1 Writing",
-    description: "Writing Practice Test 1 from Cambridge IELTS 10 (Energy Use, etc.)",
+    description: "Writing Practice Test 1 from Cambridge IELTS 10",
     type: "WRITING",
     duration: 60,
     sections: [
@@ -1236,50 +1236,65 @@ const writingExams = [
         sectionOrder: 1,
         title: "Writing Task 1: Energy Use in Household",
         passageText: "The first chart below shows how energy is used in an average Australian household. The second chart shows the greenhouse gas emissions which result from this energy use.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-        images: ["https://example.com/charts/energy_use.png"],
+        images: ["/images/writing_t1_test1.png"],
         questions: []
       },
       {
         sectionOrder: 2,
-        title: "Writing Task 2: Taxes on Fast Food",
-        passageText: "Some people believe that fast food should be taxed higher to encourage healthy eating. To what extent do you agree or disagree?\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        title: "Writing Task 2: Children and Punishment",
+        passageText: "It is important for children to learn the difference between right and wrong at an early age. Punishment is necessary to help them learn this distinction.\n\nTo what extent do you agree or disagree with this opinion?\n\nWhat sort of punishment should parents and teachers be allowed to use to teach good behaviour to children?\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        images: ["/images/writing_t2_test1.png"],
         questions: []
       }
     ]
   },
   {
     title: "Cambridge IELTS 10 Test 2 Writing",
-    description: "Writing Practice Test 2 from Cambridge IELTS 10 (Fairtrade Sales, etc.)",
+    description: "Writing Practice Test 2 from Cambridge IELTS 10",
     type: "WRITING",
     duration: 60,
     sections: [
       {
         sectionOrder: 1,
         title: "Writing Task 1: Sales of Fairtrade Products",
-        passageText: "The tables below give information about sales of Fairtrade-labelled coffee and bananas in five European countries in 2004 and 2008.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-        images: ["https://example.com/charts/fairtrade_sales.png"],
+        passageText: "The tables below give information about sales of Fairtrade-labelled coffee and bananas in 1999 and 2004 in five European countries.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
+        images: ["/images/writing_t1_test2.png"],
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Writing Task 2: University Subjects",
+        passageText: "Some people think that all university students should study whatever they like. Others believe that they should only be allowed to study subjects that will be useful in the future, such as those related to science and technology.\n\nDiscuss both these views and give your own opinion.\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        images: ["/images/writing_t2_test2.png"],
         questions: []
       }
     ]
   },
   {
     title: "Cambridge IELTS 10 Test 3 Writing",
-    description: "Writing Practice Test 3 from Cambridge IELTS 10 (UK Graduate destinations, etc.)",
+    description: "Writing Practice Test 3 from Cambridge IELTS 10",
     type: "WRITING",
     duration: 60,
     sections: [
       {
         sectionOrder: 1,
         title: "Writing Task 1: UK Graduates Destinations",
-        passageText: "The charts below show what UK graduate and postgraduate students who did not go into full-time work did after leaving college.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-        images: ["https://example.com/charts/uk_graduates.png"],
+        passageText: "The charts below show what UK graduate and postgraduate students who did not go into full-time work did after leaving college in 2008.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
+        images: ["/images/writing_t1_test3.png"],
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Writing Task 2: Similar Countries",
+        passageText: "Countries are becoming more and more similar because people are able to buy the same products anywhere in the world.\n\nDo you think this is a positive or negative development?\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        images: ["/images/writing_t2_test3.png"],
         questions: []
       }
     ]
   },
   {
     title: "Cambridge IELTS 10 Test 4 Writing",
-    description: "Writing Practice Test 4 from Cambridge IELTS 10 (Salmon Life Cycle, etc.)",
+    description: "Writing Practice Test 4 from Cambridge IELTS 10",
     type: "WRITING",
     duration: 60,
     sections: [
@@ -1287,7 +1302,14 @@ const writingExams = [
         sectionOrder: 1,
         title: "Writing Task 1: Life Cycle of Salmon",
         passageText: "The diagrams below show the life cycle of a species of large fish called the salmon.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-        images: ["https://example.com/charts/salmon_lifecycle.png"],
+        images: ["/images/writing_t1_test4.png"],
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Writing Task 2: Museum Admission Fees",
+        passageText: "Many museums charge for admission while others are free.\n\nDo you think the advantages of charging people for admission to museums outweigh the disadvantages?\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        images: ["/images/writing_t2_test4.png"],
         questions: []
       }
     ]

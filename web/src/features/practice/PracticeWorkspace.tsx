@@ -15,6 +15,12 @@ export default function PracticeWorkspace() {
 
   const setActiveTab = (tab: string) => {
     setSearchParams({ tab });
+    setSelectedExamId(null);
+    setActiveExam(null);
+    setEssayText('');
+    setWritingEssays({ 0: '', 1: '' });
+    setWritingResults({});
+    setActiveSectionIdx(0);
   };
 
   // State for Speaking Practice
@@ -26,8 +32,11 @@ export default function PracticeWorkspace() {
 
   // State for Writing Practice
   const [essayText, setEssayText] = useState('');
-  const [writingResult, setWritingResult] = useState<any>(null);
   const [writingLoading, setWritingLoading] = useState(false);
+  const [writingExams, setWritingExams] = useState<any[]>([]);
+  const [writingExamsLoading, setWritingExamsLoading] = useState(false);
+  const [writingEssays, setWritingEssays] = useState<Record<number, string>>({ 0: '', 1: '' });
+  const [writingResults, setWritingResults] = useState<Record<number, any>>({});
 
   // State for Reading Practice (Real DB integration)
   const [readingExams, setReadingExams] = useState<any[]>([]);
@@ -79,6 +88,25 @@ export default function PracticeWorkspace() {
         }
       };
       fetchListeningExams();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'writing') {
+      const fetchWritingExams = async () => {
+        setWritingExamsLoading(true);
+        try {
+          const response = await apiClient.get('/exams?type=WRITING');
+          if (response.data && response.data.success) {
+            setWritingExams(response.data.data.exams);
+          }
+        } catch (err) {
+          console.error('Error fetching writing exams:', err);
+        } finally {
+          setWritingExamsLoading(false);
+        }
+      };
+      fetchWritingExams();
     }
   }, [activeTab]);
 
@@ -275,26 +303,49 @@ export default function PracticeWorkspace() {
   };
 
   // Writing handlers
-  const handleEvaluateWriting = () => {
-    if (essayText.trim().split(/\s+/).length < 20) {
-      alert('Bài viết quá ngắn. Vui lòng nhập tối thiểu 20 từ để AI đánh giá.');
+  const handleEvaluateWriting = async () => {
+    const currentEssay = essayText;
+    const wordCount = currentEssay.trim().split(/\s+/).filter(Boolean).length;
+    
+    const isTask1 = activeSectionIdx === 0;
+    const minWords = isTask1 ? 50 : 100;
+    
+    if (wordCount < minWords) {
+      alert(`Bài viết quá ngắn. Vui lòng nhập tối thiểu ${minWords} từ để AI đánh giá.`);
       return;
     }
+
     setWritingLoading(true);
-    setTimeout(() => {
-      setWritingResult({
-        overall: 6.5,
-        criteria: {
-          taskResponse: 7.0,
-          coherence: 6.5,
-          vocabulary: 6.0,
-          grammar: 6.5,
-        },
-        feedback: 'Bài viết luận điểm rõ ràng, cấu trúc mạch lạc. Cần đa dạng hóa cấu trúc ngữ pháp phức tạp và sử dụng các từ đồng nghĩa để tránh lặp từ.',
-        wordCount: essayText.trim().split(/\s+/).length
+    try {
+      const currentSection = activeExam.sections[activeSectionIdx];
+      const response = await apiClient.post('/exams/evaluate-writing', {
+        testId: activeExam.id,
+        prompt: currentSection.passageText,
+        essayText: currentEssay
       });
+
+      if (response.data && response.data.success) {
+        const result = response.data.data;
+        setWritingResults(prev => ({
+          ...prev,
+          [activeSectionIdx]: result
+        }));
+      }
+    } catch (err) {
+      console.error('Error evaluating writing:', err);
+      alert('Không thể đánh giá bài viết lúc này. Vui lòng thử lại sau.');
+    } finally {
       setWritingLoading(false);
-    }, 1800);
+    }
+  };
+
+  const handleSectionChange = (idx: number) => {
+    setWritingEssays(prev => ({
+      ...prev,
+      [activeSectionIdx]: essayText
+    }));
+    setActiveSectionIdx(idx);
+    setEssayText(writingEssays[idx] || '');
   };
 
   // Reading handlers (Real DB Submission)
@@ -515,81 +566,211 @@ export default function PracticeWorkspace() {
               </div>
             )}
 
-            {/* TAB CONTENT: WRITING */}
-            {activeTab === 'writing' && (
-              <div className="space-y-6">
+            {/* TAB CONTENT: WRITING - EXAM SELECTION LIST */}
+            {activeTab === 'writing' && !selectedExamId && (
+              <div className="space-y-6 animate-fade-in">
                 <div>
-                  <span className="text-xs uppercase tracking-widest text-[#4682b4] font-black">✍️ AI writing grader</span>
-                  <h2 className="text-3xl font-serif text-[#1b263b] font-black tracking-tight mt-1">IELTS Writing Task 2</h2>
-                  <p className="text-xs text-gray-500 font-semibold mt-1">Nhập bài viết luận của bạn dựa trên chủ đề bên dưới để nhận điểm số tiêu chí chi tiết.</p>
+                  <span className="text-xs uppercase tracking-widest text-[#4682b4] font-black">✍️ IELTS Writing List</span>
+                  <h2 className="text-3xl font-serif text-[#1b263b] font-black tracking-tight mt-1">Chọn Đề Luyện Viết</h2>
+                  <p className="text-xs text-gray-500 font-semibold mt-1">Chọn đề thi chính thức từ bộ đề Cambridge IELTS 10 để làm bài viết luận Task 1 & Task 2.</p>
                 </div>
 
-                <div className="bg-[#ffd54f]/15 border-2 border-dashed border-[#1b263b]/30 rounded-2xl p-5 space-y-3">
-                  <h3 className="font-bold text-[#c92a2a] text-sm uppercase">Essay Prompt:</h3>
-                  <p className="font-serif italic font-semibold text-gray-800 text-sm">
-                    "Some people think that universities should provide graduates with the knowledge and skills needed in the workplace. Others think that the true function of a university should be to give access to knowledge for its own sake, regardless of whether the course is useful to an employer. Discuss both views and give your opinion."
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center text-[10px] uppercase font-black text-gray-500 px-1">
-                    <span>Your Essay Response</span>
-                    <span className={essayText.trim().split(/\s+/).filter(Boolean).length >= 250 ? 'text-emerald-600' : 'text-amber-600'}>
-                      Word Count: {essayText.trim().split(/\s+/).filter(Boolean).length} / 250+ (min)
-                    </span>
+                {writingExamsLoading ? (
+                  <div className="flex justify-center items-center py-12">
+                    <span className="w-8 h-8 border-4 border-[#c92a2a] border-t-transparent rounded-full animate-spin" />
                   </div>
-                  <textarea
-                    rows={8}
-                    value={essayText}
-                    onChange={(e) => setEssayText(e.target.value)}
-                    placeholder="Type or paste your IELTS essay here..."
-                    className="w-full bg-white border-2 border-[#1b263b] rounded-2xl p-4 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner resize-y font-mono"
-                  />
-                </div>
-
-                <button
-                  onClick={handleEvaluateWriting}
-                  disabled={writingLoading || !essayText.trim()}
-                  className="w-full bg-[#c92a2a] disabled:bg-gray-300 disabled:cursor-not-allowed text-white border-2 border-[#1b263b] py-3.5 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-[#b01e1e] transition-all shadow-[3px_3px_0px_0px_#1b263b] flex items-center justify-center gap-2"
-                >
-                  {writingLoading ? (
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    'Chấm Điểm Essay Bằng AI ✍️'
-                  )}
-                </button>
-
-                {writingResult && (
-                  <div className="bg-white border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-4 animate-fade-in">
-                    <div className="flex items-center justify-between border-b-2 border-dashed border-gray-200 pb-3">
-                      <h4 className="font-serif text-lg font-bold text-[#1b263b]">Kết Quả Chấm Essay AI</h4>
-                      <div className="bg-[#ffd54f] border-2 border-[#1b263b] px-4 py-1.5 rounded-xl font-mono font-black text-lg">
-                        Band {writingResult.overall}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {[
-                        { label: 'Task Response', score: writingResult.criteria.taskResponse },
-                        { label: 'Coherence', score: writingResult.criteria.coherence },
-                        { label: 'Vocabulary', score: writingResult.criteria.vocabulary },
-                        { label: 'Grammar', score: writingResult.criteria.grammar },
-                      ].map((item) => (
-                        <div key={item.label} className="bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-center">
-                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{item.label}</p>
-                          <p className="text-lg font-mono font-black text-[#1b263b]">{item.score}</p>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {writingExams.map((exam) => (
+                      <div
+                        key={exam.id}
+                        className="bg-white border-2 border-[#1b263b] rounded-2xl p-5 shadow-[3px_3px_0px_0px_#1b263b] flex flex-col justify-between"
+                      >
+                        <div>
+                          <span className="inline-block bg-[#fbcfe8] text-[#9d174d] text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-[#1b263b] mb-3">
+                            Writing Module
+                          </span>
+                          <h3 className="font-serif text-lg font-bold text-[#1b263b]">{exam.title}</h3>
+                          <p className="text-xs text-gray-500 font-medium mt-1">{exam.description || 'Không có mô tả.'}</p>
+                          <div className="flex items-center gap-3 mt-4 text-[11px] font-semibold text-gray-600">
+                            <span>⏱️ {exam.duration || 60} Phút</span>
+                            <span>•</span>
+                            <span>📝 {exam.sections?.length || 2} Tasks</span>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-xs font-black uppercase text-gray-400">Phản hồi chi tiết từ AI:</p>
-                      <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-                        {writingResult.feedback}
-                      </p>
-                    </div>
+                        <button
+                          onClick={() => setSelectedExamId(exam.id)}
+                          className="w-full bg-[#ffd54f] text-[#1b263b] border-2 border-[#1b263b] py-2 rounded-xl mt-5 font-black uppercase text-xs tracking-wider hover:bg-[#ffca28] transition-all shadow-[2px_2px_0px_0px_#1b263b]"
+                        >
+                          Start Practice ✍️
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* TAB CONTENT: WRITING - ACTIVE WORKSPACE */}
+            {activeTab === 'writing' && selectedExamId && activeExam && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Header Info */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-dashed border-gray-200 pb-4 gap-4">
+                  <div>
+                    <h3 className="font-serif text-xl font-bold text-[#1b263b]">{activeExam.title}</h3>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">Writing Practice Mode</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        setSelectedExamId(null);
+                        setActiveExam(null);
+                        setWritingResults({});
+                        setWritingEssays({ 0: '', 1: '' });
+                        setEssayText('');
+                      }}
+                      className="bg-gray-100 hover:bg-gray-200 border-2 border-[#1b263b] px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider shadow-[2px_2px_0px_0px_#1b263b]"
+                    >
+                      ← Thoát Đề
+                    </button>
+                  </div>
+                </div>
+
+                {/* Task switcher (tabs) */}
+                <div className="flex gap-2 border-b-2 border-[#1b263b] pb-0">
+                  {activeExam.sections.map((sec: any, idx: number) => {
+                    const isSelected = activeSectionIdx === idx;
+                    return (
+                      <button
+                        key={sec.id}
+                        onClick={() => handleSectionChange(idx)}
+                        className={`px-4 py-2 border-t-2 border-l-2 border-r-2 border-[#1b263b] rounded-t-xl text-xs font-black uppercase tracking-wider transition-all -mb-[2px] ${
+                          isSelected
+                            ? 'bg-[#fcfbf7] border-b-2 border-b-[#fcfbf7] z-10 text-[#c92a2a]'
+                            : 'bg-gray-100 hover:bg-gray-50 text-gray-500'
+                        }`}
+                      >
+                        Task {sec.sectionOrder}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Two Column Workspace */}
+                <div className="grid lg:grid-cols-2 gap-8 mt-6">
+                  {/* Left Column - Prompt Description */}
+                  <div className="space-y-4 bg-white border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b]">
+                    <h4 className="font-bold text-[#c92a2a] text-xs uppercase tracking-wider">
+                      {activeExam.sections[activeSectionIdx]?.title || `Writing Task ${activeSectionIdx + 1}`}
+                    </h4>
+                    
+                    <div 
+                      className="text-xs text-gray-700 leading-relaxed font-serif whitespace-pre-line text-left italic"
+                      dangerouslySetInnerHTML={{
+                        __html: activeExam.sections[activeSectionIdx]?.passageText?.replace(/\\n/g, '<br/>') || ''
+                      }}
+                    />
+
+                    {/* Rendering Task 1 Diagrams statically */}
+                    {activeExam.sections[activeSectionIdx]?.images && activeExam.sections[activeSectionIdx].images.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-dashed border-gray-200 text-center">
+                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-wider mb-2">Diagram Visual Prompt</p>
+                        <img
+                          src={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace('/api/v1', '')}${activeExam.sections[activeSectionIdx].images[0]}`}
+                          alt="Writing prompt illustration"
+                          className="max-w-full max-h-[300px] object-contain border border-gray-300 rounded-xl mx-auto shadow-sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Column - User Input and AI evaluation */}
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-[10px] uppercase font-black text-gray-500 px-1">
+                        <span>Your Essay Response</span>
+                        <span className={essayText.trim().split(/\s+/).filter(Boolean).length >= (activeSectionIdx === 0 ? 150 : 250) ? 'text-emerald-600' : 'text-amber-600'}>
+                          Word Count: {essayText.trim().split(/\s+/).filter(Boolean).length} / {activeSectionIdx === 0 ? 150 : 250}+ (min)
+                        </span>
+                      </div>
+                      <textarea
+                        rows={12}
+                        value={essayText}
+                        onChange={(e) => {
+                          const text = e.target.value;
+                          setEssayText(text);
+                          setWritingEssays(prev => ({
+                            ...prev,
+                            [activeSectionIdx]: text
+                          }));
+                        }}
+                        placeholder={activeSectionIdx === 0 ? "Viết bài mô tả biểu đồ của bạn tại đây (tối thiểu 150 từ)..." : "Viết bài luận nghị luận xã hội của bạn tại đây (tối thiểu 250 từ)..."}
+                        className="w-full bg-white border-2 border-[#1b263b] rounded-2xl p-4 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner resize-y font-mono"
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleEvaluateWriting}
+                      disabled={writingLoading || !essayText.trim()}
+                      className="w-full bg-[#c92a2a] disabled:bg-gray-300 disabled:cursor-not-allowed text-white border-2 border-[#1b263b] py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-[#b01e1e] transition-all shadow-[3px_3px_0px_0px_#1b263b] flex items-center justify-center gap-2"
+                    >
+                      {writingLoading ? (
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        'Nộp Bài & Chấm Điểm AI ✍️'
+                      )}
+                    </button>
+
+                    {/* Result for this section */}
+                    {writingResults[activeSectionIdx] && (
+                      <div className="bg-white border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-4 animate-fade-in text-left">
+                        <div className="flex items-center justify-between border-b-2 border-dashed border-gray-200 pb-3">
+                          <h4 className="font-serif text-lg font-bold text-[#1b263b]">Kết Quả Chấm Essay AI</h4>
+                          <div className="bg-[#ffd54f] border-2 border-[#1b263b] px-4 py-1.5 rounded-xl font-mono font-black text-lg">
+                            Band {writingResults[activeSectionIdx].bandScore}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {[
+                            { label: 'Task Response', score: writingResults[activeSectionIdx].taskAchievement },
+                            { label: 'Coherence', score: writingResults[activeSectionIdx].coherenceCohesion },
+                            { label: 'Vocabulary', score: writingResults[activeSectionIdx].lexicalResource },
+                            { label: 'Grammar', score: writingResults[activeSectionIdx].grammarAccuracy },
+                          ].map((item) => (
+                            <div key={item.label} className="bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-center">
+                              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{item.label}</p>
+                              <p className="text-lg font-mono font-black text-[#1b263b]">{item.score}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="space-y-3 pt-2 text-xs text-gray-700 leading-relaxed font-semibold">
+                          <div>
+                            <p className="text-[10px] font-black uppercase text-gray-400">1. Task Achievement / Response:</p>
+                            <p className="mt-0.5">{writingResults[activeSectionIdx].aiFeedback?.taskAchievement}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase text-gray-400">2. Coherence and Cohesion:</p>
+                            <p className="mt-0.5">{writingResults[activeSectionIdx].aiFeedback?.coherenceCohesion}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase text-gray-400">3. Lexical Resource:</p>
+                            <p className="mt-0.5">{writingResults[activeSectionIdx].aiFeedback?.lexicalResource}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase text-gray-400">4. Grammatical Range & Accuracy:</p>
+                            <p className="mt-0.5">{writingResults[activeSectionIdx].aiFeedback?.grammarAccuracy}</p>
+                          </div>
+                          <div className="pt-2 border-t border-dashed border-gray-200">
+                            <p className="text-[10px] font-black uppercase text-red-500">General Suggestions:</p>
+                            <p className="mt-0.5 text-gray-800 font-serif italic font-bold">"{writingResults[activeSectionIdx].aiFeedback?.general}"</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
