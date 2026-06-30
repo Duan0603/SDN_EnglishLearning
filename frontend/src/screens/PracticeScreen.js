@@ -69,11 +69,10 @@ const PracticeScreen = ({ navigation }) => {
       }
     };
 
-    if (activeTab === 'reading' || activeTab === 'listening') {
+    if (activeTab === 'reading' || activeTab === 'listening' || activeTab === 'writing') {
       fetchExams();
     } else {
       const mockExams = [
-        { id: '5', title: 'IELTS Writing Task 1 & 2', time: '60 Phút', type: 'writing', level: 'Hard', color: '#d97706' },
         { id: '6', title: 'IELTS Speaking Mock Test', time: '15 Phút', type: 'speaking', level: 'Medium', color: '#c92a2a' },
       ];
       setExams(mockExams.filter(e => e.type === activeTab));

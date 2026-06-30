@@ -6,12 +6,16 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import path from 'path';
 import { apiRouter } from './routes/index';
 import { globalErrorHandler, notFoundHandler } from './middlewares/error.middleware';
 import { config } from './config/env.config';
 
 export const createApp = (): Application => {
   const app = express();
+
+  // Serve static images folder
+  app.use('/images', express.static(path.join(__dirname, '../public/images')));
 
   // Security middlewares
   app.use(helmet());
