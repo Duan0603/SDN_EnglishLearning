@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.config';
 import { TestType } from '@prisma/client';
+import { GeminiService } from './gemini.service';
 
 export class ExamService {
   /**
@@ -336,4 +337,29 @@ export class ExamService {
     }
     return results;
   }
+
+  /**
+   * Evaluates a student's writing response with Gemini AI and saves it to the database.
+   */
+  static async evaluateWriting(userId: string, testId: string | null, prompt: string, essayText: string) {
+    const evaluation = await GeminiService.scoreWriting(essayText, prompt);
+    
+    const submission = await prisma.writingSubmission.create({
+      data: {
+        userId,
+        testId: testId || null,
+        prompt,
+        essayText,
+        bandScore: evaluation.bandScore,
+        taskAchievement: evaluation.taskAchievement,
+        coherenceCohesion: evaluation.coherenceCohesion,
+        lexicalResource: evaluation.lexicalResource,
+        grammarAccuracy: evaluation.grammarAccuracy,
+        aiFeedback: evaluation.aiFeedback,
+      }
+    });
+
+    return submission;
+  }
 }
+

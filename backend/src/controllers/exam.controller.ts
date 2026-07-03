@@ -151,4 +151,35 @@ export class ExamController {
       next(new ApiError(error.message || 'Bulk import failed.', 400));
     }
   }
+
+  /**
+   * POST /api/v1/exams/evaluate-writing
+   * Evaluate a student's writing response with Gemini AI.
+   */
+  static async evaluateWriting(req: any, res: Response, next: NextFunction) {
+    try {
+      const { testId, prompt, essayText } = req.body;
+      const userId = req.user?.userId || req.user?.id || req.user?._id;
+
+      if (!userId) {
+        return next(new ApiError('Unauthorized', 401));
+      }
+
+      if (!essayText) {
+        return next(new ApiError('essayText is required.', 400));
+      }
+
+      if (!prompt) {
+        return next(new ApiError('prompt is required.', 400));
+      }
+
+      const result = await ExamService.evaluateWriting(userId, testId, prompt, essayText);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      next(new ApiError(error.message || 'Failed to evaluate writing.', 400));
+    }
+  }
 }

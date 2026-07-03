@@ -7,7 +7,8 @@ import {
   StyleSheet,
   StatusBar,
   ActivityIndicator,
-  Alert
+  Alert,
+  ScrollView
 } from 'react-native';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
@@ -17,8 +18,15 @@ import AppIcon from '../shared/icons/AppIcon';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../theme';
 import client from '../api/client';
 
+const DEFAULT_SECTIONS = [
+  {
+    title: "Part 1: Giới thiệu bản thân",
+    passageText: "Hãy nói về sở thích cá nhân của bạn. Bạn thường làm gì vào thời gian rảnh rỗi? Tại sao bạn lại thích điều đó?"
+  }
+];
+
 const SpeakingScreen = ({ route, navigation }) => {
-  const { title = "IELTS Speaking Mock Test" } = route.params || {};
+  const { title = "IELTS Speaking Mock Test", examId } = route.params || {};
   const { user } = useAuthStore();
   
   const [isRecording, setIsRecording] = useState(false);
@@ -27,8 +35,40 @@ const SpeakingScreen = ({ route, navigation }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState(null);
   
+  const [sections, setSections] = useState([]);
+  const [activeSectionIndex, setActiveSectionIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  
   const socketRef = useRef(null);
   const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (examId) {
+      setLoading(true);
+      client.get(`/exams/${examId}`)
+        .then(response => {
+          if (response.data && response.data.success) {
+            const test = response.data.data;
+            if (test.sections && test.sections.length > 0) {
+              setSections(test.sections);
+            } else {
+              setSections(DEFAULT_SECTIONS);
+            }
+          } else {
+            setSections(DEFAULT_SECTIONS);
+          }
+        })
+        .catch(err => {
+          console.error("Error fetching speaking exam:", err);
+          setSections(DEFAULT_SECTIONS);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setSections(DEFAULT_SECTIONS);
+    }
+  }, [examId]);
 
   // Initialize Socket
   useEffect(() => {
@@ -132,12 +172,15 @@ const SpeakingScreen = ({ route, navigation }) => {
         encoding: FileSystem.EncodingType.Base64,
       });
 
+      const activeSection = sections[activeSectionIndex] || DEFAULT_SECTIONS[0];
+
       // Emit to server
       socketRef.current.emit('audio:start');
       socketRef.current.emit('audio:chunk', base64Data);
       socketRef.current.emit('audio:stop', {
-        userId: user?._id || 'guest',
-        prompt: 'Vui lòng mô tả sở thích của bạn (IELTS Speaking Part 1)' // sample prompt
+        userId: user?._id || user?.id || 'guest',
+        testId: examId || null,
+        prompt: activeSection.passageText || 'Vui lòng trả lời câu hỏi Speaking'
       });
 
     } catch (err) {
@@ -147,9 +190,55 @@ const SpeakingScreen = ({ route, navigation }) => {
     }
   };
 
+  const getProgressWidth = (score) => {
+    const num = parseFloat(score);
+    if (isNaN(num)) return '0%';
+    return `${Math.min(100, Math.max(0, (num / 9) * 100))}%`;
+  };
+
+  const renderParsedPassage = (passageText) => {
+    if (!passageText) return null;
+    const lines = passageText.split('\n');
+    return lines.map((line, index) => {
+      const trimmed = line.trim();
+      if (!trimmed) return <View key={index} style={{ height: 8 }} />;
+      
+      if (trimmed.toLowerCase().startsWith('topic') || trimmed.toLowerCase().startsWith('discussion topics')) {
+        return (
+          <Text key={index} style={S.passageTopicHeader}>
+            {trimmed}
+          </Text>
+        );
+      }
+      
+      if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*')) {
+        const questionText = trimmed.substring(1).trim();
+        return (
+          <View key={index} style={S.passageQuestionRow}>
+            <View style={S.passageQuestionBullet} />
+            <Text style={S.passageQuestionText}>{questionText}</Text>
+          </View>
+        );
+      }
+      
+      const isFirstLine = index === 0;
+      return (
+        <Text 
+          key={index} 
+          style={[
+            S.passageParagraph, 
+            isFirstLine && S.passageFirstLine
+          ]}
+        >
+          {trimmed}
+        </Text>
+      );
+    });
+  };
+
   return (
     <SafeAreaView style={S.safe} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
+      <StatusBar barStyle="dark-content" backgroundColor="#fcfbf7" />
       
       {/* ── App Bar ──────────────────────────────────── */}
       <View style={S.appBar}>
@@ -163,15 +252,61 @@ const SpeakingScreen = ({ route, navigation }) => {
       {/* ── Content ────────────────────────────────────── */}
       <View style={S.content}>
         
-        {!result ? (
-          <View style={S.recordingContainer}>
-            <Text style={S.promptTitle}>Part 1: Giới thiệu bản thân</Text>
-            <Text style={S.promptDesc}>
-              Hãy nói về sở thích cá nhân của bạn. Bạn thường làm gì vào thời gian rảnh rỗi? Tại sao bạn lại thích điều đó?
+        {loading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={{ marginTop: 12, color: COLORS.textSecondary, fontFamily: TYPOGRAPHY.fontMedium }}>
+              Đang tải nội dung đề thi...
             </Text>
+          </View>
+        ) : !result ? (
+          <View style={S.recordingContainer}>
+            {sections.length > 1 && (
+              <View style={S.partTabsContainer}>
+                {sections.map((sec, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => {
+                      setActiveSectionIndex(idx);
+                      setResult(null);
+                      setIsRecording(false);
+                      setDuration(0);
+                    }}
+                    style={[
+                      S.partTabItem,
+                      idx === activeSectionIndex && S.partTabItemActive
+                    ]}
+                  >
+                    <Text style={[
+                      S.partTabText,
+                      idx === activeSectionIndex && S.partTabTextActive
+                    ]}>
+                      Part {idx + 1}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
-            <View style={S.timerBox}>
-              <Text style={[S.timerText, isRecording && { color: COLORS.danger }]}>
+            {/* Prompt Card */}
+            <View style={S.promptCard}>
+              <View style={S.cardBadge}>
+                <Text style={S.cardBadgeText}>
+                  {(sections[activeSectionIndex]?.title || DEFAULT_SECTIONS[0].title).toUpperCase()}
+                </Text>
+              </View>
+              <ScrollView 
+                style={S.cardScroll} 
+                contentContainerStyle={S.cardScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {renderParsedPassage(sections[activeSectionIndex]?.passageText || DEFAULT_SECTIONS[0].passageText)}
+              </ScrollView>
+            </View>
+
+            <View style={[S.timerBadge, isRecording && S.timerBadgeRecording]}>
+              {isRecording && <View style={S.timerDot} />}
+              <Text style={[S.timerText, isRecording && S.timerTextRecording]}>
                 {formatTime(duration)}
               </Text>
             </View>
@@ -188,7 +323,7 @@ const SpeakingScreen = ({ route, navigation }) => {
               >
                 <AppIcon 
                   name={isRecording ? 'stop' : 'mic-active'} 
-                  size={40} 
+                  size={32} 
                   color={COLORS.textInverse} 
                 />
               </TouchableOpacity>
@@ -201,43 +336,88 @@ const SpeakingScreen = ({ route, navigation }) => {
             )}
           </View>
         ) : (
-          <View style={S.resultContainer}>
-            <AppIcon name="success" size={60} color={COLORS.success} />
-            <Text style={S.resultTitle}>Chấm điểm hoàn tất!</Text>
-            
-            <View style={S.scoreCircle}>
-              <Text style={S.scoreLabel}>Overall Band</Text>
-              <Text style={S.scoreValue}>{result.bandScore}</Text>
-            </View>
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+            <View style={S.resultContainer}>
+              <AppIcon name="success" size={48} color={COLORS.success} />
+              <Text style={S.resultTitle}>Chấm điểm hoàn tất!</Text>
+              
+              <View style={S.resultCard}>
+                <View style={S.scoreCircleContainer}>
+                  <View style={S.scoreCircle}>
+                    <Text style={S.scoreLabel}>Overall Band</Text>
+                    <Text style={S.scoreValue}>{result.bandScore}</Text>
+                  </View>
+                </View>
 
-            <View style={S.criteriaBox}>
-              <View style={S.criteriaRow}>
-                <Text style={S.criteriaName}>Trôi chảy & Mạch lạc:</Text>
-                <Text style={S.criteriaScore}>{result.fluencyCoherence}</Text>
+                <View style={S.criteriaBox}>
+                  <View style={S.progressRow}>
+                    <View style={S.criteriaInfo}>
+                      <Text style={S.criteriaName}>Trôi chảy & Mạch lạc:</Text>
+                      <Text style={S.criteriaScore}>{result.fluencyCoherence}</Text>
+                    </View>
+                    <View style={S.progressBarBg}>
+                      <View style={[S.progressBarFill, { width: getProgressWidth(result.fluencyCoherence) }]} />
+                    </View>
+                  </View>
+                  
+                  <View style={S.progressRow}>
+                    <View style={S.criteriaInfo}>
+                      <Text style={S.criteriaName}>Từ vựng:</Text>
+                      <Text style={S.criteriaScore}>{result.lexicalResource}</Text>
+                    </View>
+                    <View style={S.progressBarBg}>
+                      <View style={[S.progressBarFill, { width: getProgressWidth(result.lexicalResource) }]} />
+                    </View>
+                  </View>
+
+                  <View style={S.progressRow}>
+                    <View style={S.criteriaInfo}>
+                      <Text style={S.criteriaName}>Ngữ pháp:</Text>
+                      <Text style={S.criteriaScore}>{result.grammarAccuracy}</Text>
+                    </View>
+                    <View style={S.progressBarBg}>
+                      <View style={[S.progressBarFill, { width: getProgressWidth(result.grammarAccuracy) }]} />
+                    </View>
+                  </View>
+
+                  <View style={S.progressRow}>
+                    <View style={S.criteriaInfo}>
+                      <Text style={S.criteriaName}>Phát âm:</Text>
+                      <Text style={S.criteriaScore}>{result.pronunciation}</Text>
+                    </View>
+                    <View style={S.progressBarBg}>
+                      <View style={[S.progressBarFill, { width: getProgressWidth(result.pronunciation) }]} />
+                    </View>
+                  </View>
+                </View>
               </View>
-              <View style={S.criteriaRow}>
-                <Text style={S.criteriaName}>Từ vựng:</Text>
-                <Text style={S.criteriaScore}>{result.lexicalResource}</Text>
+
+              <View style={S.feedbackBox}>
+                <Text style={S.feedbackTitle}>Phản hồi từ AI:</Text>
+                <Text style={S.feedbackText}>{result.aiFeedback}</Text>
               </View>
-              <View style={S.criteriaRow}>
-                <Text style={S.criteriaName}>Ngữ pháp:</Text>
-                <Text style={S.criteriaScore}>{result.grammarAccuracy}</Text>
-              </View>
-              <View style={S.criteriaRow}>
-                <Text style={S.criteriaName}>Phát âm:</Text>
-                <Text style={S.criteriaScore}>{result.pronunciation}</Text>
+
+              <View style={S.actionsRow}>
+                <TouchableOpacity style={S.retryBtn} onPress={() => setResult(null)}>
+                  <Text style={S.retryText}>Luyện tập lại</Text>
+                </TouchableOpacity>
+                
+                {activeSectionIndex < sections.length - 1 && (
+                  <TouchableOpacity 
+                    style={[S.retryBtn, { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]} 
+                    onPress={() => {
+                      setActiveSectionIndex(activeSectionIndex + 1);
+                      setResult(null);
+                      setIsRecording(false);
+                      setDuration(0);
+                    }}
+                  >
+                    <Text style={[S.retryText, { color: COLORS.textInverse }]}>Part Tiếp Theo →</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
-
-            <View style={S.feedbackBox}>
-              <Text style={S.feedbackTitle}>Phản hồi từ AI:</Text>
-              <Text style={S.feedbackText}>{result.aiFeedback}</Text>
-            </View>
-
-            <TouchableOpacity style={S.retryBtn} onPress={() => setResult(null)}>
-              <Text style={S.retryText}>Thử lại bài khác</Text>
-            </TouchableOpacity>
-          </View>
+          </ScrollView>
         )}
 
       </View>
@@ -246,14 +426,14 @@ const SpeakingScreen = ({ route, navigation }) => {
 };
 
 const S = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
+  safe: { flex: 1, backgroundColor: '#f5f3dc' },
   appBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.base,
     paddingVertical: SPACING.md,
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#fcfbf7',
     borderBottomWidth: 1,
     borderBottomColor: COLORS.borderLight,
   },
@@ -263,45 +443,245 @@ const S = StyleSheet.create({
   content: { flex: 1, padding: SPACING.lg },
   
   recordingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  promptTitle: { fontSize: TYPOGRAPHY.lg, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary, marginBottom: SPACING.sm, textAlign: 'center' },
-  promptDesc: { fontSize: TYPOGRAPHY.md, fontFamily: TYPOGRAPHY.fontRegular, color: COLORS.textSecondary, textAlign: 'center', marginBottom: SPACING['3xl'], paddingHorizontal: SPACING.md },
   
-  timerBox: { marginBottom: SPACING['2xl'] },
-  timerText: { fontSize: 48, fontFamily: TYPOGRAPHY.fontBlack, color: COLORS.textPrimary },
+  promptCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    width: '100%',
+    maxWidth: 680,
+    height: 340,
+    marginBottom: SPACING.lg,
+    ...SHADOWS.md,
+    overflow: 'hidden',
+    alignSelf: 'center',
+  },
+  cardBadge: {
+    backgroundColor: COLORS.primaryLight,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.primaryBorder,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+  },
+  cardBadgeText: {
+    color: COLORS.primaryDark,
+    fontSize: TYPOGRAPHY.sm,
+    fontFamily: TYPOGRAPHY.fontBold,
+    letterSpacing: 0.5,
+  },
+  cardScroll: {
+    flex: 1,
+  },
+  cardScrollContent: {
+    padding: SPACING.lg,
+  },
   
-  micButton: {
-    width: 100, height: 100, borderRadius: 50,
+  passageTopicHeader: {
+    fontSize: TYPOGRAPHY.base,
+    fontFamily: TYPOGRAPHY.fontBold,
+    color: COLORS.primaryDark,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xs,
+  },
+  passageQuestionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: SPACING.xs,
+    paddingLeft: SPACING.xs,
+  },
+  passageQuestionBullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: COLORS.primary,
-    alignItems: 'center', justifyContent: 'center',
-    ...SHADOWS.md
+    marginTop: 8,
+    marginRight: SPACING.sm,
+  },
+  passageQuestionText: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.base,
+    fontFamily: TYPOGRAPHY.fontMedium,
+    color: COLORS.textPrimary,
+    lineHeight: 22,
+  },
+  passageParagraph: {
+    fontSize: TYPOGRAPHY.base,
+    fontFamily: TYPOGRAPHY.fontRegular,
+    color: COLORS.textSecondary,
+    lineHeight: 22,
+    marginBottom: SPACING.xs,
+  },
+  passageFirstLine: {
+    fontSize: TYPOGRAPHY.base,
+    fontFamily: TYPOGRAPHY.fontMedium,
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.sm,
+  },
+  
+  timerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.full,
+    paddingVertical: 6,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.xl,
+    ...SHADOWS.sm,
+  },
+  timerBadgeRecording: {
+    borderColor: COLORS.error,
+    backgroundColor: COLORS.errorBg,
+  },
+  timerDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.error,
+    marginRight: SPACING.sm,
+  },
+  timerText: {
+    fontSize: TYPOGRAPHY.xl,
+    fontFamily: TYPOGRAPHY.fontBold,
+    color: COLORS.textPrimary,
+  },
+  timerTextRecording: {
+    color: COLORS.error,
+  },
+
+  micButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: COLORS.surface,
+    ...SHADOWS.md,
   },
   micButtonActive: {
-    backgroundColor: COLORS.danger,
-    transform: [{ scale: 1.1 }]
+    backgroundColor: COLORS.error,
+    transform: [{ scale: 1.05 }],
+    shadowColor: COLORS.error,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
   micInstruction: { marginTop: SPACING.lg, fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary },
 
   processingBox: { alignItems: 'center', marginTop: SPACING.xl },
   processingText: { marginTop: SPACING.md, fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.primary },
 
-  resultContainer: { flex: 1, alignItems: 'center', paddingTop: SPACING.xl },
-  resultTitle: { fontSize: TYPOGRAPHY.xl, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.success, marginTop: SPACING.sm, marginBottom: SPACING.xl },
+  resultContainer: { flex: 1, alignItems: 'center', paddingTop: SPACING.md },
+  resultTitle: { fontSize: TYPOGRAPHY.xl, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.success, marginTop: SPACING.sm, marginBottom: SPACING.lg },
   
-  scoreCircle: { width: 120, height: 120, borderRadius: 60, borderWidth: 4, borderColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.xl },
+  resultCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    ...SHADOWS.md,
+    marginBottom: SPACING.lg,
+  },
+  scoreCircleContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '35%',
+    minWidth: 140,
+    paddingVertical: SPACING.sm,
+  },
+  scoreCircle: { width: 110, height: 110, borderRadius: 55, borderWidth: 4, borderColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
   scoreLabel: { fontSize: TYPOGRAPHY.xs, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary },
-  scoreValue: { fontSize: 36, fontFamily: TYPOGRAPHY.fontBlack, color: COLORS.primary },
+  scoreValue: { fontSize: 32, fontFamily: TYPOGRAPHY.fontBlack, color: COLORS.primary },
 
-  criteriaBox: { width: '100%', backgroundColor: COLORS.surface, padding: SPACING.lg, borderRadius: RADIUS.lg, ...SHADOWS.sm, marginBottom: SPACING.lg },
-  criteriaRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: SPACING.xs },
-  criteriaName: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary },
-  criteriaScore: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary },
+  criteriaBox: {
+    width: '60%',
+    minWidth: 260,
+    flexGrow: 1,
+  },
+  progressRow: {
+    marginVertical: SPACING.xs,
+    width: '100%',
+  },
+  criteriaInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  progressBarBg: {
+    height: 8,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.gray100,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary,
+  },
 
-  feedbackBox: { width: '100%', backgroundColor: COLORS.primaryLight, padding: SPACING.lg, borderRadius: RADIUS.lg, marginBottom: SPACING.xl },
+  feedbackBox: {
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
+    backgroundColor: COLORS.primaryLight,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
+    marginBottom: SPACING.xl,
+  },
   feedbackTitle: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.primaryDark, marginBottom: SPACING.xs },
   feedbackText: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontRegular, color: COLORS.primaryDark, lineHeight: 20 },
 
   retryBtn: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.xl, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.full },
-  retryText: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary }
+  retryText: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: SPACING.md,
+    alignSelf: 'center',
+  },
+
+  partTabsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: SPACING.lg,
+  },
+  partTabItem: {
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginHorizontal: SPACING.xs,
+    backgroundColor: COLORS.surface,
+  },
+  partTabItemActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  partTabText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontFamily: TYPOGRAPHY.fontMedium,
+    color: COLORS.textSecondary,
+  },
+  partTabTextActive: {
+    color: COLORS.textInverse,
+    fontFamily: TYPOGRAPHY.fontBold,
+  },
 });
 
 export default SpeakingScreen;

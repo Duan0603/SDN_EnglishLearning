@@ -519,19 +519,19 @@ const speakingExams = [
       {
         sectionOrder: 1,
         title: "Part 1: Introduction and Interview",
-        passageText: "The examiner asks you about yourself, your home, work or studies, and topics like food and cooking.\n\n- What sorts of food do you like eating most? [Why?]\n- Who normally does the cooking in your home? [Why/Why not?]\n- Do you watch cookery programmes on TV? [Why/Why not?]",
+        passageText: "The examiner asks the candidate about him/herself, his/her home, work or studies and other familiar topics.\n\nTopic: Food and cooking\n• What sorts of food do you like eating most? [Why?]\n• Who normally does the cooking in your home? [Why/Why not?]\n• Do you watch cookery programmes on TV? [Why/Why not?]\n• In general, do you prefer eating out or eating at home? [Why?]",
         questions: []
       },
       {
         sectionOrder: 2,
         title: "Part 2: Individual Long Turn (Cue Card)",
-        passageText: "Describe a house or apartment you would like to live in.\n\nYou should say:\n- where it would be\n- what it would look like\n- who you would live there with\n- and explain why you would like to live in this house or apartment.",
+        passageText: "Describe a house/apartment that someone you know lives in.\n\nYou should say:\n• whose house/apartment this is\n• where the house/apartment is\n• what it looks like inside\n• and explain what you like or dislike about this person's house/apartment.\n\nYou will have to talk about the topic for one to two minutes. You have one minute to think about what you are going to say. You can make some notes to help you if you wish.",
         questions: []
       },
       {
         sectionOrder: 3,
         title: "Part 3: Two-way Discussion",
-        passageText: "Discussion topics: Types of housing, lifestyle trends, and community building.",
+        passageText: "The examiner and the candidate discuss more abstract issues related to the topic in Part 2.\n\nTopic 1: Different types of home\n• What kinds of home are most popular in your country? Why is this?\n• What do you think are the advantages of living in a house rather than an apartment?\n• Do you think that everyone would like to live in a larger home? Why is that?\n\nTopic 2: Finding a place to live\n• How easy is it to find a place to live in your country?\n• Do you think it's better to rent or to buy a place to live in? Why?\n• Do you agree that there is a right age for young adults to stop living with their parents? Why is that?",
         questions: []
       }
     ]
@@ -544,8 +544,20 @@ const speakingExams = [
     sections: [
       {
         sectionOrder: 1,
-        title: "Part 1: Friends",
-        passageText: "The examiner asks you about friends:\n\n- How often do you go out with friends? [Why/Why not?]\n- Tell me about your best friend at school.\n- How friendly are you with your neighbours? [Why/Why not?]",
+        title: "Part 1: Introduction and Interview",
+        passageText: "The examiner asks the candidate about him/herself, his/her home, work or studies and other familiar topics.\n\nTopic: Friends\n• How often do you go out with friends? [Why/Why not?]\n• Tell me about your best friend at school.\n• How friendly are you with your neighbours? [Why/Why not?]\n• Which is more important to you, friends or family? [Why?]",
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Part 2: Individual Long Turn (Cue Card)",
+        passageText: "Describe a writer you would like to meet.\n\nYou should say:\n• who the writer is\n• what you know about this writer already\n• what you would like to find out about him/her\n• and explain why you would like to meet this writer.\n\nYou will have to talk about the topic for one to two minutes. You have one minute to think about what you are going to say. You can make some notes to help you if you wish.",
+        questions: []
+      },
+      {
+        sectionOrder: 3,
+        title: "Part 3: Two-way Discussion",
+        passageText: "The examiner and the candidate discuss more abstract issues related to the topic in Part 2.\n\nTopic 1: Reading and children\n• What kinds of book are most popular with children in your country? Why do you think that is?\n• Why do you think some children do not read books very often?\n• How do you think children can be encouraged to read more?\n\nTopic 2: Reading for different purposes\n• Are there any occasions when reading at speed is a useful skill to have? What are they?\n• Are there any jobs where people need to read a lot? What are they?\n• Do you think that reading novels is more interesting than reading factual books? Why is that?",
         questions: []
       }
     ]
@@ -558,8 +570,20 @@ const speakingExams = [
     sections: [
       {
         sectionOrder: 1,
-        title: "Part 1: Photographs",
-        passageText: "The examiner asks you about photographs:\n\n- What type of photos do you like taking? [Why/Why not?]\n- What do you do with photos you take? [Why/Why not?]\n- When you visit other places, do you take photos or buy postcards? [Why/Why not?]",
+        title: "Part 1: Introduction and Interview",
+        passageText: "The examiner asks the candidate about him/herself, his/her home, work or studies and other familiar topics.\n\nTopic: Photographs\n• What type of photos do you like taking? [Why/Why not?]\n• What do you do with photos you take? [Why/Why not?]\n• When you visit other places, do you take photos or buy postcards? [Why/Why not?]\n• Do you like people taking photos of you? [Why/Why not?]",
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Part 2: Individual Long Turn (Cue Card)",
+        passageText: "Describe a day when you thought the weather was perfect.\n\nYou should say:\n• where you were on this day\n• what the weather was like on this day\n• what you did during the day\n• and explain why you thought the weather was perfect on this day.\n\nYou will have to talk about the topic for one to two minutes. You have one minute to think about what you are going to say. You can make some notes to help you if you wish.",
+        questions: []
+      },
+      {
+        sectionOrder: 3,
+        title: "Part 3: Two-way Discussion",
+        passageText: "The examiner and the candidate discuss more abstract issues related to the topic in Part 2.\n\nTopic 1: Types of weather\n• What types of weather do people in your country dislike most? Why is that?\n• What jobs can be affected by different weather conditions? Why?\n• Are there any important festivals in your country that celebrate a season or type of weather?\n\nTopic 2: Weather forecasts\n• How important do you think it is for everyone to check what the next day's weather will be? Why?\n• What is the best way to get accurate information about the weather?\n• How easy or difficult is it to predict the weather in your country? Why is that?",
         questions: []
       }
     ]
@@ -572,8 +596,20 @@ const speakingExams = [
     sections: [
       {
         sectionOrder: 1,
-        title: "Part 1: Names",
-        passageText: "The examiner asks you about names:\n\n- How did your parents choose your name(s)?\n- Does your name have any special meaning?\n- Is your name common or unusual in your country?",
+        title: "Part 1: Introduction and Interview",
+        passageText: "The examiner asks the candidate about him/herself, his/her home, work or studies and other familiar topics.\n\nTopic: Names\n• How did your parents choose your name(s)?\n• Does your name have any special meaning?\n• Is your name common or unusual in your country?\n• If you could change your name, would you? [Why/Why not?]",
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Part 2: Individual Long Turn (Cue Card)",
+        passageText: "Describe a TV documentary you watched that was particularly interesting.\n\nYou should say:\n• what the documentary was about\n• why you decided to watch it\n• what you learnt during the documentary\n• and explain why the TV documentary was particularly interesting.\n\nYou will have to talk about the topic for one to two minutes. You have one minute to think about what you are going to say. You can make some notes to help you if you wish.",
+        questions: []
+      },
+      {
+        sectionOrder: 3,
+        title: "Part 3: Two-way Discussion",
+        passageText: "The examiner and the candidate discuss more abstract issues related to the topic in Part 2.\n\nTopic 1: Different types of TV programmes\n• What are the most popular kinds of TV programmes in your country? Why is this?\n• Do you think there are too many game shows on TV nowadays? Why?\n• Do you think TV is the main way for people to get the news in your country? What other ways are there?\n\nTopic 2: TV advertising\n• What types of products are advertised most often on TV?\n• Do you think that people pay attention to adverts on TV? Why do you think that is?\n• How important are regulations on TV advertising? Why?",
         questions: []
       }
     ]
@@ -590,14 +626,15 @@ const writingExams = [
       {
         sectionOrder: 1,
         title: "Writing Task 1: Water Use by Region",
-        passageText: "The charts below show the percentage of water used for different purposes (industrial, agricultural, domestic) in six areas of the world.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-        images: ["https://example.com/charts/water_use.png"],
+        passageText: "The charts below show the percentage of water used for different purposes in six areas of the world.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
+        images: ["/images/writing_t1_c11_t1.png"],
         questions: []
       },
       {
         sectionOrder: 2,
-        title: "Writing Task 2: Government & Health",
-        passageText: "Governments should introduce laws to reduce the consumption of unhealthy foods. To what extent do you agree or disagree with this statement?",
+        title: "Writing Task 2: Railways vs Roads",
+        passageText: "Governments should spend money on railways rather than roads.\n\nTo what extent do you agree or disagree with this statement?\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        images: ["/images/writing_t2_c11_t1.png"],
         questions: []
       }
     ]
@@ -612,7 +649,14 @@ const writingExams = [
         sectionOrder: 1,
         title: "Writing Task 1: Language Ability of University Students",
         passageText: "The charts below show the proportions of British students at one university in England who were able to speak other languages in addition to English, in 2000 and 2010.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-        images: ["https://example.com/charts/languages_students.png"],
+        images: ["/images/writing_t1_c11_t2.png"],
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Writing Task 2: Waste Recycling Laws",
+        passageText: "Some people claim that not enough of the waste from homes is recycled. They say that the only way to increase recycling is for governments to make it a legal requirement.\n\nTo what extent do you agree or disagree with this statement?\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        images: ["/images/writing_t2_c11_t2.png"],
         questions: []
       }
     ]
@@ -627,7 +671,14 @@ const writingExams = [
         sectionOrder: 1,
         title: "Writing Task 1: Carbon Dioxide Emissions",
         passageText: "The graph below shows average carbon dioxide (CO2) emissions per person in the United Kingdom, Sweden, Italy and Portugal between 1967 and 2007.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-        images: ["https://example.com/charts/co2_emissions.png"],
+        images: ["/images/writing_t1_c11_t3.png"],
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Writing Task 2: Purpose of Learning Foreign Languages",
+        passageText: "Some people say that the only reason for learning a foreign language is in order to travel to or work in a foreign country. Others say that these are not the only reasons why someone should learn a foreign language.\n\nDiscuss both these views and give your own opinion.\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        images: ["/images/writing_t2_c11_t3.png"],
         questions: []
       }
     ]
@@ -642,7 +693,14 @@ const writingExams = [
         sectionOrder: 1,
         title: "Writing Task 1: Museum Visitors Survey",
         passageText: "The table below shows the numbers of visitors to Ashdown Museum during the year before and the year after it was refurbished. The charts show the results of surveys asking visitors how satisfied they were with their visit during the same two periods.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-        images: ["https://example.com/charts/museum_visitors.png"],
+        images: ["/images/writing_t1_c11_t4.png"],
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Writing Task 2: Economic Progress vs Other Progress",
+        passageText: "Many governments think that economic progress is their most important goal. Some people, however, think that other types of progress are equally important for a country.\n\nDiscuss both these views and give your own opinion.\n\nGive reasons for your answer and include any relevant examples from your own knowledge or experience.",
+        images: ["/images/writing_t2_c11_t4.png"],
         questions: []
       }
     ]
