@@ -49,7 +49,7 @@ const PracticeScreen = ({ navigation }) => {
             time: `${e.duration || 60} Phút`,
             type: e.type.toLowerCase(),
             level: e.title.includes('18') || e.title.includes('Hard') ? 'Hard' : 'Medium',
-            color: e.type === 'READING' ? '#4682b4' : '#005c42',
+            color: e.type === 'READING' ? '#4682b4' : e.type === 'SPEAKING' ? '#c92a2a' : '#005c42',
             questionsCount: e.questionsCount
           }));
           setExams(dbExams);
@@ -62,6 +62,7 @@ const PracticeScreen = ({ navigation }) => {
           { id: '2', title: 'IELTS Cambridge 18 - Test 2', time: '60 Phút', type: 'reading', level: 'Medium', color: '#4682b4' },
           { id: '3', title: 'IELTS Cambridge 17 - Test 1', time: '60 Phút', type: 'reading', level: 'Hard', color: '#4682b4' },
           { id: '4', title: 'IELTS Listening Practice 1', time: '30 Phút', type: 'listening', level: 'Medium', color: '#005c42' },
+          { id: '6', title: 'IELTS Speaking Mock Test', time: '15 Phút', type: 'speaking', level: 'Medium', color: '#c92a2a' },
         ];
         setExams(mockExams.filter(e => e.type === activeTab));
       } finally {
@@ -69,14 +70,7 @@ const PracticeScreen = ({ navigation }) => {
       }
     };
 
-    if (activeTab === 'reading' || activeTab === 'listening' || activeTab === 'writing') {
-      fetchExams();
-    } else {
-      const mockExams = [
-        { id: '6', title: 'IELTS Speaking Mock Test', time: '15 Phút', type: 'speaking', level: 'Medium', color: '#c92a2a' },
-      ];
-      setExams(mockExams.filter(e => e.type === activeTab));
-    }
+    fetchExams();
   }, [activeTab]);
 
   const filteredExams = exams;
@@ -143,7 +137,7 @@ const PracticeScreen = ({ navigation }) => {
               activeOpacity={0.8}
               onPress={() => {
                 if (exam.type === 'speaking') {
-                  navigation.navigate('Speaking', { title: exam.title });
+                  navigation.navigate('Speaking', { title: exam.title, examId: exam.id });
                 } else {
                   navigation.navigate('Exam', { examId: exam.id, testType: activeTab });
                 }
@@ -163,7 +157,7 @@ const PracticeScreen = ({ navigation }) => {
                   <Text style={styles.examTitle}>{exam.title}</Text>
                   
                   <View style={styles.examAction}>
-                    <Text style={[styles.examActionText, { color: exam.color }]}>START MOCK EXAM</Text>
+                    <Text style={[styles.examActionText, { color: exam.color }]}>START EXAM</Text>
                     <Ionicons name="arrow-forward" size={16} color={exam.color} />
                   </View>
                 </View>
