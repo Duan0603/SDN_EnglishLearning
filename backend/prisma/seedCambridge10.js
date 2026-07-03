@@ -1164,19 +1164,19 @@ const speakingExams = [
       {
         sectionOrder: 1,
         title: "Part 1: Introduction and Interview",
-        passageText: "The examiner asks the candidate about him/herself, his/her home, work or studies and other familiar topics.\n\nTopic: Weekends\n• How do you usually spend your weekends? \n• Which is your favourite part of the weekend?\n• Do you think weekends are long enough?",
+        passageText: "The examiner asks the candidate about him/herself, his/her home, work or studies and other familiar topics.\n\nTopic: Weekends\n• How do you usually spend your weekends?\n• Which is your favourite part of the weekend? [Why?]\n• Do you think your weekends are long enough? [Why/Why not?]\n• How important do you think it is to have free time at the weekends? [Why?]",
         questions: []
       },
       {
         sectionOrder: 2,
         title: "Part 2: Individual Long Turn (Cue Card)",
-        passageText: "Describe a memorable event in your life.\n\nYou should say:\n• What the event was and when it occurred\n• Who was there with you\n• And explain why it is so memorable to you.",
+        passageText: "Describe someone you know who does something well.\n\nYou should say:\n• who this person is\n• how you know this person\n• what they do well\n• and explain why you think this person is so good at doing this.\n\nYou will have to talk about the topic for one to two minutes. You have one minute to think about what you are going to say. You can make some notes to help you if you wish.",
         questions: []
       },
       {
         sectionOrder: 3,
         title: "Part 3: Two-way Discussion",
-        passageText: "The examiner and the candidate discuss more abstract issues related to the topic in Part 2.\n\nTopic: Memory and Recollection\n• Why do some people remember details of events more clearly than others?\n• How does technology affect our ability to remember things?",
+        passageText: "The examiner and the candidate discuss more abstract issues related to the topic in Part 2.\n\nTopic 1: Skills and abilities\n• What skills and abilities do people most want to have today? Why?\n• Which skills should children learn at school? Are there any skills which they should learn at home? What are they?\n• Which skills do you think will be important in the future? Why?\n\nTopic 2: Salaries for skilled people\n• Which kinds of jobs have the highest salaries in your country? Why is this?\n• Are there any other jobs that you think should have high salaries? Why do you think that?\n• Some people say it would be better for society if everyone got the same salary. What do you think about that? Why?",
         questions: []
       }
     ]
@@ -1189,8 +1189,20 @@ const speakingExams = [
     sections: [
       {
         sectionOrder: 1,
-        title: "Part 1: Music",
-        passageText: "Music:\n• What types of music do you like listening to?\n• Do you play any musical instruments?\n• How has your taste in music changed over the years?",
+        title: "Part 1: Introduction and Interview",
+        passageText: "The examiner asks the candidate about him/herself, his/her home, work or studies and other familiar topics.\n\nTopic: Music\n• What types of music do you like listening to? [Why?]\n• At what times of day do you like to listen to music? [Why?]\n• Did you learn to play a musical instrument when you were a child? [Why/Why not?]\n• Do you think all children should learn to play a musical instrument? [Why/Why not?]",
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Part 2: Individual Long Turn (Cue Card)",
+        passageText: "Describe a shop near where you live that you sometimes use.\n\nYou should say:\n• what sorts of product or service it sells\n• what the shop looks like\n• where it is located\n• and explain why you use this shop.\n\nYou will have to talk about the topic for one to two minutes. You have one minute to think about what you are going to say. You can make some notes to help you if you wish.",
+        questions: []
+      },
+      {
+        sectionOrder: 3,
+        title: "Part 3: Two-way Discussion",
+        passageText: "The examiner and the candidate discuss more abstract issues related to the topic in Part 2.\n\nTopic 1: Local business\n• What types of local business are there in your neighbourhood? Are there any restaurants, shops or dentists for example?\n• Do you think local businesses are important for a neighbourhood? In what way?\n• How do large shopping malls and commercial centres affect local businesses? Why do you think that is?\n\nTopic 2: People and business\n• Why do some people want to start their own business?\n• Are there any disadvantages to running a business? Which is the most serious?\n• What are the most important qualities that a good business person needs? Why is that?",
         questions: []
       }
     ]
@@ -1203,8 +1215,20 @@ const speakingExams = [
     sections: [
       {
         sectionOrder: 1,
-        title: "Part 1: Travel",
-        passageText: "Travel:\n• Do you enjoy travelling? why?\n• Where would you like to travel in the future?\n• What are the benefits of travelling to other countries?",
+        title: "Part 1: Introduction and Interview",
+        passageText: "The examiner asks the candidate about him/herself, his/her home, work or studies and other familiar topics.\n\nTopic: Travel\n• Do you enjoy travelling? [Why/Why not?]\n• Have you done much travelling? [Why/Why not?]\n• Do you think it's better to travel alone or with other people? [Why?]\n• Where would you like to travel in the future? [Why?]",
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Part 2: Individual Long Turn (Cue Card)",
+        passageText: "Describe a child that you know.\n\nYou should say:\n• who this child is and how often you see him or her\n• how old this child is\n• what he or she is like\n• and explain what you feel about this child.\n\nYou will have to talk about the topic for one to two minutes. You have one minute to think about what you are going to say. You can make some notes to help you if you wish.",
+        questions: []
+      },
+      {
+        sectionOrder: 3,
+        title: "Part 3: Two-way Discussion",
+        passageText: "The examiner and the candidate discuss more abstract issues related to the topic in Part 2.\n\nTopic 1: Relationships between parents and children\n• How much time do children spend with their parents in your country? Do you think that is enough?\n• How important do you think spending time together is for the relationships between parents and children? Why?\n• Have relationships between parents and children changed in recent years? Why do you think that is?\n\nTopic 2: Children's free-time activities\n• What are the most popular free-time activities with children today?\n• Do you think the free-time activities children do today are good for their health? Why is that?\n• How do you think children's free-time activities will change in the future? Will this be a positive change?",
         questions: []
       }
     ]
@@ -1217,8 +1241,20 @@ const speakingExams = [
     sections: [
       {
         sectionOrder: 1,
-        title: "Part 1: School",
-        passageText: "School:\n• What was your favourite subject at school?\n• Do you keep in touch with any of your school friends?\n• Do you think school education prepares children well for the future?",
+        title: "Part 1: Introduction and Interview",
+        passageText: "The examiner asks the candidate about him/herself, his/her home, work or studies and other familiar topics.\n\nTopic: School\n• Did you go to a secondary/high school near where you lived? [Why/Why not?]\n• What did you like about your secondary/high school? [Why?]\n• Tell me about anything you didn't like at your school.\n• How do you think your school could be improved? [Why/Why not?]",
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: "Part 2: Individual Long Turn (Cue Card)",
+        passageText: "Describe something you don't have now but would really like to own in the future.\n\nYou should say:\n• what this thing is\n• how long you have wanted to own it\n• where you first saw it\n• and explain why you would like to own it.\n\nYou will have to talk about the topic for one to two minutes. You have one minute to think about what you are going to say. You can make some notes to help you if you wish.",
+        questions: []
+      },
+      {
+        sectionOrder: 3,
+        title: "Part 3: Two-way Discussion",
+        passageText: "The examiner and the candidate discuss more abstract issues related to the topic in Part 2.\n\nTopic 1: Owning things\n• What types of things do young people in your country most want to own today? Why is this?\n• Why do some people feel they need to own lots of things?\n• Do you think that owning lots of things makes people happy? Why?\n\nTopic 2: Possessions and society\n• Do you think television and films can make people want to get new possessions? Why do they have this effect?\n• Are there any benefits to society of people wanting to get new possessions? Why do you think this is?\n• Do you think people will consider that having lots of possessions is a sign of success in the future? Why?",
         questions: []
       }
     ]
