@@ -18,6 +18,7 @@ import { examRouter } from './exam.routes';
 import { adminRouter } from './admin/index.js';
 import { mentorRouter } from './mentor.routes';
 import { bookingRouter } from './booking.routes';
+import { userRouter } from './user/index';
 
 apiRouter.use('/api/v1/access', accessRouter);
 apiRouter.use('/api/v1/auth', accessRouter);
@@ -25,3 +26,4 @@ apiRouter.use('/api/v1/exams', examRouter);
 apiRouter.use('/api/v1/admin', adminRouter);
 apiRouter.use('/api/v1/mentors', mentorRouter);
 apiRouter.use('/api/v1/bookings', bookingRouter);
+apiRouter.use('/api/v1/users', userRouter);

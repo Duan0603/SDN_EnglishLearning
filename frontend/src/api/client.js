@@ -9,7 +9,7 @@ const getBaseURL = () => {
   }
   // Hardcoded for current LAN testing to bypass .env cache issues
   if (__DEV__) {
-    return 'http://192.168.155.238:5000/api/v1';
+    return 'http://192.168.1.106:5000/api/v1';
   }
   return 'https://api.apex-ielts.com/api/v1';
 };

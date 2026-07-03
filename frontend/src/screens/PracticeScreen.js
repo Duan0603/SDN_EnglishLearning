@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
-  Platform
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import examService from '../api/exam.service';
 
 // Brutalist shadow wrapper
 const BrutalistShadow = ({ children, style, offset = 4 }) => (
@@ -21,26 +23,83 @@ const BrutalistShadow = ({ children, style, offset = 4 }) => (
   </View>
 );
 
+// Map API type → badge color
+const TYPE_COLORS = {
+  READING: '#4682b4',
+  LISTENING: '#005c42',
+  WRITING: '#d97706',
+  SPEAKING: '#c92a2a',
+};
+
+// Map API type → display level label (fallback)
+const getDifficultyLabel = (exam) => {
+  if (exam.level) return exam.level;
+  if (exam.duration && exam.duration >= 60) return 'Hard';
+  return 'Medium';
+};
+
 const PracticeScreen = ({ navigation }) => {
-  const [activeTab, setActiveTab] = useState('reading');
+  const [activeTab, setActiveTab] = useState('READING');
+  const [exams, setExams] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 
   const tabs = [
-    { key: 'reading', label: 'Reading', icon: 'book' },
-    { key: 'listening', label: 'Listening', icon: 'headset' },
-    { key: 'writing', label: 'Writing', icon: 'pencil' },
-    { key: 'speaking', label: 'Speaking', icon: 'mic' },
+    { key: 'READING',   label: 'Reading',   icon: 'book' },
+    { key: 'LISTENING', label: 'Listening', icon: 'headset' },
+    { key: 'WRITING',   label: 'Writing',   icon: 'pencil' },
+    { key: 'SPEAKING',  label: 'Speaking',  icon: 'mic' },
   ];
 
-  const exams = [
-    { id: '1', title: 'IELTS Cambridge 18 - Test 1', time: '60 Phút', type: 'reading', level: 'Hard', color: '#4682b4' },
-    { id: '2', title: 'IELTS Cambridge 18 - Test 2', time: '60 Phút', type: 'reading', level: 'Medium', color: '#4682b4' },
-    { id: '3', title: 'IELTS Cambridge 17 - Test 1', time: '60 Phút', type: 'reading', level: 'Hard', color: '#4682b4' },
-    { id: '4', title: 'IELTS Listening Practice 1', time: '30 Phút', type: 'listening', level: 'Medium', color: '#005c42' },
-    { id: '5', title: 'IELTS Writing Task 1 & 2', time: '60 Phút', type: 'writing', level: 'Hard', color: '#d97706' },
-    { id: '6', title: 'IELTS Speaking Mock Test', time: '15 Phút', type: 'speaking', level: 'Medium', color: '#c92a2a' },
-  ];
+  const fetchExams = useCallback(async (type = activeTab, page = 1, silent = false) => {
+    if (!silent) setIsLoading(true);
+    setError(null);
+    try {
+      const res = await examService.getAll({ type, page, limit: 20 });
+      // Response: { success, data: { exams, pagination } }
+      const data = res.data?.data;
+      setExams(data?.exams || []);
+      setPagination(data?.pagination || { page: 1, pages: 1, total: 0 });
+    } catch (err) {
+      setError('Không thể tải danh sách đề thi. Kiểm tra kết nối mạng.');
+      setExams([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const filteredExams = exams.filter(e => e.type === activeTab);
+  // Fetch khi đổi tab
+  useEffect(() => {
+    fetchExams(activeTab, 1);
+  }, [activeTab]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchExams(activeTab, 1, true);
+    setRefreshing(false);
+  }, [activeTab, fetchExams]);
+
+  const handleExamPress = (exam) => {
+    const type = exam.type?.toLowerCase() || activeTab.toLowerCase();
+    if (type === 'speaking') {
+      navigation.navigate('Speaking', { title: exam.title });
+    } else {
+      // Truyền examId thật để ExamScreen load từ API
+      navigation.navigate('Exam', {
+        examId: exam.id,
+        testType: exam.type || activeTab,
+        examTitle: exam.title,
+      });
+    }
+  };
+
+  const formatDuration = (minutes) => {
+    if (!minutes) return '—';
+    if (minutes >= 60) return `${minutes / 60} Giờ`;
+    return `${minutes} Phút`;
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -76,7 +135,12 @@ const PracticeScreen = ({ navigation }) => {
         </ScrollView>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1b263b" />}
+      >
         
         {/* Header Card */}
         <BrutalistShadow style={styles.headerCard} offset={4}>
@@ -86,53 +150,81 @@ const PracticeScreen = ({ navigation }) => {
             </View>
             <View style={{ flex: 1, marginLeft: 16 }}>
               <Text style={styles.headerTitle}>Ready to start?</Text>
-              <Text style={styles.headerSub}>Select an exam and begin taking the mock test immediately.</Text>
+              <Text style={styles.headerSub}>
+                {pagination.total > 0
+                  ? `${pagination.total} đề thi ${activeTab.toLowerCase()} trong cơ sở dữ liệu`
+                  : 'Chọn kỹ năng và bắt đầu thi thử ngay.'}
+              </Text>
             </View>
           </View>
         </BrutalistShadow>
 
-        <Text style={styles.sectionBadge}>✎ {activeTab.toUpperCase()} EXAMS</Text>
+        <Text style={styles.sectionBadge}>✎ {activeTab} EXAMS</Text>
         <Text style={styles.sectionTitle}>Available Tests</Text>
 
-        {filteredExams.map((exam) => (
-          <TouchableOpacity 
-            key={exam.id}
-            style={styles.examCardContainer}
-            activeOpacity={0.8}
-            onPress={() => {
-              if (exam.type === 'speaking') {
-                navigation.navigate('Speaking', { title: exam.title });
-              } else {
-                navigation.navigate('Exam', { testType: activeTab });
-              }
-            }}
-          >
-            <BrutalistShadow style={{ borderRadius: 16 }} offset={4}>
-              <View style={styles.examCardInner}>
-                <View style={[styles.moduleRedLine, { backgroundColor: exam.color + '40' }]} />
-                
-                <View style={styles.examCardTop}>
-                  <View style={[styles.badge, { backgroundColor: exam.color }]}>
-                    <Text style={styles.badgeText}>{exam.level}</Text>
-                  </View>
-                  <Text style={styles.examTime}>{exam.time}</Text>
-                </View>
-                
-                <Text style={styles.examTitle}>{exam.title}</Text>
-                
-                <View style={styles.examAction}>
-                  <Text style={[styles.examActionText, { color: exam.color }]}>START MOCK EXAM</Text>
-                  <Ionicons name="arrow-forward" size={16} color={exam.color} />
-                </View>
-              </View>
-            </BrutalistShadow>
-          </TouchableOpacity>
-        ))}
+        {/* Loading State */}
+        {isLoading && (
+          <View style={styles.centerState}>
+            <ActivityIndicator size="large" color="#1b263b" />
+            <Text style={styles.centerText}>Đang tải đề thi...</Text>
+          </View>
+        )}
 
-        {filteredExams.length === 0 && (
+        {/* Error State */}
+        {!isLoading && error && (
+          <View style={styles.errorState}>
+            <Text style={{ fontSize: 32, marginBottom: 12 }}>⚠️</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => fetchExams(activeTab, 1)}>
+              <Text style={styles.retryBtnText}>Thử lại</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Exam List */}
+        {!isLoading && !error && exams.map((exam) => {
+          const color = TYPE_COLORS[exam.type] || TYPE_COLORS.READING;
+          const level = getDifficultyLabel(exam);
+          return (
+            <TouchableOpacity
+              key={exam.id}
+              style={styles.examCardContainer}
+              activeOpacity={0.8}
+              onPress={() => handleExamPress(exam)}
+            >
+              <BrutalistShadow style={{ borderRadius: 16 }} offset={4}>
+                <View style={styles.examCardInner}>
+                  <View style={[styles.moduleRedLine, { backgroundColor: color + '40' }]} />
+                  
+                  <View style={styles.examCardTop}>
+                    <View style={[styles.badge, { backgroundColor: color }]}>
+                      <Text style={styles.badgeText}>{level}</Text>
+                    </View>
+                    <Text style={styles.examTime}>{formatDuration(exam.duration)}</Text>
+                  </View>
+                  
+                  <Text style={styles.examTitle} numberOfLines={2}>{exam.title}</Text>
+                  
+                  {exam.questionsCount != null && (
+                    <Text style={styles.examMeta}>{exam.questionsCount} câu hỏi</Text>
+                  )}
+                  
+                  <View style={styles.examAction}>
+                    <Text style={[styles.examActionText, { color }]}>START MOCK EXAM</Text>
+                    <Ionicons name="arrow-forward" size={16} color={color} />
+                  </View>
+                </View>
+              </BrutalistShadow>
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* Empty State */}
+        {!isLoading && !error && exams.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={{ fontSize: 40, marginBottom: 12 }}>📂</Text>
-            <Text style={styles.emptyText}>No exams found for this skill yet.</Text>
+            <Text style={styles.emptyText}>Chưa có đề thi {activeTab.toLowerCase()} nào trong hệ thống.</Text>
+            <Text style={styles.emptySubText}>Admin có thể bulk-import đề Cambridge qua Admin Panel.</Text>
           </View>
         )}
 
@@ -201,6 +293,14 @@ const styles = StyleSheet.create({
   sectionBadge: { fontFamily: 'Outfit_900Black', fontSize: 10, color: '#c92a2a', letterSpacing: 2, marginBottom: 4 },
   sectionTitle: { fontSize: 24, fontFamily: 'Outfit_900Black', color: '#1b263b', marginBottom: 16 },
 
+  centerState: { alignItems: 'center', paddingVertical: 40 },
+  centerText: { fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#666', marginTop: 12 },
+
+  errorState: { alignItems: 'center', paddingVertical: 40 },
+  errorText: { fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#c92a2a', textAlign: 'center', marginBottom: 16 },
+  retryBtn: { backgroundColor: '#1b263b', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  retryBtnText: { fontFamily: 'Outfit_900Black', fontSize: 12, color: '#fff' },
+
   examCardContainer: { marginBottom: 16 },
   examCardInner: {
     backgroundColor: '#fcfbf7',
@@ -213,12 +313,14 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, borderWidth: 1, borderColor: '#1b263b' },
   badgeText: { fontSize: 10, fontFamily: 'Outfit_900Black', color: '#fff', textTransform: 'uppercase' },
   examTime: { fontSize: 12, fontFamily: 'Outfit_900Black', color: '#666' },
-  examTitle: { fontSize: 18, fontFamily: 'Outfit_900Black', color: '#1b263b', marginBottom: 16 },
+  examTitle: { fontSize: 16, fontFamily: 'Outfit_900Black', color: '#1b263b', marginBottom: 6, lineHeight: 22 },
+  examMeta: { fontSize: 11, fontFamily: 'Outfit_700Bold', color: '#999', marginBottom: 10 },
   examAction: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   examActionText: { fontSize: 12, fontFamily: 'Outfit_900Black', marginRight: 4 },
 
   emptyState: { alignItems: 'center', justifyContent: 'center', padding: 40, marginTop: 20 },
-  emptyText: { fontSize: 14, fontFamily: 'Outfit_700Bold', color: '#666' },
+  emptyText: { fontSize: 14, fontFamily: 'Outfit_700Bold', color: '#666', textAlign: 'center', marginBottom: 8 },
+  emptySubText: { fontSize: 12, fontFamily: 'Outfit_700Bold', color: '#999', textAlign: 'center' },
 });
 
 export default PracticeScreen;
