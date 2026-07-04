@@ -1,8 +1,9 @@
 import express from "express";
-import {asyncHandler} from "../../auth/checkAuth.js";
-import {AccessController} from "../../controllers/access.controller.js";
-import {PasswordController} from "../../controllers/password.controller.js";
-import {authentication} from "../../auth/authUtils.js";
+import {asyncHandler} from "../../auth/checkAuth";
+import {AccessController} from "../../controllers/access.controller";
+import {PasswordController} from "../../controllers/password.controller";
+import {authentication} from "../../auth/authUtils";
+import { getUserResults, getUserStats } from "../../controllers/user.controller";
 
 export const userRouter = express.Router();
 
@@ -20,3 +21,7 @@ userRouter.use(authentication)
 userRouter.get('/profile', asyncHandler(AccessController.getProfile))
 userRouter.patch('/profile', asyncHandler(AccessController.updateProfile))
 userRouter.post('/upload-avatar', asyncHandler(AccessController.uploadAvatar))
+
+// Progress & analytics endpoints (used by mobile ProgressScreen)
+userRouter.get('/me/results', asyncHandler(getUserResults))
+userRouter.get('/me/stats',   asyncHandler(getUserStats))

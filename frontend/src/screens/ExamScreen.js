@@ -42,6 +42,8 @@ const ExamScreen = ({ route, navigation }) => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [results, setResults] = useState(null);
   const [showResultsModal, setShowResultsModal] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // State for Writing Practice
   const [writingEssays, setWritingEssays] = useState({ 0: '', 1: '' });
@@ -55,15 +57,17 @@ const ExamScreen = ({ route, navigation }) => {
     const minWords = isTask1 ? 50 : 100;
 
     if (wordCount < minWords) {
-      Alert.alert('Bài viết quá ngắn', `Vui lòng nhập tối thiểu ${minWords} từ để AI đánh giá.`);
+      setErrorMessage(`Vui lòng nhập tối thiểu ${minWords} từ để AI đánh giá.`);
       return;
     }
 
     setWritingLoading(true);
     try {
+      // Use activeSection for the prompt instead of reading from state inside the handler
+      const activeSection = exam?.sections[activeSectionIdx] || {};
       const response = await client.post('/exams/evaluate-writing', {
         testId: exam.id,
-        prompt: activeSection.passageText,
+        prompt: activeSection.passageText || 'Vui lòng viết bài essay',
         essayText: currentEssay
       });
 
@@ -72,10 +76,12 @@ const ExamScreen = ({ route, navigation }) => {
           ...writingResults,
           [activeSectionIdx]: response.data.data
         });
+      } else {
+        setErrorMessage('Không thể đánh giá bài viết lúc này. Vui lòng thử lại sau.');
       }
     } catch (err) {
       console.error('Error evaluating writing:', err);
-      Alert.alert('Lỗi', 'Không thể đánh giá bài viết lúc này. Vui lòng thử lại sau.');
+      setErrorMessage('Không thể đánh giá bài viết lúc này. Vui lòng thử lại sau.');
     } finally {
       setWritingLoading(false);
     }
@@ -209,7 +215,7 @@ const ExamScreen = ({ route, navigation }) => {
         }
       } catch (err) {
         console.error('Error fetching exam:', err);
-        Alert.alert('Error', 'Failed to load exam. Please try again.');
+        setErrorMessage('Failed to load exam. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -236,16 +242,9 @@ const ExamScreen = ({ route, navigation }) => {
 
   const handleSubmit = async (isAuto = false) => {
     if (!isAuto) {
-      Alert.alert(
-        'Nộp bài',
-        'Bạn có chắc chắn muốn nộp bài thi không?',
-        [
-          { text: 'Hủy', style: 'cancel' },
-          { text: 'Nộp bài', onPress: () => submitAnswers() }
-        ]
-      );
+      setShowSubmitModal(true);
     } else {
-      Alert.alert('Hết giờ', 'Thời gian làm bài đã hết. Bài thi sẽ tự động được nộp.');
+      setErrorMessage('Thời gian làm bài đã hết. Bài thi sẽ tự động được nộp.');
       submitAnswers();
     }
   };
@@ -272,7 +271,7 @@ const ExamScreen = ({ route, navigation }) => {
       }
     } catch (err) {
       console.error('Submit error:', err);
-      Alert.alert('Lỗi', 'Không thể nộp bài thi. Vui lòng thử lại.');
+      setErrorMessage('Không thể nộp bài thi. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -659,6 +658,50 @@ const ExamScreen = ({ route, navigation }) => {
         </View>
       </Modal>
 
+      {/* Submit Confirmation Modal */}
+      <Modal
+        visible={showSubmitModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSubmitModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContentContainer}>
+            <BrutalistShadow style={styles.exitModalCard} offset={6}>
+              <View style={styles.exitModalInner}>
+                <View style={styles.exitModalHeader}>
+                  <Ionicons name="checkmark-circle" size={32} color="#c92a2a" />
+                  <Text style={styles.exitModalTitle}>Submit Exam?</Text>
+                </View>
+                
+                <Text style={styles.exitModalText}>
+                  Bạn có chắc chắn muốn nộp bài thi không?
+                </Text>
+
+                <View style={styles.exitModalButtons}>
+                  <TouchableOpacity 
+                    style={[styles.exitModalBtn, styles.cancelBtn]} 
+                    onPress={() => setShowSubmitModal(false)}
+                  >
+                    <Text style={styles.cancelBtnText}>Hủy</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[styles.exitModalBtn, styles.confirmExitBtn]} 
+                    onPress={() => {
+                      setShowSubmitModal(false);
+                      submitAnswers();
+                    }}
+                  >
+                    <Text style={styles.confirmExitBtnText}>Nộp bài</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </BrutalistShadow>
+          </View>
+        </View>
+      </Modal>
+
       {/* Results Modal */}
       <Modal
         visible={showResultsModal}
@@ -735,6 +778,32 @@ const ExamScreen = ({ route, navigation }) => {
             )}
           </ScrollView>
         </SafeAreaView>
+      </Modal>
+
+      {/* Error Message Modal */}
+      <Modal
+        visible={!!errorMessage}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setErrorMessage('')}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(27, 38, 59, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: '100%', maxWidth: 400, backgroundColor: '#fcfbf7', borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 2, borderColor: '#1b263b', elevation: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Ionicons name="alert-circle" size={32} color="#c92a2a" />
+              <Text style={{ fontSize: 20, fontFamily: 'Outfit_900Black', color: '#1b263b', marginLeft: 10 }}>Thông Báo</Text>
+            </View>
+            <Text style={{ fontSize: 14, fontFamily: 'Outfit_700Bold', color: '#333', textAlign: 'center', marginBottom: 24, lineHeight: 22 }}>
+              {errorMessage}
+            </Text>
+            <TouchableOpacity 
+              style={{ width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: '#c92a2a', borderWidth: 2, borderColor: '#1b263b' }} 
+              onPress={() => setErrorMessage('')}
+            >
+              <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#fff' }}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );

@@ -1,9 +1,10 @@
 # generated: 2026-05-25
-# last_updated: 2026-05-30
-# project: SDN_EnglishLearning
+# last_updated: 2026-06-28
+# project: SDN_EnglishLearning (Apex IELTS)
 # project_key: NOKEY
 # tracking_system: file-system
 # story_location: _bmad-output/implementation-artifacts
+# audit_date: 2026-06-28 (Full codebase review against README)
 
 # STATUS DEFINITIONS:
 # ==================
@@ -11,10 +12,6 @@
 #   - backlog: Epic not yet started
 #   - in-progress: Epic actively being worked on
 #   - done: All stories in epic completed
-#
-# Epic Status Transitions:
-#   - backlog → in-progress: Automatically when first story is created (via create-story)
-#   - in-progress → done: Manually when all stories reach 'done' status
 #
 # Story Status:
 #   - backlog: Story only exists in epic file
@@ -24,22 +21,29 @@
 #   - done: Story completed
 #
 # Layer Tags:
-#   [BE] = Backend task    [FE] = Frontend task    [FULL] = Full-stack task
+#   [BE] = Backend task    [FE] = Frontend (Mobile)    [WEB] = Web Admin    [FULL] = Full-stack
 #
-# Retrospective Status:
-#   - optional: Can be completed but not required
-#   - done: Retrospective has been completed
+# ⚠️  AUDIT FINDINGS (2026-06-28):
+# =================================
+# CRITICAL GAPS — Screens using hardcoded data instead of real API:
+#   - PracticeScreen.js: exams array is HARDCODED (lines 34-41) → needs GET /api/v1/exams?type=
+#   - ExamScreen.js:     passage text is HARDCODED (lines 140-146) → needs GET /api/v1/exams/:id
+#   - ExamScreen.js:     submit is a mock Alert (line 65-68) → needs POST /api/v1/exams/:id/submit
+#   - ProgressScreen.js: ALL data is HARDCODED (history[], bandScores) → needs GET /api/v1/users/me/results
+#   - HomeScreen.js:     progress % and band scores are HARDCODED → needs real API data
+#   - SpeakingScreen.js: ✅ CORRECTLY uses Socket.io (real integration)
+#   - MentorsScreen.js:  ✅ Calls real API with graceful mock fallback
+#   - LoginScreen.js:    ✅ Calls real API via useAuthStore.login()
 #
-# WORKFLOW NOTES:
-# ===============
-# - Epic transitions to 'in-progress' automatically when first story is created
-# - Stories can be worked in parallel if team capacity allows
-# - Developer typically creates next story after previous one is 'done' to incorporate learnings
-# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
-# - Backend and Frontend sub-stories can be developed in parallel by different developers
+# MISSING FEATURES:
+#   - Speaking history endpoint (Story 3.4 sub-task "Speaking history list" is backlog)
+#   - Web auth Redux slice not fully connected to real API
+#   - Admin mentor approval UI on web (Epic 4 stories on web backlog)
+#   - User progress/results endpoint on backend (GET /users/me/results not yet implemented)
+#   - Real-time availability refresh via Socket.io on booking screen
 
 generated: 2026-05-25
-last_updated: 2026-05-30
+last_updated: 2026-06-28
 project: SDN_EnglishLearning
 project_key: NOKEY
 tracking_system: file-system
@@ -47,21 +51,22 @@ story_location: _bmad-output/implementation-artifacts
 
 # ==============================================================================
 # EPIC 1: Access Management & Platform Core
-# Goal: Foundation (Vite + Express + Prisma) + Authentication + Socket.io infra
+# Goal: Foundation (Expo + Express + Prisma) + Authentication + Socket.io infra
 # FRs covered: FR7
 # ==============================================================================
 development_status:
   epic-1: in-progress
 
   # Story 1.1 [FULL] Initialize Project Monorepo & Infrastructure
-  1-1-initialize-project-monorepo-infrastructure: review
+  1-1-initialize-project-monorepo-infrastructure: done
   # Sub-tasks breakdown:
   #   [BE] Express TS + Prisma + MongoDB + Redis config ............. done
   #   [BE] Health endpoint /health .................................. done
   #   [BE] Error middleware + standard response format .............. done
-  #   [FE] Vite React + Tailwind + Zustand/Redux setup ............. done
-  #   [FE] React Navigation + base screens scaffolding ............. done
-  #   [FE] Expo + NativeWind config ................................ done
+  #   [FE] Expo + NativeWind + Zustand setup ....................... done
+  #   [FE] React Navigation Stack + Bottom Tabs .................... done
+  #   [FE] Theme system (COLORS, TYPOGRAPHY, SPACING, RADIUS) ...... done
+  #   [WEB] Vite React + Tailwind + Redux store .................... done
 
   # Story 1.2 [BE] Implement Authentication API (Backend)
   1-2-implement-authentication-api-backend: done
@@ -69,29 +74,39 @@ development_status:
   #   [BE] POST /api/v1/auth/signup ................................ done
   #   [BE] POST /api/v1/auth/login (JWT + HttpOnly Cookie) ........ done
   #   [BE] POST /api/v1/auth/logout (authenticated) ............... done
+  #   [BE] GET /api/v1/auth/profile ................................ done
+  #   [BE] POST /api/v1/auth/google-login (OAuth) ................. done
+  #   [BE] POST /api/v1/auth/forgot-password ...................... done
+  #   [BE] POST /api/v1/auth/reset-password ...................... done
   #   [BE] authUtils middleware (verify JWT, RBAC) ................. done
   #   [BE] KeyToken model & service (token persistence) ........... done
+  #   [BE] mail.service.js (reset password email) ................. done
 
   # Story 1.3 [FE] Implement Frontend Authentication State & Routing
-  1-3-implement-frontend-authentication-state-routing: backlog
+  1-3-implement-frontend-authentication-state-routing: done
   # Sub-tasks breakdown:
-  #   [FE] Redux authSlice (login, logout, persist session) ... backlog
-  #   [FE] Axios API client with interceptors (attach JWT, refresh) ... backlog
-  #   [FE] LoginScreen integration with real API ...................... backlog
-  #   [FE] RegisterScreen integration with real API ................... backlog
-  #   [FE] Protected route guard (redirect unauthenticated users) ..... backlog
-  #   [FE] Role-based navigation (Student/Mentor/Admin dashboards) .... backlog
-  #   [FE] Secure token storage (expo-secure-store) ................... backlog
+  #   [FE] Zustand useAuthStore (login, logout, register, googleLogin) ... done
+  #   [FE] Axios API client with interceptors (attach JWT, x-client-id) .. done
+  #   [FE] LoginScreen integration with real API ...................... done
+  #   [FE] RegisterScreen integration with real API ................... done
+  #   [FE] ForgotPasswordScreen + ResetPasswordScreen ................. done
+  #   [FE] Protected route guard via !user check in AppNavigator ........ done
+  #   [FE] Role-based navigation (ADMIN sees Admin panel button) ........ done
+  #   [FE] Token restore on app boot (restoreToken + isBootstrapping) ... done
+  #   [FE] Deep linking for password reset (ielts-app://reset-password) . done
+  #   [WEB] Redux authSlice setup .................................. done
+  #   ⚠️  [WEB] Redux authSlice NOT fully connected to real API ........ in-progress
 
   # Story 1.4 [FULL] Implement Socket.io Infrastructure & Redux Middleware
-  1-4-implement-socket-io-infrastructure-redux-middleware: backlog
+  1-4-implement-socket-io-infrastructure-redux-middleware: in-progress
   # Sub-tasks breakdown:
-  #   [BE] Socket.io server setup + CORS config ...................... backlog
-  #   [BE] Socket authentication middleware (verify JWT on connect) ... backlog
-  #   [BE] Socket event namespace structure (audio:*, exam:*) ........ backlog
-  #   [FE] socket.io-client connection manager ....................... backlog
-  #   [FE] Custom Redux Middleware for Socket.io events .............. backlog
-  #   [FE] Socket reconnection & error handling UI ................... backlog
+  #   [BE] Socket.io server setup + CORS config ...................... done
+  #   [BE] Socket authentication middleware (verify JWT on connect) ... done (implicit via userId param)
+  #   [BE] Socket event namespace structure (audio:*) ................ done
+  #   [FE] socket.io-client in SpeakingScreen ........................ done
+  #   [FE] audio:start / audio:chunk / audio:stop / audio:score events done
+  #   [FE] Socket reconnection & error handling UI ................... done (Alert on error)
+  #   ⚠️  [FE] Socket.io NOT used for real-time booking slot refresh .. backlog
 
   epic-1-retrospective: optional
 
@@ -109,51 +124,56 @@ development_status:
   #   [BE] CRUD API: POST/GET/PUT/DELETE /api/v1/exams ............. done
   #   [BE] Bulk import endpoint for Cambridge answer keys .......... done
   #   [BE] Admin role guard middleware ............................. done
-
-  # Story 2.2 [FE] Admin Exam Management UI (Frontend)
-  2-2-admin-exam-management-ui-frontend: done
-  # Sub-tasks breakdown:
-  #   [FE] Admin Dashboard layout & sidebar navigation ............. done
-  #   [FE] Exam creation form (multi-step: exam → sections → questions) done
-  #   [FE] Client-side form validation ............................. done
-  #   [FE] Exam list with search, filter, pagination ............... done
-  #   [FE] Exam edit/delete confirmation flow ....................... done
-
-  # Story 2.3 [FE] Exam Engine Core UI & Timer (Frontend)
-  2-3-exam-engine-core-ui-timer-frontend: done
-  # Sub-tasks breakdown:
-  #   [FE] Split-screen layout (material left / questions right) ... done
-  #   [FE] Real-time countdown timer (Web Worker for accuracy) ..... done
-  #   [FE] Auto-submit on timer expiry ............................. done
-  #   [FE] Redux exam state (answer selections, navigation) ........ done
-  #   [FE] LocalStorage sync (anti data-loss on F5/close) .......... done
-  #   [FE] Listening audio player with controls .................... done
-  #   [FE] Transcript hidden mode (Exam Mode) ...................... done
-
-  # Story 2.4 [BE] Exam Submission & Grading API (Backend)
-  2-4-exam-submission-grading-api-backend: done
-  # Sub-tasks breakdown:
-  #   [BE] POST /api/v1/exams/:id/submit endpoint .................. done
-  #   [BE] Answer comparison engine (student vs Cambridge key) ..... done
   #   [BE] Band score conversion algorithm (raw → 1.0-9.0) ......... done
   #   [BE] TestResult model & persistence .......................... done
 
-  # Story 2.5 [FE] Practice Mode with Transcripts (Frontend)
-  2-5-practice-mode-with-transcripts-frontend: done
+  # Story 2.2 [WEB] Admin Exam Management UI (Web Admin)
+  2-2-admin-exam-management-ui-web: done
   # Sub-tasks breakdown:
-  #   [FE] Section/Part selector (filter by skill type) ............ done
-  #   [FE] Toggle transcript button + synced text display .......... done
-  #   [FE] Disabled/pausable timer in practice mode ................ done
-  #   [FE] Audio player with transcript sync highlight ............. done
+  #   [WEB] Admin Dashboard layout & sidebar navigation ............ done
+  #   [WEB] Exam creation form (multi-step: exam → sections → questions) done
+  #   [WEB] Client-side form validation ........................... done
+  #   [WEB] Exam list with search, filter, pagination .............. done
+  #   [WEB] Exam edit/delete confirmation flow ..................... done
 
-  # Story 2.6 [FE] Review & Analytics UI (Frontend)
-  2-6-review-analytics-ui-frontend: done
+  # Story 2.3 [FE] Exam Engine Core UI & Timer (Mobile)
+  2-3-exam-engine-core-ui-timer-mobile: done
   # Sub-tasks breakdown:
-  #   [FE] Graded exam result screen (correct=green/wrong=red) ..... done
-  #   [FE] Paraphrasing highlight engine (bold synonyms) ........... done
-  #   [FE] Detailed explanation accordion per question ............. done
-  #   [FE] Score history chart (band score over time) .............. done
-  #   [FE] Export/share result functionality ........................ done
+  #   [FE] Tab layout (Passage tab / Questions tab) ................ done
+  #   [FE] Real-time countdown timer (setInterval) ................. done
+  #   [FE] Auto-submit on timer expiry ............................. done
+  #   [FE] AsyncStorage sync (anti data-loss on close) ............. done
+  #   [FE] Load REAL exam from GET /api/v1/exams/:id ............... done  (2026-06-28)
+  #   [FE] Submit to POST /api/v1/exams/:id/submit ................. done  (2026-06-28)
+  #   [FE] MCQ / Fill-blank / True-False-NG question types ......... done  (2026-06-28)
+  #   [FE] Real graded results screen (correct/wrong + explanation)  done  (2026-06-28)
+  #   ⚠️  [FE] Listening audio player with controls ................. backlog  (future)
+
+  # Story 2.4 [FE] Practice Mode - Exam List (Mobile)
+  2-4-practice-mode-exam-list-mobile: done
+  # Sub-tasks breakdown:
+  #   [FE] Tab filter: Reading / Listening / Writing / Speaking .... done
+  #   [FE] Load exams from GET /api/v1/exams?type= ................. done  (2026-06-28)
+  #   [FE] Loading/Error/Empty states + pull-to-refresh ........... done
+  #   [FE] Pass real examId to ExamScreen on navigate .............. done
+
+  # Story 2.5 [FE] Progress & Results Screen (Mobile)
+  2-5-progress-results-screen-mobile: done
+  # Sub-tasks breakdown:
+  #   [FE] Overall band score display (Reading/Listening/Writing/Speaking) done
+  #   [FE] Stats grid (tests done, study hours, top score) ........ done
+  #   [FE] Exam history list with type filter + pull-to-refresh ... done
+  #   [FE] Load REAL results from GET /api/v1/users/me/results ..... done  (2026-06-28)
+  #   [FE] Load REAL stats from GET /api/v1/users/me/stats ......... done  (2026-06-28)
+  #   [BE] GET /api/v1/users/me/results endpoint ................... done  (2026-06-28)
+  #   [BE] GET /api/v1/users/me/stats endpoint (aggregated bands) .. done  (2026-06-28)
+
+  # Story 2.6 [FE] Home Dashboard - Real Progress Data (Mobile)
+  2-6-home-dashboard-real-data-mobile: backlog
+  # Sub-tasks breakdown:
+  #   ⚠️  [FE] Load real overall band score from API ............... backlog  ← CRITICAL GAP
+  #          (Currently hardcoded "7.5" and module progress %)
+  #   ⚠️  [FE] Load streak data from user profile ................. backlog
 
   epic-2-retrospective: optional
 
@@ -164,42 +184,43 @@ development_status:
 # ==============================================================================
   epic-3: in-progress
 
-  # Story 3.1 [FE] Audio Recording & Microphone Handling (Frontend)
+  # Story 3.1 [FE] Audio Recording & Microphone Handling (Mobile)
   3-1-audio-recording-microphone-handling-frontend: done
   # Sub-tasks breakdown:
   #   [FE] Microphone permission request flow ...................... done
-  #   [FE] MediaRecorder API integration (start/stop/pause) ........ done
-  #   [FE] Recording indicator (blinking dot animation) ............ done
-  #   [FE] Error handling: mic disconnect / network loss ........... done
-  #   [FE] Toast notification for retry on interruption ............ done
-  #   [FE] IndexedDB caching for offline audio blobs ............... done
-  #   [FE] Disabled button state during permission request ......... done
+  #   [FE] expo-av Audio.Recording integration (start/stop) ........ done
+  #   [FE] Recording timer indicator (duration counter) ............ done
+  #   [FE] Error handling: too short (<3s) warning ................ done
+  #   [FE] Processing state with ActivityIndicator ................. done
+  #   [FE] FileSystem.readAsStringAsync → base64 conversion ........ done
 
   # Story 3.2 [BE] Socket.io Audio Receiver & Speech-to-Text (Backend)
   3-2-socket-io-audio-receiver-speech-to-text-backend: done
   # Sub-tasks breakdown:
+  #   [BE] Socket.io audio:start event handler ..................... done
   #   [BE] Socket.io audio:chunk event handler ..................... done
   #   [BE] Audio buffer assembly from chunks ....................... done
-  #   [BE] Whisper STT API integration ............................. done
-  #   [BE] Temporary audio cache (15-min TTL cleanup) .............. done
-  #   [BE] Streaming pipeline (zero-memory-footprint) .............. done
+  #   [BE] Whisper STT API integration (stt.service.ts) ............ done
+  #   [BE] Temporary audio cache with TTL cleanup .................. done
 
   # Story 3.3 [BE] Gemini API Prompting & Scoring Service (Backend)
   3-3-gemini-api-prompting-scoring-service-backend: done
   # Sub-tasks breakdown:
-  #   [BE] Gemini API client wrapper ............................... done
+  #   [BE] Gemini API client wrapper (gemini.service.ts) ........... done
   #   [BE] Specialized IELTS scoring prompt template ............... done
-  #   [BE] Response parser (structured JSON extraction) ............ done
-  #   [BE] Performance optimization (<7s end-to-end) ............... done
+  #   [BE] Response parser (JSON extraction: bandScore, fluency, etc) done
   #   [BE] SpeakingSubmission model & persistence .................. done
+  #   [BE] audio:stop event → STT → Gemini → audio:score emit ...... done
 
-  # Story 3.4 [FE] Speaking Assessment Results UI (Frontend)
-  3-4-speaking-assessment-results-ui-frontend: done
+  # Story 3.4 [FE] Speaking Assessment Results UI (Mobile)
+  3-4-speaking-assessment-results-ui-frontend: in-progress
   # Sub-tasks breakdown:
-  #   [FE] Score display: 4-criteria radar/bar chart ............... done
-  #   [FE] Fluency, Lexical, Grammar, Pronunciation breakdown ..... done
+  #   [FE] Score display: bandScore + 4 criteria breakdown ......... done
+  #   [FE] AI feedback text display ............................... done
   #   [FE] Loading state during AI processing ...................... done
-  #   [FE] Speaking history list (past assessments) ................ backlog
+  #   [FE] Retry / "Try another" button ........................... done
+  #   ⚠️  [FE] Speaking history list (past assessments) ............. backlog  ← NOT DONE
+  #   ⚠️  [BE] GET /api/v1/speaking/history endpoint ............... backlog  ← NEEDS BACKEND
 
   epic-3-retrospective: optional
 
@@ -208,45 +229,101 @@ development_status:
   # Goal: Admin approves mentors, Mentors manage availability, Students book safely
   # FRs covered: FR5, FR6 (partial)
   # ==============================================================================
-  epic-4: backlog
+  epic-4: in-progress
 
   # Story 4.1 [FULL] Mentor Approval & Profile (Admin & Mentor)
-  4-1-mentor-approval-profile-api-admin-mentor: backlog
+  4-1-mentor-approval-profile-api-admin-mentor: in-progress
   # Sub-tasks breakdown:
-  #   [BE] Mentor registration API (extended user profile) ......... backlog
-  #   [BE] Admin approval endpoint PATCH /api/v1/mentors/:id/approve backlog
-  #   [BE] Mentor profile CRUD API ................................. backlog
-  #   [FE] Admin: Mentor review queue list ......................... backlog
-  #   [FE] Admin: Approve/Reject button with confirmation modal .... backlog
-  #   [FE] Mentor: Profile setup form (bio, expertise, photo) ..... backlog
+  #   [BE] Mentor API: GET /api/v1/mentors ......................... done
+  #   [BE] Mentor API: GET /api/v1/mentors/:id/availabilities ...... done
+  #   [BE] mentor.service.ts CRUD ................................... done
+  #   ⚠️  [BE] Admin approval endpoint PATCH /api/v1/mentors/:id/approve backlog
+  #   ⚠️  [WEB] Admin: Mentor review queue list ..................... backlog
+  #   ⚠️  [WEB] Admin: Approve/Reject button with confirmation modal . backlog
+  #   ⚠️  [FE] Mentor: Profile setup form (bio, expertise, photo) ... backlog
 
   # Story 4.2 [FULL] Mentor Availability Management (Mentor UI & API)
-  4-2-mentor-availability-management-mentor-ui-api: backlog
+  4-2-mentor-availability-management-mentor-ui-api: in-progress
   # Sub-tasks breakdown:
-  #   [BE] Availability model (mentorId, timeSlot, meetingLink) .... backlog
-  #   [BE] CRUD API for availability slots ......................... backlog
-  #   [BE] Unique compound index (mentorId + timeSlot) ............. backlog
-  #   [FE] Mentor: Calendar/schedule view .......................... backlog
-  #   [FE] Mentor: Add timeslot form (date, time, meeting link) .... backlog
-  #   [FE] Mentor: Slot status display (available/booked) .......... backlog
+  #   [BE] Availability model (mentorId, timeSlot, meetingLink) .... done
+  #   [BE] CRUD API for availability slots ......................... done
+  #   [BE] Unique compound index (mentorId + timeSlot) ............. done
+  #   ⚠️  [FE/WEB] Mentor: Calendar/schedule view ................... backlog
+  #   ⚠️  [FE/WEB] Mentor: Add timeslot form ....................... backlog
+  #   ⚠️  [FE/WEB] Mentor: Slot status display (available/booked) ... backlog
 
   # Story 4.3 [BE] Concurrency-Safe Booking API (Backend)
-  4-3-concurrency-safe-booking-api-backend: backlog
+  4-3-concurrency-safe-booking-api-backend: done
   # Sub-tasks breakdown:
-  #   [BE] POST /api/v1/bookings endpoint .......................... backlog
-  #   [BE] Redis SETNX lock with 10s TTL ........................... backlog
-  #   [BE] 409 Conflict response for failed lock acquisition ....... backlog
-  #   [BE] MongoDB compound index fallback validation .............. backlog
-  #   [BE] Booking model & persistence ............................. backlog
+  #   [BE] POST /api/v1/bookings endpoint .......................... done
+  #   [BE] Redis SETNX lock with TTL ............................... done (booking.service.ts)
+  #   [BE] 409 Conflict response for failed lock acquisition ....... done
+  #   [BE] Booking model & persistence ............................. done
 
-  # Story 4.4 [FE] Mentor Browsing & Booking UI (Student UI)
-  4-4-mentor-browsing-booking-ui-student-ui: backlog
+  # Story 4.4 [FE] Mentor Browsing & Booking UI (Mobile)
+  4-4-mentor-browsing-booking-ui-mobile: done
   # Sub-tasks breakdown:
-  #   [FE] Mentor list with search & filter ........................ backlog
-  #   [FE] Mentor profile detail page .............................. backlog
-  #   [FE] Available timeslot grid/calendar view ................... backlog
-  #   [FE] Booking confirmation modal .............................. backlog
-  #   [FE] 409 Conflict Toast ("Slot just booked by someone else") . backlog
-  #   [FE] Real-time availability refresh .......................... backlog
+  #   [FE] Mentor list with search & filter ........................ done
+  #   [FE] Mentor profile detail (bottom sheet modal) .............. done
+  #   [FE] Available timeslot list in modal ........................ done
+  #   [FE] Booking confirmation modal with notes field .............. done
+  #   [FE] POST /api/v1/bookings real API call ..................... done (with graceful mock fallback)
+  #   ⚠️  [FE] 409 Conflict Toast ("Slot just booked by someone else") backlog  (shows mock success instead)
+  #   ⚠️  [FE] Real-time availability refresh via Socket.io ........ backlog
 
   epic-4-retrospective: optional
+
+# ==============================================================================
+# EPIC 5 [NEW]: Fullstack Data Integration (Critical Gaps Resolution)
+# Goal: Replace all hardcoded/mock data with real API calls
+# Priority: HIGH — Required for production-ready state
+# ==============================================================================
+  epic-5: in-progress
+
+  # Story 5.1 [FE] PracticeScreen Real Exam List Integration
+  5-1-practice-screen-real-exam-list: done
+  # Completed: 2026-06-28
+  #   [FE] Replace hardcoded exams[] with GET /api/v1/exams?type= ... done
+  #   [FE] Loading / Error / Empty states + pull-to-refresh ........ done
+  #   [FE] Pass real examId to ExamScreen on navigate .............. done
+
+  # Story 5.2 [FE] ExamScreen Real Data & Submit Integration
+  5-2-exam-screen-real-data-submit: done
+  # Completed: 2026-06-28
+  #   [FE] Load exam from GET /api/v1/exams/:id ................... done
+  #   [FE] Render real passage text (Reading) / audioUrl (Listening) done
+  #   [FE] MCQ / Fill-blank / True-False-NG question rendering ..... done
+  #   [FE] Submit real answers to POST /api/v1/exams/:id/submit ... done
+  #   [FE] Display real graded result (correct/wrong + explanation) . done
+  #   [FE] Multi-section support (Part 1/2/3 tabs) ................. done
+
+  # Story 5.3 [FULL] User Progress API & ProgressScreen Integration
+  5-3-user-progress-api-integration: done
+  # Completed: 2026-06-28
+  #   [BE] GET /api/v1/users/me/results — list TestResults for user done
+  #   [BE] GET /api/v1/users/me/stats — aggregate bandScore per skill done
+  #   [BE] userRouter registered at /api/v1/users in routes/index.ts done
+  #   [FE] Load real history from GET /api/v1/users/me/results ...... done
+  #   [FE] Load real band scores from GET /api/v1/users/me/stats .... done
+
+  # Story 5.4 [FE] HomeScreen Real Progress Data
+  5-4-home-screen-real-progress: backlog
+  # Sub-tasks breakdown:
+  #   [FE] Load overall band score from profile/stats API .......... backlog
+  #   [FE] Replace hardcoded module progress % with real data ...... backlog
+  #   [FE] Replace "7 Days" streak badge with real streak .......... backlog
+
+  # Story 5.5 [FE] Speaking History Integration
+  5-5-speaking-history-integration: backlog
+  # Sub-tasks breakdown:
+  #   [BE] GET /api/v1/speaking/history endpoint .................. backlog
+  #   [FE] Speaking history list on SpeakingScreen or ProgressScreen backlog
+
+  # Story 5.6 [WEB] Web Auth API Integration
+  5-6-web-auth-api-integration: backlog
+  # Sub-tasks breakdown:
+  #   [WEB] Connect Redux authSlice to POST /api/v1/auth/login ...... backlog
+  #   [WEB] Persist JWT token in localStorage/cookie ............... backlog
+  #   [WEB] Protected routes for admin dashboard ................... backlog
+
+  epic-5-retrospective: optional

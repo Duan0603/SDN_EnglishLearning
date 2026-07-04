@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
-  Platform
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import client from '../api/client';
+import useAuthStore from '../store/useAuthStore';
 
 // Brutalist shadow wrapper
 const BrutalistShadow = ({ children, style, offset = 4 }) => (
@@ -23,14 +26,14 @@ const BrutalistShadow = ({ children, style, offset = 4 }) => (
 
 // Inline horizontal bar chart
 const BandBar = ({ label, score, color, maxScore = 9 }) => {
-  const pct = (score / maxScore) * 100;
+  const pct = score > 0 ? (score / maxScore) * 100 : 0;
   return (
     <View style={styles.bandBarRow}>
       <Text style={styles.bandBarLabel}>{label}</Text>
       <View style={styles.bandBarTrack}>
         <View style={[styles.bandBarFill, { width: `${pct}%`, backgroundColor: color }]} />
       </View>
-      <Text style={[styles.bandBarScore, { color }]}>{score}</Text>
+      <Text style={[styles.bandBarScore, { color }]}>{score > 0 ? score.toFixed(1) : '—'}</Text>
     </View>
   );
 };
@@ -39,39 +42,198 @@ const BandBar = ({ label, score, color, maxScore = 9 }) => {
 const HistoryItem = ({ title, date, score, type, color }) => (
   <View style={styles.historyItem}>
     <View style={[styles.historyIcon, { backgroundColor: color + '20' }]}>
-      <Text style={{ fontSize: 18 }}>{type === 'speaking' ? '🎙️' : type === 'writing' ? '✍️' : type === 'listening' ? '🎧' : '📖'}</Text>
+      <Text style={{ fontSize: 18 }}>
+        {type === 'SPEAKING' ? '🎙️' : type === 'WRITING' ? '✍️' : type === 'LISTENING' ? '🎧' : '📖'}
+      </Text>
     </View>
     <View style={styles.historyInfo}>
-      <Text style={styles.historyTitle}>{title}</Text>
+      <Text style={styles.historyTitle} numberOfLines={1}>{title}</Text>
       <Text style={styles.historyDate}>{date}</Text>
     </View>
     <View style={[styles.historyScore, { borderColor: color }]}>
-      <Text style={[styles.historyScoreText, { color }]}>{score}</Text>
+      <Text style={[styles.historyScoreText, { color }]}>{score?.toFixed(1) || '—'}</Text>
     </View>
   </View>
 );
 
+const TYPE_COLORS = {
+  READING: '#4682b4',
+  LISTENING: '#005c42',
+  WRITING: '#d97706',
+  SPEAKING: '#c92a2a',
+};
+
+// --- View-based Pseudo Charts ---
+
+// 1. Trend Chart (Bar chart acting as timeline trend)
+const TrendChart = ({ data }) => {
+  // data = array of band scores
+  if (!data || data.length === 0) return <Text style={styles.chartEmpty}>No trend data yet.</Text>;
+  const recent = data.slice(0, 15).reverse(); // Last 15 attempts
+  
+  return (
+    <View style={styles.trendContainer}>
+      <View style={styles.trendChart}>
+        {recent.map((score, idx) => {
+          const heightPct = Math.max(10, (score / 9) * 100);
+          return (
+            <View key={idx} style={styles.trendColumn}>
+              <Text style={styles.trendScoreText}>{score.toFixed(1)}</Text>
+              <View style={[styles.trendBar, { height: `${heightPct}%` }]} />
+            </View>
+          );
+        })}
+      </View>
+      <Text style={styles.chartAxisLabel}>← OLDEST   |   NEWEST →</Text>
+    </View>
+  );
+};
+
+// 2. Practice Calendar (Contribution Graph)
+const PracticeCalendar = ({ history }) => {
+  if (!history || history.length === 0) return <Text style={styles.chartEmpty}>No activity yet.</Text>;
+  
+  // Create last 28 days array
+  const days = [];
+  const today = new Date();
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(today.getDate() - i);
+    days.push({
+      dateStr: d.toISOString().split('T')[0],
+      count: 0
+    });
+  }
+
+  // Count history
+  history.forEach(h => {
+    try {
+      const dStr = new Date(h.createdAt).toISOString().split('T')[0];
+      const match = days.find(d => d.dateStr === dStr);
+      if (match) match.count++;
+    } catch {}
+  });
+
+  return (
+    <View style={styles.calendarContainer}>
+      {days.map((day, i) => (
+        <View 
+          key={i} 
+          style={[
+            styles.calendarBox, 
+            { backgroundColor: day.count > 2 ? '#c92a2a' : day.count > 0 ? '#ff8787' : '#f5f3dc' }
+          ]} 
+        />
+      ))}
+    </View>
+  );
+};
+
+// 3. Radar Chart (Compass layout using Views)
+const RadarChart = ({ bands }) => {
+  const { READING = 0, LISTENING = 0, WRITING = 0, SPEAKING = 0 } = bands;
+  const getLen = (val) => Math.max(10, (val / 9) * 50); // max 50px
+
+  return (
+    <View style={styles.radarContainer}>
+      <View style={styles.radarCenter}>
+        {/* Top: Reading */}
+        <View style={[styles.radarBranch, styles.radarTop, { height: getLen(READING), backgroundColor: TYPE_COLORS.READING }]} />
+        <Text style={[styles.radarLabel, styles.radarLabelTop]}>R {READING}</Text>
+
+        {/* Right: Listening */}
+        <View style={[styles.radarBranch, styles.radarRight, { width: getLen(LISTENING), backgroundColor: TYPE_COLORS.LISTENING }]} />
+        <Text style={[styles.radarLabel, styles.radarLabelRight]}>L {LISTENING}</Text>
+
+        {/* Bottom: Writing */}
+        <View style={[styles.radarBranch, styles.radarBottom, { height: getLen(WRITING), backgroundColor: TYPE_COLORS.WRITING }]} />
+        <Text style={[styles.radarLabel, styles.radarLabelBottom]}>W {WRITING}</Text>
+
+        {/* Left: Speaking */}
+        <View style={[styles.radarBranch, styles.radarLeft, { width: getLen(SPEAKING), backgroundColor: TYPE_COLORS.SPEAKING }]} />
+        <Text style={[styles.radarLabel, styles.radarLabelLeft]}>S {SPEAKING}</Text>
+      </View>
+    </View>
+  );
+};
+
 const ProgressScreen = ({ navigation }) => {
+  const { user } = useAuthStore();
   const [activeFilter, setActiveFilter] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // API data
+  const [stats, setStats] = useState(null);
+  const [history, setHistory] = useState([]);
 
   const filters = [
-    { key: 'all', label: 'ALL' },
-    { key: 'reading', label: 'READING' },
-    { key: 'listening', label: 'LISTENING' },
-    { key: 'writing', label: 'WRITING' },
-    { key: 'speaking', label: 'SPEAKING' },
+    { key: 'all',       label: 'ALL' },
+    { key: 'READING',   label: 'READING' },
+    { key: 'LISTENING', label: 'LISTENING' },
+    { key: 'WRITING',   label: 'WRITING' },
+    { key: 'SPEAKING',  label: 'SPEAKING' },
   ];
 
-  const history = [
-    { id: 1, title: 'Cambridge 18 - Test 1', date: '24 Jun 2026', score: 7.5, type: 'reading', color: '#4682b4' },
-    { id: 2, title: 'Speaking Mock - Cue Card', date: '23 Jun 2026', score: 7.0, type: 'speaking', color: '#c92a2a' },
-    { id: 3, title: 'Writing Task 2 - Education', date: '22 Jun 2026', score: 6.5, type: 'writing', color: '#d97706' },
-    { id: 4, title: 'Listening Practice 3', date: '21 Jun 2026', score: 8.0, type: 'listening', color: '#005c42' },
-    { id: 5, title: 'Cambridge 17 - Test 2', date: '20 Jun 2026', score: 7.0, type: 'reading', color: '#4682b4' },
-    { id: 6, title: 'Speaking - Part 1 AI', date: '19 Jun 2026', score: 6.5, type: 'speaking', color: '#c92a2a' },
-  ];
+  const fetchProgress = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
+    try {
+      // Fetch user results from backend
+      const [statsRes, historyRes] = await Promise.allSettled([
+        client.get('/users/me/stats', { hideToast: true }),
+        client.get('/users/me/results?limit=20', { hideToast: true }),
+      ]);
 
-  const filtered = activeFilter === 'all' ? history : history.filter(h => h.type === activeFilter);
+      if (statsRes.status === 'fulfilled') {
+        setStats(statsRes.value.data?.data || statsRes.value.data?.metadata || null);
+      }
+      if (historyRes.status === 'fulfilled') {
+        const raw = historyRes.value.data?.data?.results || historyRes.value.data?.metadata || [];
+        setHistory(Array.isArray(raw) ? raw : []);
+      }
+    } catch (err) {
+      // Stats/results endpoint may not exist yet — silently keep empty state
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProgress();
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchProgress(true);
+    setRefreshing(false);
+  }, [fetchProgress]);
+
+  const filtered = activeFilter === 'all'
+    ? history
+    : history.filter(h => (h.type || h.test?.type) === activeFilter);
+
+  // Compute overall band from stats or history
+  const overall = stats?.overallBand || (history.length > 0
+    ? (history.reduce((sum, h) => sum + (h.bandScore || 0), 0) / history.length).toFixed(1)
+    : null);
+
+  const bandByType = {
+    READING:   stats?.readingBand   || null,
+    LISTENING: stats?.listeningBand || null,
+    WRITING:   stats?.writingBand   || null,
+    SPEAKING:  stats?.speakingBand  || null,
+  };
+
+  const totalTests  = stats?.totalTests  || history.length;
+  const totalHours  = stats?.studyHours  || 0;
+  const topScore    = stats?.topScore    || (history.length > 0 ? Math.max(...history.map(h => h.bandScore || 0)) : 0);
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      return new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch { return dateStr; }
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -82,107 +244,145 @@ const ProgressScreen = ({ navigation }) => {
         <Text style={styles.appBarTitle}>STUDY PROGRESS</Text>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {isLoading ? (
+        <View style={styles.centerState}>
+          <ActivityIndicator size="large" color="#1b263b" />
+          <Text style={styles.centerText}>Đang tải tiến độ của bạn...</Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1b263b" />}
+        >
 
-        {/* Overall Band Score Card */}
-        <BrutalistShadow style={styles.overallCard} offset={6}>
-          <View style={styles.overallCardInner}>
-            {/* Red margin line */}
-            <View style={styles.marginLine} />
-
-            <Text style={styles.sectionBadge}>✎ CURRENT OVERALL</Text>
-            <View style={styles.overallRow}>
-              <View>
-                <Text style={styles.overallScore}>7.5</Text>
-                <Text style={styles.overallLabel}>IELTS Band</Text>
-              </View>
-              {/* Stamp */}
-              <View style={styles.stampRing}>
-                <Text style={styles.stampText}>A+</Text>
-              </View>
-            </View>
-
-            {/* Band bars for each skill */}
-            <View style={styles.bandsSection}>
-              <BandBar label="Reading"   score={7.5} color="#4682b4" />
-              <BandBar label="Listening" score={8.5} color="#005c42" />
-              <BandBar label="Writing"   score={6.5} color="#d97706" />
-              <BandBar label="Speaking"  score={7.0} color="#c92a2a" />
-            </View>
-          </View>
-        </BrutalistShadow>
-
-        {/* Weekly Streak Card */}
-        <BrutalistShadow style={styles.streakCard} offset={4}>
-          <View style={styles.streakCardInner}>
-            <View style={styles.streakHeader}>
-              <Text style={styles.sectionBadge}>🔥 THIS WEEK</Text>
-              <Text style={styles.streakCount}>7 Day Streak</Text>
-            </View>
-            {/* Day dots */}
-            <View style={styles.dayDots}>
-              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
-                <View key={i} style={styles.dayCol}>
-                  <View style={[styles.dayDot, i < 5 && styles.dayDotFilled]}>
-                    {i < 5 && <Ionicons name="checkmark" size={12} color="#fff" />}
-                  </View>
-                  <Text style={styles.dayLabel}>{day}</Text>
+          {/* Overall Band Score Card */}
+          <BrutalistShadow style={styles.overallCard} offset={6}>
+            <View style={styles.overallCardInner}>
+              <View style={styles.marginLine} />
+              <Text style={styles.sectionBadge}>✎ CURRENT OVERALL</Text>
+              <View style={styles.overallRow}>
+                <View>
+                  <Text style={styles.overallScore}>{overall || '—'}</Text>
+                  <Text style={styles.overallLabel}>IELTS Band</Text>
                 </View>
-              ))}
-            </View>
-          </View>
-        </BrutalistShadow>
+                <View style={styles.stampRing}>
+                  <Text style={styles.stampText}>{overall >= 8 ? 'A+' : overall >= 7 ? 'A' : overall >= 6 ? 'B' : '?'}</Text>
+                </View>
+              </View>
 
-        {/* Stats Grid */}
-        <View style={styles.statsGrid}>
-          {[
-            { label: 'TESTS DONE', value: '34', emoji: '📋', color: '#4682b4' },
-            { label: 'AI GRADED', value: '28', emoji: '🤖', color: '#005c42' },
-            { label: 'STUDY HOURS', value: '82h', emoji: '⏱️', color: '#d97706' },
-            { label: 'TOP SCORE', value: '8.5', emoji: '🏆', color: '#c92a2a' },
-          ].map((stat, i) => (
-            <BrutalistShadow key={i} style={styles.statCard} offset={3}>
-              <View style={styles.statCardInner}>
-                <Text style={styles.statEmoji}>{stat.emoji}</Text>
-                <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
+              {/* Band bars for each skill */}
+              <View style={styles.bandsSection}>
+                <BandBar label="Reading"   score={bandByType.READING   || 0} color="#4682b4" />
+                <BandBar label="Listening" score={bandByType.LISTENING || 0} color="#005c42" />
+                <BandBar label="Writing"   score={bandByType.WRITING   || 0} color="#d97706" />
+                <BandBar label="Speaking"  score={bandByType.SPEAKING  || 0} color="#c92a2a" />
+              </View>
+
+              {!stats && history.length === 0 && (
+                <Text style={styles.noDataHint}>Chưa có dữ liệu. Hãy thực hiện bài thi đầu tiên!</Text>
+              )}
+            </View>
+          </BrutalistShadow>
+
+          {/* Stats Grid */}
+          <View style={styles.statsGrid}>
+            {[
+              { label: 'TESTS DONE', value: totalTests || '0',            emoji: '📋', color: '#4682b4' },
+              { label: 'STUDY HOURS', value: totalHours > 0 ? `${totalHours}h` : '—', emoji: '⏱️', color: '#d97706' },
+              { label: 'TOP SCORE',  value: topScore > 0 ? topScore.toFixed(1) : '—', emoji: '🏆', color: '#c92a2a' },
+              { label: 'HISTORY',    value: history.length || '0',         emoji: '📊', color: '#005c42' },
+            ].map((stat, i) => (
+              <BrutalistShadow key={i} style={styles.statCard} offset={3}>
+                <View style={styles.statCardInner}>
+                  <Text style={styles.statEmoji}>{stat.emoji}</Text>
+                  <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
+                  <Text style={styles.statLabel}>{stat.label}</Text>
+                </View>
+              </BrutalistShadow>
+            ))}
+          </View>
+
+          {/* Charts Section */}
+          <Text style={styles.sectionBadge}>✎ ANALYTICS</Text>
+          <Text style={styles.sectionTitle}>Performance Charts</Text>
+
+          {/* Trend Chart */}
+          <BrutalistShadow style={styles.chartCard} offset={4}>
+            <View style={styles.historyCardInner}>
+              <Text style={styles.chartCardTitle}>Band Trend (Last 15 Attempts)</Text>
+              <TrendChart data={history.map(h => h.bandScore || 0)} />
+            </View>
+          </BrutalistShadow>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+            {/* Radar Chart */}
+            <BrutalistShadow style={[styles.chartCard, { width: '48%', marginBottom: 0 }]} offset={4}>
+              <View style={[styles.historyCardInner, { padding: 12, alignItems: 'center' }]}>
+                <Text style={styles.chartCardTitle}>Skill Balance</Text>
+                <RadarChart bands={bandByType} />
               </View>
             </BrutalistShadow>
-          ))}
-        </View>
 
-        {/* History Section */}
-        <Text style={styles.sectionBadge}>✎ EXAM HISTORY</Text>
-        <Text style={styles.sectionTitle}>Recent Attempts</Text>
-
-        {/* Filter Tabs */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersScroll}>
-          {filters.map(f => (
-            <TouchableOpacity
-              key={f.key}
-              onPress={() => setActiveFilter(f.key)}
-              style={[styles.filterBtn, activeFilter === f.key && styles.filterBtnActive]}
-            >
-              <Text style={[styles.filterText, activeFilter === f.key && styles.filterTextActive]}>{f.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <BrutalistShadow style={styles.historyCard} offset={4}>
-          <View style={styles.historyCardInner}>
-            {filtered.map((item, i) => (
-              <React.Fragment key={item.id}>
-                <HistoryItem {...item} />
-                {i < filtered.length - 1 && <View style={styles.historyDivider} />}
-              </React.Fragment>
-            ))}
-            {filtered.length === 0 && (
-              <Text style={styles.emptyText}>No history found for this skill.</Text>
-            )}
+            {/* Practice Calendar */}
+            <BrutalistShadow style={[styles.chartCard, { width: '48%', marginBottom: 0 }]} offset={4}>
+              <View style={[styles.historyCardInner, { padding: 12 }]}>
+                <Text style={styles.chartCardTitle}>Activity (28d)</Text>
+                <PracticeCalendar history={history} />
+              </View>
+            </BrutalistShadow>
           </View>
-        </BrutalistShadow>
 
-      </ScrollView>
+          {/* History Section */}
+          <Text style={styles.sectionBadge}>✎ EXAM HISTORY</Text>
+          <Text style={styles.sectionTitle}>Recent Attempts</Text>
+
+          {/* Filter Tabs */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersScroll}>
+            {filters.map(f => (
+              <TouchableOpacity
+                key={f.key}
+                onPress={() => setActiveFilter(f.key)}
+                style={[styles.filterBtn, activeFilter === f.key && styles.filterBtnActive]}
+              >
+                <Text style={[styles.filterText, activeFilter === f.key && styles.filterTextActive]}>{f.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <BrutalistShadow style={styles.historyCard} offset={4}>
+            <View style={styles.historyCardInner}>
+              {filtered.length > 0 ? filtered.map((item, i) => {
+                const type = item.type || item.test?.type || 'READING';
+                const color = TYPE_COLORS[type] || '#4682b4';
+                return (
+                  <React.Fragment key={item.id || i}>
+                    <HistoryItem
+                      title={item.test?.title || item.title || 'Bài thi'}
+                      date={formatDate(item.createdAt)}
+                      score={item.bandScore}
+                      type={type}
+                      color={color}
+                    />
+                    {i < filtered.length - 1 && <View style={styles.historyDivider} />}
+                  </React.Fragment>
+                );
+              }) : (
+                <View style={styles.emptyHistory}>
+                  <Text style={{ fontSize: 32, marginBottom: 10 }}>📭</Text>
+                  <Text style={styles.emptyText}>
+                    {activeFilter === 'all'
+                      ? 'Chưa có lịch sử thi. Hãy thực hiện bài thi đầu tiên!'
+                      : `Chưa có lịch sử thi ${activeFilter.toLowerCase()}.`}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </BrutalistShadow>
+
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -198,6 +398,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   appBarTitle: { fontSize: 16, fontFamily: 'Outfit_900Black', color: '#1b263b', letterSpacing: 2 },
+
+  centerState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  centerText: { fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#666', marginTop: 16 },
 
   scroll: { flex: 1 },
   scrollContent: { padding: 20, paddingBottom: 40 },
@@ -220,18 +423,9 @@ const styles = StyleSheet.create({
   bandBarLabel: { fontFamily: 'Outfit_900Black', fontSize: 11, color: '#1b263b', width: 70 },
   bandBarTrack: { flex: 1, height: 10, backgroundColor: '#f5f3dc', borderWidth: 2, borderColor: '#1b263b', borderRadius: 4, overflow: 'hidden' },
   bandBarFill: { height: '100%' },
-  bandBarScore: { fontFamily: 'Outfit_900Black', fontSize: 14, width: 30, textAlign: 'right' },
+  bandBarScore: { fontFamily: 'Outfit_900Black', fontSize: 14, width: 36, textAlign: 'right' },
 
-  // Streak Card
-  streakCard: { borderRadius: 16, marginBottom: 20 },
-  streakCardInner: { backgroundColor: '#ffd54f', padding: 20 },
-  streakHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  streakCount: { fontFamily: 'Outfit_900Black', fontSize: 16, color: '#1b263b' },
-  dayDots: { flexDirection: 'row', justifyContent: 'space-between' },
-  dayCol: { alignItems: 'center', gap: 6 },
-  dayDot: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: '#1b263b', backgroundColor: '#fcfbf7', alignItems: 'center', justifyContent: 'center' },
-  dayDotFilled: { backgroundColor: '#1b263b' },
-  dayLabel: { fontFamily: 'Outfit_900Black', fontSize: 10, color: '#1b263b' },
+  noDataHint: { fontFamily: 'Outfit_700Bold', fontSize: 12, color: '#999', textAlign: 'center', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(27,38,59,0.1)' },
 
   // Stats Grid
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 28 },
@@ -257,9 +451,39 @@ const styles = StyleSheet.create({
   historyTitle: { fontFamily: 'Outfit_900Black', fontSize: 14, color: '#1b263b', marginBottom: 2 },
   historyDate: { fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#999' },
   historyScore: { width: 44, height: 44, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  historyScoreText: { fontFamily: 'Outfit_900Black', fontSize: 16 },
+  historyScoreText: { fontFamily: 'Outfit_900Black', fontSize: 15 },
   historyDivider: { height: 1, backgroundColor: 'rgba(27,38,59,0.1)', marginHorizontal: 4 },
-  emptyText: { fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#999', textAlign: 'center', paddingVertical: 20 },
+
+  emptyHistory: { alignItems: 'center', paddingVertical: 24 },
+  emptyText: { fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#999', textAlign: 'center' },
+
+  // View-based Charts
+  chartCard: { borderRadius: 16, marginBottom: 20 },
+  chartCardTitle: { fontFamily: 'Outfit_900Black', fontSize: 12, color: '#1b263b', marginBottom: 12 },
+  chartEmpty: { fontFamily: 'Outfit_700Bold', fontSize: 12, color: '#999', textAlign: 'center', marginVertical: 20 },
+  
+  trendContainer: { height: 120 },
+  trendChart: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 6, borderBottomWidth: 2, borderBottomColor: '#1b263b', paddingBottom: 4 },
+  trendColumn: { width: 14, alignItems: 'center', justifyContent: 'flex-end', height: '100%' },
+  trendScoreText: { fontSize: 8, fontFamily: 'Outfit_900Black', color: '#666', marginBottom: 2, transform: [{ rotate: '-45deg' }] },
+  trendBar: { width: 10, backgroundColor: '#c92a2a', borderTopLeftRadius: 4, borderTopRightRadius: 4, borderWidth: 1, borderColor: '#1b263b' },
+  chartAxisLabel: { fontSize: 8, fontFamily: 'Outfit_900Black', color: '#999', textAlign: 'center', marginTop: 8 },
+
+  calendarContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, width: '100%' },
+  calendarBox: { width: 14, height: 14, borderRadius: 3, borderWidth: 1, borderColor: '#1b263b' },
+
+  radarContainer: { height: 110, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  radarCenter: { width: 10, height: 10, backgroundColor: '#1b263b', borderRadius: 5, position: 'relative' },
+  radarBranch: { position: 'absolute', borderWidth: 1, borderColor: '#1b263b' },
+  radarTop: { width: 6, bottom: '100%', left: 2, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
+  radarBottom: { width: 6, top: '100%', left: 2, borderBottomLeftRadius: 3, borderBottomRightRadius: 3 },
+  radarLeft: { height: 6, right: '100%', top: 2, borderTopLeftRadius: 3, borderBottomLeftRadius: 3 },
+  radarRight: { height: 6, left: '100%', top: 2, borderTopRightRadius: 3, borderBottomRightRadius: 3 },
+  radarLabel: { position: 'absolute', fontSize: 10, fontFamily: 'Outfit_900Black', color: '#1b263b' },
+  radarLabelTop: { bottom: 55, left: -10, width: 30, textAlign: 'center' },
+  radarLabelBottom: { top: 55, left: -10, width: 30, textAlign: 'center' },
+  radarLabelLeft: { right: 55, top: -4, width: 30, textAlign: 'right' },
+  radarLabelRight: { left: 55, top: -4, width: 30 },
 });
 
 export default ProgressScreen;

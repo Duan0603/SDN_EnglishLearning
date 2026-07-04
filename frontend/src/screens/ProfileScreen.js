@@ -69,11 +69,36 @@ const ProfileScreen = ({ navigation }) => {
     return selected.map((part) => part[0]?.toUpperCase()).join('') || 'MA';
   }, [profileName]);
 
+  const [apiStats, setApiStats] = useState(null);
+
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await client.get('/users/me/stats', { hideToast: true });
+        if (res.data?.success) {
+          setApiStats(res.data.data || res.data.metadata || null);
+        }
+      } catch (err) {
+        console.log('Error fetching stats for profile:', err);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const overallBand = apiStats?.overallBand || 0;
+  const readingBand = apiStats?.readingBand || 0;
+  const listeningBand = apiStats?.listeningBand || 0;
+  const writingBand = apiStats?.writingBand || 0;
+  const speakingBand = apiStats?.speakingBand || 0;
+  const totalTests = apiStats?.totalTests || 0;
+  const currentStreak = apiStats?.currentStreak || 0;
+  const weeksActive = apiStats?.weeksActive || 0;
+
   const stats = [
-    { icon: 'flame', value: '42 Days', label: 'Streak', color: '#c92a2a', bg: '#fbcfe8' }, // Eraser Pink
-    { icon: 'book', value: '34 Tests', label: 'Completed', color: '#4682b4', bg: '#e0f2fe' }, // Light Blue
-    { icon: 'chatbubbles', value: '28 Logs', label: 'AI Scored', color: '#005c42', bg: '#a7f3d0' }, // Mint
-    { icon: 'medal', value: '3 Badges', label: 'Achievements', color: '#d97706', bg: '#ffd54f' }, // Warm Yellow
+    { icon: 'flame', value: `${currentStreak} Days`, label: 'Streak', color: '#c92a2a', bg: '#fbcfe8' },
+    { icon: 'book', value: `${totalTests} Tests`, label: 'Completed', color: '#4682b4', bg: '#e0f2fe' },
+    { icon: 'time', value: `${weeksActive} Wks`, label: 'Active', color: '#005c42', bg: '#a7f3d0' },
+    { icon: 'medal', value: `${apiStats?.topScore || 0} Band`, label: 'Top Score', color: '#d97706', bg: '#ffd54f' },
   ];
 
   const tabs = [
@@ -144,7 +169,7 @@ const ProfileScreen = ({ navigation }) => {
               <View style={styles.targetRow}>
                 <View style={styles.targetBox}>
                   <Text style={styles.targetLabel}>CURRENT BAND</Text>
-                  <Text style={[styles.targetValue, { color: '#c92a2a' }]}>6.75</Text>
+                  <Text style={[styles.targetValue, { color: '#c92a2a' }]}>{overallBand > 0 ? overallBand.toFixed(1) : '—'}</Text>
                 </View>
                 <View style={[styles.targetBox, styles.targetBoxDashed]}>
                   <Text style={styles.targetLabel}>TARGET BAND</Text>
@@ -237,10 +262,10 @@ const ProfileScreen = ({ navigation }) => {
                   <Text style={styles.sectionTitle}>Detailed Skill Breakdown</Text>
                   
                   {[
-                    { label: 'Reading', score: '7.5', progress: 75, color: '#4682b4', icon: 'book' },
-                    { label: 'Listening', score: '8.5', progress: 85, color: '#005c42', icon: 'headset' },
-                    { label: 'Writing', score: '6.5', progress: 65, color: '#d97706', icon: 'create' },
-                    { label: 'Speaking', score: '7.0', progress: 70, color: '#c92a2a', icon: 'mic' },
+                    { label: 'Reading', score: readingBand > 0 ? readingBand.toFixed(1) : '—', progress: readingBand > 0 ? (readingBand / 9) * 100 : 0, color: '#4682b4', icon: 'book' },
+                    { label: 'Listening', score: listeningBand > 0 ? listeningBand.toFixed(1) : '—', progress: listeningBand > 0 ? (listeningBand / 9) * 100 : 0, color: '#005c42', icon: 'headset' },
+                    { label: 'Writing', score: writingBand > 0 ? writingBand.toFixed(1) : '—', progress: writingBand > 0 ? (writingBand / 9) * 100 : 0, color: '#d97706', icon: 'create' },
+                    { label: 'Speaking', score: speakingBand > 0 ? speakingBand.toFixed(1) : '—', progress: speakingBand > 0 ? (speakingBand / 9) * 100 : 0, color: '#c92a2a', icon: 'mic' },
                   ].map((skill) => (
                     <View key={skill.label} style={styles.skillRow}>
                       <View style={styles.skillInfo}>

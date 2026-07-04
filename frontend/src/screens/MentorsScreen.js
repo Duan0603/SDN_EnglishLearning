@@ -44,17 +44,17 @@ const MentorsScreen = ({ navigation }) => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
 
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
   const fetchMentors = useCallback(async () => {
     setIsLoadingMentors(true);
     try {
       const response = await client.get('/mentors');
       setMentors(response.data.data || []);
     } catch (error) {
-      // Mock data for display purposes
-      setMentors([
-        { id: 1, fullName: 'David Okafor', expertise: 'Speaking Mentor', bio: 'Former IELTS Examiner with 10 years experience.' },
-        { id: 2, fullName: 'Sarah Jenkins', expertise: 'Writing Mentor', bio: 'Specializes in Academic Writing Task 2.' }
-      ]);
+      console.log('Error fetching mentors:', error);
+      setMentors([]);
     } finally {
       setIsLoadingMentors(false);
     }
@@ -70,10 +70,8 @@ const MentorsScreen = ({ navigation }) => {
       const response = await client.get(`/mentors/${mentorId}/availabilities`);
       setSlots(response.data.data || []);
     } catch (error) {
-      setSlots([
-        { id: 101, startTime: new Date().toISOString(), endTime: new Date(Date.now() + 3600000).toISOString() },
-        { id: 102, startTime: new Date(Date.now() + 86400000).toISOString(), endTime: new Date(Date.now() + 86400000 + 3600000).toISOString() }
-      ]);
+      console.log('Error fetching slots:', error);
+      setSlots([]);
     } finally {
       setIsLoadingSlots(false);
     }
@@ -99,12 +97,16 @@ const MentorsScreen = ({ navigation }) => {
         availabilityId: selectedSlotForBooking.id,
         notes: bookingNotes,
       });
-      Alert.alert('Success', 'Mentor session booked successfully!');
+      setSuccessMessage('Mentor session booked successfully!');
       setShowBookingModal(false);
       if (selectedMentor) fetchMentorSlots(selectedMentor.id);
     } catch (err) {
-      Alert.alert('Booking confirmed', 'Mock booking successful (API error handled).');
-      setShowBookingModal(false);
+      console.error('Booking error:', err);
+      if (err.response?.data?.message) {
+        setErrorMessage(err.response.data.message);
+      } else {
+        setErrorMessage('Failed to book session. Please try again.');
+      }
     } finally {
       setIsSubmittingBooking(false);
     }
@@ -277,6 +279,35 @@ const MentorsScreen = ({ navigation }) => {
           </BrutalistShadow>
         </View>
       </Modal>
+
+      {/* Error Message Modal */}
+      <Modal visible={!!errorMessage} transparent animationType="fade" onRequestClose={() => setErrorMessage('')}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(27,38,59,0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: '100%', maxWidth: 400, backgroundColor: '#fcfbf7', borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 2, borderColor: '#1b263b', elevation: 6 }}>
+            <Ionicons name="alert-circle" size={32} color="#c92a2a" style={{ marginBottom: 12 }} />
+            <Text style={{ fontSize: 16, fontFamily: 'Outfit_900Black', color: '#1b263b', marginBottom: 16, textAlign: 'center' }}>Lỗi Cập Nhật</Text>
+            <Text style={{ fontSize: 13, fontFamily: 'Outfit_700Bold', color: '#666', textAlign: 'center', marginBottom: 24 }}>{errorMessage}</Text>
+            <TouchableOpacity style={{ width: '100%', paddingVertical: 14, borderRadius: 12, backgroundColor: '#c92a2a', alignItems: 'center', borderWidth: 2, borderColor: '#1b263b' }} onPress={() => setErrorMessage('')}>
+              <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#fff' }}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Success Message Modal */}
+      <Modal visible={!!successMessage} transparent animationType="fade" onRequestClose={() => setSuccessMessage('')}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(27,38,59,0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: '100%', maxWidth: 400, backgroundColor: '#fcfbf7', borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 2, borderColor: '#1b263b', elevation: 6 }}>
+            <Ionicons name="checkmark-circle" size={32} color="#005c42" style={{ marginBottom: 12 }} />
+            <Text style={{ fontSize: 16, fontFamily: 'Outfit_900Black', color: '#1b263b', marginBottom: 16, textAlign: 'center' }}>Thành Công</Text>
+            <Text style={{ fontSize: 13, fontFamily: 'Outfit_700Bold', color: '#666', textAlign: 'center', marginBottom: 24 }}>{successMessage}</Text>
+            <TouchableOpacity style={{ width: '100%', paddingVertical: 14, borderRadius: 12, backgroundColor: '#a7f3d0', alignItems: 'center', borderWidth: 2, borderColor: '#1b263b' }} onPress={() => setSuccessMessage('')}>
+              <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#005c42' }}>Tiếp Tục</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 };

@@ -12,7 +12,7 @@ const getBaseURL = () => {
     if (Platform.OS === 'web') {
       return 'http://localhost:5000/api/v1';
     }
-    return 'http://192.168.155.238:5000/api/v1';
+    return 'http://192.168.1.106:5000/api/v1';
   }
   return 'https://api.apex-ielts.com/api/v1';
 };

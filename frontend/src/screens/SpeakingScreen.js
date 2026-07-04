@@ -8,25 +8,20 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
-  ScrollView
+  ScrollView,
+  Platform,
+  Modal
 } from 'react-native';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
-import io from 'socket.io-client';
+import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../store/useAuthStore';
 import AppIcon from '../shared/icons/AppIcon';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../theme';
 import client from '../api/client';
 
-const DEFAULT_SECTIONS = [
-  {
-    title: "Part 1: Giới thiệu bản thân",
-    passageText: "Hãy nói về sở thích cá nhân của bạn. Bạn thường làm gì vào thời gian rảnh rỗi? Tại sao bạn lại thích điều đó?"
-  }
-];
-
 const SpeakingScreen = ({ route, navigation }) => {
-  const { title = "IELTS Speaking Mock Test", examId } = route.params || {};
+  const { title = "IELTS Speaking Test", examId } = route.params || {};
   const { user } = useAuthStore();
   
   const [isRecording, setIsRecording] = useState(false);
@@ -38,9 +33,14 @@ const SpeakingScreen = ({ route, navigation }) => {
   const [sections, setSections] = useState([]);
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   
   const socketRef = useRef(null);
   const timerRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const durationRef = useRef(0);
 
   useEffect(() => {
     if (examId) {
@@ -52,93 +52,95 @@ const SpeakingScreen = ({ route, navigation }) => {
             if (test.sections && test.sections.length > 0) {
               setSections(test.sections);
             } else {
-              setSections(DEFAULT_SECTIONS);
+              setErrorMessage('Không tìm thấy dữ liệu bài thi Speaking này.');
+              navigation.goBack();
             }
           } else {
-            setSections(DEFAULT_SECTIONS);
+            setErrorMessage('Lỗi khi tải bài thi.');
+            navigation.goBack();
           }
         })
         .catch(err => {
           console.error("Error fetching speaking exam:", err);
-          setSections(DEFAULT_SECTIONS);
+          setErrorMessage('Đã xảy ra lỗi tải bài thi.');
+          navigation.goBack();
         })
         .finally(() => {
           setLoading(false);
         });
     } else {
-      setSections(DEFAULT_SECTIONS);
+      setErrorMessage('Không có Exam ID.');
+      navigation.goBack();
     }
   }, [examId]);
 
-  // Initialize Socket
   useEffect(() => {
-    // Get correct backend URL
-    const baseURL = client.defaults.baseURL.replace('/api/v1', '');
-    socketRef.current = io(baseURL, {
-      transports: ['websocket']
-    });
-
-    socketRef.current.on('connect', () => {
-      console.log('Socket connected:', socketRef.current.id);
-    });
-
-    socketRef.current.on('audio:transcript', (data) => {
-      console.log('Transcript received:', data);
-    });
-
-    socketRef.current.on('audio:score', (data) => {
-      console.log('Score received:', data);
-      setIsProcessing(false);
-      if (data.success) {
-        setResult(data.score);
-      } else {
-        Alert.alert('Lỗi', data.error || 'Không thể chấm điểm, vui lòng thử lại.');
-      }
-    });
-
-    socketRef.current.on('audio:error', (data) => {
-      setIsProcessing(false);
-      Alert.alert('Lỗi server', data.error || 'Có lỗi xảy ra.');
-    });
-
     return () => {
-      if (socketRef.current) socketRef.current.disconnect();
       if (recording) recording.stopAndUnloadAsync();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
       clearInterval(timerRef.current);
     };
-  }, []);
+  }, [recording]);
 
   const formatTime = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
   const startRecording = async () => {
     try {
-      const permission = await Audio.requestPermissionsAsync();
-      if (permission.status !== 'granted') {
-        Alert.alert('Quyền bị từ chối', 'Ứng dụng cần quyền truy cập microphone để ghi âm bài nói.');
-        return;
-      }
-      
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
+      if (Platform.OS === 'web') {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        audioChunksRef.current = [];
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      
-      setRecording(recording);
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const uri = URL.createObjectURL(blob);
+          handleStopCompletion(uri);
+        };
+
+        mediaRecorder.start();
+        mediaRecorderRef.current = mediaRecorder;
+      } else {
+        const permission = await Audio.requestPermissionsAsync();
+        if (permission.status !== 'granted') {
+          Alert.alert('Quyền bị từ chối', 'Ứng dụng cần quyền truy cập microphone để ghi âm bài nói.');
+          return;
+        }
+        
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+
+        const { recording: newRecording } = await Audio.Recording.createAsync(
+          Audio.RecordingOptionsPresets.HIGH_QUALITY
+        );
+        
+        setRecording(newRecording);
+      }
+
       setIsRecording(true);
       setDuration(0);
+      durationRef.current = 0;
       setResult(null);
 
+      // We use a local variable to update state properly
+      if (timerRef.current) clearInterval(timerRef.current);
+      let currentDuration = 0;
       timerRef.current = setInterval(() => {
-        setDuration(d => d + 1);
+        currentDuration += 1;
+        setDuration(currentDuration);
+        durationRef.current = currentDuration;
       }, 1000);
 
     } catch (err) {
       console.error('Failed to start recording', err);
-      Alert.alert('Lỗi', 'Không thể bắt đầu ghi âm.');
+      setErrorMessage('Không thể bắt đầu ghi âm. Vui lòng cấp quyền Microphone.');
     }
   };
 
@@ -147,46 +149,74 @@ const SpeakingScreen = ({ route, navigation }) => {
       setIsRecording(false);
       clearInterval(timerRef.current);
       
-      if (!recording) return;
-      
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      setRecording(null);
-      
-      if (duration < 3) {
-        Alert.alert('Quá ngắn', 'Bài nói của bạn quá ngắn (dưới 3 giây). Vui lòng thử lại.');
-        return;
+      if (Platform.OS === 'web') {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+        }
+      } else {
+        if (!recording) return;
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        setRecording(null);
+        handleStopCompletion(uri);
       }
-
-      submitAudio(uri);
-
     } catch (err) {
       console.error('Failed to stop recording', err);
     }
   };
 
+  const handleStopCompletion = (uri) => {
+    if (durationRef.current < 3) {
+      setErrorMessage('Bài nói của bạn quá ngắn (dưới 3 giây). Vui lòng thử lại.');
+      return;
+    }
+    submitAudio(uri);
+  };
+
   const submitAudio = async (uri) => {
     setIsProcessing(true);
     try {
-      const base64Data = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
+      let base64Data = '';
+      if (Platform.OS === 'web') {
+        const fetchRes = await fetch(uri);
+        const blob = await fetchRes.blob();
+        base64Data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const dataUrl = reader.result;
+            resolve(dataUrl.split(',')[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } else {
+        base64Data = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+      }
+
+      const activeSection = sections[activeSectionIndex] || {};
+      const currentDuration = durationRef.current;
+
+      const response = await client.post('/exams/evaluate-speaking', {
+        testId: examId,
+        prompt: activeSection.passageText || activeSection.title || 'IELTS Speaking Test',
+        audioBase64: base64Data,
+        durationSeconds: currentDuration,
+        partNumber: activeSectionIndex + 1,
       });
 
-      const activeSection = sections[activeSectionIndex] || DEFAULT_SECTIONS[0];
-
-      // Emit to server
-      socketRef.current.emit('audio:start');
-      socketRef.current.emit('audio:chunk', base64Data);
-      socketRef.current.emit('audio:stop', {
-        userId: user?._id || user?.id || 'guest',
-        testId: examId || null,
-        prompt: activeSection.passageText || 'Vui lòng trả lời câu hỏi Speaking'
-      });
-
+      if (response.data && response.data.success) {
+        setResult(response.data.data);
+      } else {
+        setErrorMessage('Không thể chấm điểm, vui lòng thử lại.');
+      }
     } catch (err) {
       console.error('Failed to read or submit audio', err);
+      const backendMessage = err.response?.data?.message || err.message;
+      setErrorMessage(`Lỗi: ${backendMessage || 'Không thể gửi âm thanh'}`);
+    } finally {
       setIsProcessing(false);
-      Alert.alert('Lỗi', 'Không thể gửi âm thanh.');
     }
   };
 
@@ -292,7 +322,7 @@ const SpeakingScreen = ({ route, navigation }) => {
             <View style={S.promptCard}>
               <View style={S.cardBadge}>
                 <Text style={S.cardBadgeText}>
-                  {(sections[activeSectionIndex]?.title || DEFAULT_SECTIONS[0].title).toUpperCase()}
+                  {(sections[activeSectionIndex]?.title || 'SPEAKING SECTION').toUpperCase()}
                 </Text>
               </View>
               <ScrollView 
@@ -300,7 +330,7 @@ const SpeakingScreen = ({ route, navigation }) => {
                 contentContainerStyle={S.cardScrollContent}
                 showsVerticalScrollIndicator={false}
               >
-                {renderParsedPassage(sections[activeSectionIndex]?.passageText || DEFAULT_SECTIONS[0].passageText)}
+                {renderParsedPassage(sections[activeSectionIndex]?.passageText || '')}
               </ScrollView>
             </View>
 
@@ -336,75 +366,95 @@ const SpeakingScreen = ({ route, navigation }) => {
             )}
           </View>
         ) : (
-          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32, paddingTop: 8 }}>
             <View style={S.resultContainer}>
-              <AppIcon name="success" size={48} color={COLORS.success} />
-              <Text style={S.resultTitle}>Chấm điểm hoàn tất!</Text>
-              
-              <View style={S.resultCard}>
-                <View style={S.scoreCircleContainer}>
-                  <View style={S.scoreCircle}>
-                    <Text style={S.scoreLabel}>Overall Band</Text>
-                    <Text style={S.scoreValue}>{result.bandScore}</Text>
-                  </View>
+              {/* Band Score Header */}
+              <View style={S.resultHeader}>
+                <View style={S.bandCircle}>
+                  <Text style={S.bandLabel}>Band</Text>
+                  <Text style={S.bandScore}>{result.bandScore?.toFixed(1)}</Text>
+                  <Text style={S.bandSub}>/ 9.0</Text>
                 </View>
-
-                <View style={S.criteriaBox}>
-                  <View style={S.progressRow}>
-                    <View style={S.criteriaInfo}>
-                      <Text style={S.criteriaName}>Trôi chảy & Mạch lạc:</Text>
-                      <Text style={S.criteriaScore}>{result.fluencyCoherence}</Text>
-                    </View>
-                    <View style={S.progressBarBg}>
-                      <View style={[S.progressBarFill, { width: getProgressWidth(result.fluencyCoherence) }]} />
-                    </View>
-                  </View>
-                  
-                  <View style={S.progressRow}>
-                    <View style={S.criteriaInfo}>
-                      <Text style={S.criteriaName}>Từ vựng:</Text>
-                      <Text style={S.criteriaScore}>{result.lexicalResource}</Text>
-                    </View>
-                    <View style={S.progressBarBg}>
-                      <View style={[S.progressBarFill, { width: getProgressWidth(result.lexicalResource) }]} />
-                    </View>
-                  </View>
-
-                  <View style={S.progressRow}>
-                    <View style={S.criteriaInfo}>
-                      <Text style={S.criteriaName}>Ngữ pháp:</Text>
-                      <Text style={S.criteriaScore}>{result.grammarAccuracy}</Text>
-                    </View>
-                    <View style={S.progressBarBg}>
-                      <View style={[S.progressBarFill, { width: getProgressWidth(result.grammarAccuracy) }]} />
-                    </View>
-                  </View>
-
-                  <View style={S.progressRow}>
-                    <View style={S.criteriaInfo}>
-                      <Text style={S.criteriaName}>Phát âm:</Text>
-                      <Text style={S.criteriaScore}>{result.pronunciation}</Text>
-                    </View>
-                    <View style={S.progressBarBg}>
-                      <View style={[S.progressBarFill, { width: getProgressWidth(result.pronunciation) }]} />
-                    </View>
-                  </View>
+                <View style={S.resultMeta}>
+                  <Text style={S.resultTitle}>Part {activeSectionIndex + 1} — {sections[activeSectionIndex]?.title || 'Speaking'}</Text>
+                  <Text style={S.resultSubtitle}>✅ Chấm điểm hoàn tất</Text>
+                  {result.wordCount > 0 && (
+                    <Text style={S.wordCountBadge}>💬 {result.wordCount} từ được nhận diện</Text>
+                  )}
                 </View>
               </View>
 
-              <View style={S.feedbackBox}>
-                <Text style={S.feedbackTitle}>Phản hồi từ AI:</Text>
-                <Text style={S.feedbackText}>{result.aiFeedback}</Text>
+              {/* Criteria Scores */}
+              <View style={S.criteriaSection}>
+                <Text style={S.sectionHeading}>TIÊU CHÍ ĐÁNH GIÁ</Text>
+                {[
+                  { key: 'fluencyCoherence', label: 'Trôi chảy & Mạch lạc', color: '#4682b4' },
+                  { key: 'lexicalResource', label: 'Từ vựng', color: '#005c42' },
+                  { key: 'grammarAccuracy', label: 'Ngữ pháp', color: '#d97706' },
+                  { key: 'pronunciation', label: 'Phát âm', color: '#c92a2a' },
+                ].map(({ key, label, color }) => (
+                  <View key={key} style={S.criteriaRow}>
+                    <View style={S.criteriaHeader}>
+                      <Text style={S.criteriaName}>{label}</Text>
+                      <Text style={[S.criteriaScore, { color }]}>{result[key]?.toFixed(1)}</Text>
+                    </View>
+                    <View style={S.progressBarBg}>
+                      <View style={[S.progressBarFill, { width: getProgressWidth(result[key]), backgroundColor: color }]} />
+                    </View>
+                  </View>
+                ))}
               </View>
 
+              {/* AI Feedback */}
+              {result.aiFeedback && (
+                <View style={S.feedbackSection}>
+                  <Text style={S.sectionHeading}>NHẬN XÉT TỪ AI EXAMINER</Text>
+                  {result.aiFeedback.general && (
+                    <View style={S.generalFeedback}>
+                      <Text style={S.feedbackText}>{result.aiFeedback.general}</Text>
+                    </View>
+                  )}
+                  {[
+                    { key: 'fluencyCoherence', label: '🗣 Trôi chảy & Mạch lạc' },
+                    { key: 'lexicalResource', label: '📚 Từ vựng' },
+                    { key: 'grammarAccuracy', label: '✏️ Ngữ pháp' },
+                    { key: 'pronunciation', label: '🔊 Phát âm' },
+                  ].map(({ key, label }) => result.aiFeedback[key] && (
+                    <View key={key} style={S.feedbackItem}>
+                      <Text style={S.feedbackLabel}>{label}</Text>
+                      <Text style={S.feedbackDetail}>{result.aiFeedback[key]}</Text>
+                    </View>
+                  ))}
+                  {Array.isArray(result.aiFeedback.suggestions) && result.aiFeedback.suggestions.length > 0 && (
+                    <View style={S.suggestionsBox}>
+                      <Text style={S.feedbackLabel}>💡 Gợi ý cải thiện</Text>
+                      {result.aiFeedback.suggestions.map((s, i) => (
+                        <Text key={i} style={S.suggestionItem}>• {s}</Text>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Transcript */}
+              {result.transcript && result.transcript.trim().length > 5 && (
+                <View style={S.transcriptSection}>
+                  <Text style={S.sectionHeading}>📝 TRANSCRIPT (Bài nói của bạn)</Text>
+                  <ScrollView style={S.transcriptScroll} nestedScrollEnabled>
+                    <Text style={S.transcriptText}>{result.transcript}</Text>
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Action Buttons */}
               <View style={S.actionsRow}>
                 <TouchableOpacity style={S.retryBtn} onPress={() => setResult(null)}>
-                  <Text style={S.retryText}>Luyện tập lại</Text>
+                  <Text style={S.retryText}>🔄 Luyện lại</Text>
                 </TouchableOpacity>
-                
+
                 {activeSectionIndex < sections.length - 1 && (
-                  <TouchableOpacity 
-                    style={[S.retryBtn, { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]} 
+                  <TouchableOpacity
+                    style={[S.retryBtn, { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}
                     onPress={() => {
                       setActiveSectionIndex(activeSectionIndex + 1);
                       setResult(null);
@@ -415,12 +465,107 @@ const SpeakingScreen = ({ route, navigation }) => {
                     <Text style={[S.retryText, { color: COLORS.textInverse }]}>Part Tiếp Theo →</Text>
                   </TouchableOpacity>
                 )}
+
+                {activeSectionIndex === sections.length - 1 && (
+                  <TouchableOpacity
+                    style={[S.retryBtn, { backgroundColor: '#005c42', borderColor: '#005c42' }]}
+                    onPress={() => navigation.goBack()}
+                  >
+                    <Text style={[S.retryText, { color: '#fff' }]}>✅ Hoàn thành</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </ScrollView>
         )}
 
       </View>
+      
+      {/* Footer */}
+      <View style={{
+        backgroundColor: '#c92a2a',
+        paddingVertical: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderTopWidth: 2,
+        borderTopColor: '#1b263b',
+      }}>
+        <TouchableOpacity 
+          style={{ width: '100%', alignItems: 'center' }}
+          onPress={() => setShowSubmitModal(true)}
+        >
+          <Text style={{
+            fontSize: 14,
+            fontFamily: 'Outfit_900Black',
+            color: '#fff',
+            letterSpacing: 1,
+            textTransform: 'uppercase'
+          }}>SUBMIT EXAM</Text>
+        </TouchableOpacity>
+      </View>
+      {/* Submit Confirmation Modal */}
+      <Modal
+        visible={showSubmitModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSubmitModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(27, 38, 59, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: '100%', maxWidth: 400, backgroundColor: '#fcfbf7', borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 2, borderColor: '#1b263b', elevation: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Ionicons name="checkmark-circle" size={32} color="#c92a2a" />
+              <Text style={{ fontSize: 20, fontFamily: 'Outfit_900Black', color: '#1b263b', marginLeft: 10 }}>Submit Exam?</Text>
+            </View>
+            <Text style={{ fontSize: 14, fontFamily: 'Outfit_700Bold', color: '#333', textAlign: 'center', marginBottom: 24, lineHeight: 22 }}>
+              Bạn có chắc chắn muốn nộp bài thi Speaking không?
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', gap: 12 }}>
+              <TouchableOpacity 
+                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: '#e0e0e0', borderWidth: 2, borderColor: '#1b263b' }} 
+                onPress={() => setShowSubmitModal(false)}
+              >
+                <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#1b263b' }}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: '#c92a2a', borderWidth: 2, borderColor: '#1b263b' }} 
+                onPress={() => {
+                  setShowSubmitModal(false);
+                  navigation.goBack();
+                }}
+              >
+                <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#fff' }}>Nộp bài</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Error Message Modal */}
+      <Modal
+        visible={!!errorMessage}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setErrorMessage('')}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(27, 38, 59, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: '100%', maxWidth: 400, backgroundColor: '#fcfbf7', borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 2, borderColor: '#1b263b', elevation: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Ionicons name="alert-circle" size={32} color="#c92a2a" />
+              <Text style={{ fontSize: 20, fontFamily: 'Outfit_900Black', color: '#1b263b', marginLeft: 10 }}>Thông Báo</Text>
+            </View>
+            <Text style={{ fontSize: 14, fontFamily: 'Outfit_700Bold', color: '#333', textAlign: 'center', marginBottom: 24, lineHeight: 22 }}>
+              {errorMessage}
+            </Text>
+            <TouchableOpacity 
+              style={{ width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: '#c92a2a', borderWidth: 2, borderColor: '#1b263b' }} 
+              onPress={() => setErrorMessage('')}
+            >
+              <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#fff' }}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -574,114 +719,48 @@ const S = StyleSheet.create({
   processingBox: { alignItems: 'center', marginTop: SPACING.xl },
   processingText: { marginTop: SPACING.md, fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.primary },
 
-  resultContainer: { flex: 1, alignItems: 'center', paddingTop: SPACING.md },
-  resultTitle: { fontSize: TYPOGRAPHY.xl, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.success, marginTop: SPACING.sm, marginBottom: SPACING.lg },
-  
-  resultCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.lg,
-    width: '100%',
-    maxWidth: 680,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    ...SHADOWS.md,
-    marginBottom: SPACING.lg,
-  },
-  scoreCircleContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '35%',
-    minWidth: 140,
-    paddingVertical: SPACING.sm,
-  },
-  scoreCircle: { width: 110, height: 110, borderRadius: 55, borderWidth: 4, borderColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  scoreLabel: { fontSize: TYPOGRAPHY.xs, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary },
-  scoreValue: { fontSize: 32, fontFamily: TYPOGRAPHY.fontBlack, color: COLORS.primary },
+  resultContainer: { flex: 1, width: '100%', maxWidth: 680, alignSelf: 'center', paddingTop: SPACING.sm },
+  resultHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: SPACING.lg, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
+  bandCircle: { width: 80, height: 80, borderRadius: 40, borderWidth: 4, borderColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginRight: SPACING.lg },
+  bandLabel: { fontSize: 10, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary },
+  bandScore: { fontSize: 26, fontFamily: TYPOGRAPHY.fontBlack, color: COLORS.primary, lineHeight: 30 },
+  bandSub: { fontSize: 10, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary },
+  resultMeta: { flex: 1 },
+  resultTitle: { fontSize: TYPOGRAPHY.base, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary, marginBottom: 4 },
+  resultSubtitle: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontMedium, color: '#005c42', marginBottom: 4 },
+  wordCountBadge: { fontSize: TYPOGRAPHY.xs, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary },
 
-  criteriaBox: {
-    width: '60%',
-    minWidth: 260,
-    flexGrow: 1,
-  },
-  progressRow: {
-    marginVertical: SPACING.xs,
-    width: '100%',
-  },
-  criteriaInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  progressBarBg: {
-    height: 8,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.gray100,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
+  criteriaSection: { backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: SPACING.lg, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+  sectionHeading: { fontSize: TYPOGRAPHY.xs, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textSecondary, letterSpacing: 1, marginBottom: SPACING.md },
+  criteriaRow: { marginBottom: SPACING.md },
+  criteriaHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  criteriaName: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textPrimary },
+  criteriaScore: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.primary },
+  progressBarBg: { height: 8, borderRadius: RADIUS.full, backgroundColor: COLORS.gray100, overflow: 'hidden' },
+  progressBarFill: { height: '100%', borderRadius: RADIUS.full, backgroundColor: COLORS.primary },
 
-  feedbackBox: {
-    width: '100%',
-    maxWidth: 680,
-    alignSelf: 'center',
-    backgroundColor: COLORS.primaryLight,
-    padding: SPACING.lg,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
-    marginBottom: SPACING.xl,
-  },
-  feedbackTitle: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.primaryDark, marginBottom: SPACING.xs },
+  feedbackSection: { backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: SPACING.lg, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+  generalFeedback: { backgroundColor: COLORS.primaryLight, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md },
+  feedbackItem: { borderLeftWidth: 3, borderLeftColor: COLORS.primary, paddingLeft: SPACING.md, marginBottom: SPACING.md },
+  feedbackLabel: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary, marginBottom: 4 },
+  feedbackDetail: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontRegular, color: COLORS.textSecondary, lineHeight: 20 },
   feedbackText: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontRegular, color: COLORS.primaryDark, lineHeight: 20 },
+  suggestionsBox: { backgroundColor: '#fffbeb', borderRadius: RADIUS.md, padding: SPACING.md, marginTop: SPACING.sm, borderWidth: 1, borderColor: '#fde68a' },
+  suggestionItem: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontMedium, color: '#92400e', lineHeight: 20, marginTop: 4 },
+
+  transcriptSection: { backgroundColor: '#f8f8f8', borderRadius: RADIUS.lg, padding: SPACING.lg, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+  transcriptScroll: { maxHeight: 150 },
+  transcriptText: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontRegular, color: COLORS.textSecondary, lineHeight: 22, fontStyle: 'italic' },
 
   retryBtn: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.xl, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.full },
   retryText: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: SPACING.md,
-    alignSelf: 'center',
-  },
+  actionsRow: { flexDirection: 'row', gap: 12, marginTop: SPACING.md, alignSelf: 'center', flexWrap: 'wrap', justifyContent: 'center', marginBottom: SPACING.xl },
 
-  partTabsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: SPACING.lg,
-  },
-  partTabItem: {
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginHorizontal: SPACING.xs,
-    backgroundColor: COLORS.surface,
-  },
-  partTabItemActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  partTabText: {
-    fontSize: TYPOGRAPHY.sm,
-    fontFamily: TYPOGRAPHY.fontMedium,
-    color: COLORS.textSecondary,
-  },
-  partTabTextActive: {
-    color: COLORS.textInverse,
-    fontFamily: TYPOGRAPHY.fontBold,
-  },
+  partTabsContainer: { flexDirection: 'row', justifyContent: 'center', marginBottom: SPACING.lg },
+  partTabItem: { paddingVertical: SPACING.xs, paddingHorizontal: SPACING.md, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border, marginHorizontal: SPACING.xs, backgroundColor: COLORS.surface },
+  partTabItemActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  partTabText: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary },
+  partTabTextActive: { color: COLORS.textInverse, fontFamily: TYPOGRAPHY.fontBold },
 });
 
 export default SpeakingScreen;
