@@ -499,7 +499,7 @@ const AuthModal = ({ visible, onClose }) => {
                     <View style={styles.separatorLine} />
                   </View>
 
-                  {/* Mock Social Buttons */}
+                  {/* Social Buttons */}
                   <View style={styles.socialContainer}>
                     <TouchableOpacity 
                       style={styles.socialButton}

@@ -63,6 +63,100 @@ const TYPE_COLORS = {
   SPEAKING: '#c92a2a',
 };
 
+// --- View-based Pseudo Charts ---
+
+// 1. Trend Chart (Bar chart acting as timeline trend)
+const TrendChart = ({ data }) => {
+  // data = array of band scores
+  if (!data || data.length === 0) return <Text style={styles.chartEmpty}>No trend data yet.</Text>;
+  const recent = data.slice(0, 15).reverse(); // Last 15 attempts
+  
+  return (
+    <View style={styles.trendContainer}>
+      <View style={styles.trendChart}>
+        {recent.map((score, idx) => {
+          const heightPct = Math.max(10, (score / 9) * 100);
+          return (
+            <View key={idx} style={styles.trendColumn}>
+              <Text style={styles.trendScoreText}>{score.toFixed(1)}</Text>
+              <View style={[styles.trendBar, { height: `${heightPct}%` }]} />
+            </View>
+          );
+        })}
+      </View>
+      <Text style={styles.chartAxisLabel}>← OLDEST   |   NEWEST →</Text>
+    </View>
+  );
+};
+
+// 2. Practice Calendar (Contribution Graph)
+const PracticeCalendar = ({ history }) => {
+  if (!history || history.length === 0) return <Text style={styles.chartEmpty}>No activity yet.</Text>;
+  
+  // Create last 28 days array
+  const days = [];
+  const today = new Date();
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(today.getDate() - i);
+    days.push({
+      dateStr: d.toISOString().split('T')[0],
+      count: 0
+    });
+  }
+
+  // Count history
+  history.forEach(h => {
+    try {
+      const dStr = new Date(h.createdAt).toISOString().split('T')[0];
+      const match = days.find(d => d.dateStr === dStr);
+      if (match) match.count++;
+    } catch {}
+  });
+
+  return (
+    <View style={styles.calendarContainer}>
+      {days.map((day, i) => (
+        <View 
+          key={i} 
+          style={[
+            styles.calendarBox, 
+            { backgroundColor: day.count > 2 ? '#c92a2a' : day.count > 0 ? '#ff8787' : '#f5f3dc' }
+          ]} 
+        />
+      ))}
+    </View>
+  );
+};
+
+// 3. Radar Chart (Compass layout using Views)
+const RadarChart = ({ bands }) => {
+  const { READING = 0, LISTENING = 0, WRITING = 0, SPEAKING = 0 } = bands;
+  const getLen = (val) => Math.max(10, (val / 9) * 50); // max 50px
+
+  return (
+    <View style={styles.radarContainer}>
+      <View style={styles.radarCenter}>
+        {/* Top: Reading */}
+        <View style={[styles.radarBranch, styles.radarTop, { height: getLen(READING), backgroundColor: TYPE_COLORS.READING }]} />
+        <Text style={[styles.radarLabel, styles.radarLabelTop]}>R {READING}</Text>
+
+        {/* Right: Listening */}
+        <View style={[styles.radarBranch, styles.radarRight, { width: getLen(LISTENING), backgroundColor: TYPE_COLORS.LISTENING }]} />
+        <Text style={[styles.radarLabel, styles.radarLabelRight]}>L {LISTENING}</Text>
+
+        {/* Bottom: Writing */}
+        <View style={[styles.radarBranch, styles.radarBottom, { height: getLen(WRITING), backgroundColor: TYPE_COLORS.WRITING }]} />
+        <Text style={[styles.radarLabel, styles.radarLabelBottom]}>W {WRITING}</Text>
+
+        {/* Left: Speaking */}
+        <View style={[styles.radarBranch, styles.radarLeft, { width: getLen(SPEAKING), backgroundColor: TYPE_COLORS.SPEAKING }]} />
+        <Text style={[styles.radarLabel, styles.radarLabelLeft]}>S {SPEAKING}</Text>
+      </View>
+    </View>
+  );
+};
+
 const ProgressScreen = ({ navigation }) => {
   const { user } = useAuthStore();
   const [activeFilter, setActiveFilter] = useState('all');
@@ -210,6 +304,36 @@ const ProgressScreen = ({ navigation }) => {
             ))}
           </View>
 
+          {/* Charts Section */}
+          <Text style={styles.sectionBadge}>✎ ANALYTICS</Text>
+          <Text style={styles.sectionTitle}>Performance Charts</Text>
+
+          {/* Trend Chart */}
+          <BrutalistShadow style={styles.chartCard} offset={4}>
+            <View style={styles.historyCardInner}>
+              <Text style={styles.chartCardTitle}>Band Trend (Last 15 Attempts)</Text>
+              <TrendChart data={history.map(h => h.bandScore || 0)} />
+            </View>
+          </BrutalistShadow>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+            {/* Radar Chart */}
+            <BrutalistShadow style={[styles.chartCard, { width: '48%', marginBottom: 0 }]} offset={4}>
+              <View style={[styles.historyCardInner, { padding: 12, alignItems: 'center' }]}>
+                <Text style={styles.chartCardTitle}>Skill Balance</Text>
+                <RadarChart bands={bandByType} />
+              </View>
+            </BrutalistShadow>
+
+            {/* Practice Calendar */}
+            <BrutalistShadow style={[styles.chartCard, { width: '48%', marginBottom: 0 }]} offset={4}>
+              <View style={[styles.historyCardInner, { padding: 12 }]}>
+                <Text style={styles.chartCardTitle}>Activity (28d)</Text>
+                <PracticeCalendar history={history} />
+              </View>
+            </BrutalistShadow>
+          </View>
+
           {/* History Section */}
           <Text style={styles.sectionBadge}>✎ EXAM HISTORY</Text>
           <Text style={styles.sectionTitle}>Recent Attempts</Text>
@@ -332,6 +456,34 @@ const styles = StyleSheet.create({
 
   emptyHistory: { alignItems: 'center', paddingVertical: 24 },
   emptyText: { fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#999', textAlign: 'center' },
+
+  // View-based Charts
+  chartCard: { borderRadius: 16, marginBottom: 20 },
+  chartCardTitle: { fontFamily: 'Outfit_900Black', fontSize: 12, color: '#1b263b', marginBottom: 12 },
+  chartEmpty: { fontFamily: 'Outfit_700Bold', fontSize: 12, color: '#999', textAlign: 'center', marginVertical: 20 },
+  
+  trendContainer: { height: 120 },
+  trendChart: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 6, borderBottomWidth: 2, borderBottomColor: '#1b263b', paddingBottom: 4 },
+  trendColumn: { width: 14, alignItems: 'center', justifyContent: 'flex-end', height: '100%' },
+  trendScoreText: { fontSize: 8, fontFamily: 'Outfit_900Black', color: '#666', marginBottom: 2, transform: [{ rotate: '-45deg' }] },
+  trendBar: { width: 10, backgroundColor: '#c92a2a', borderTopLeftRadius: 4, borderTopRightRadius: 4, borderWidth: 1, borderColor: '#1b263b' },
+  chartAxisLabel: { fontSize: 8, fontFamily: 'Outfit_900Black', color: '#999', textAlign: 'center', marginTop: 8 },
+
+  calendarContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, width: '100%' },
+  calendarBox: { width: 14, height: 14, borderRadius: 3, borderWidth: 1, borderColor: '#1b263b' },
+
+  radarContainer: { height: 110, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  radarCenter: { width: 10, height: 10, backgroundColor: '#1b263b', borderRadius: 5, position: 'relative' },
+  radarBranch: { position: 'absolute', borderWidth: 1, borderColor: '#1b263b' },
+  radarTop: { width: 6, bottom: '100%', left: 2, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
+  radarBottom: { width: 6, top: '100%', left: 2, borderBottomLeftRadius: 3, borderBottomRightRadius: 3 },
+  radarLeft: { height: 6, right: '100%', top: 2, borderTopLeftRadius: 3, borderBottomLeftRadius: 3 },
+  radarRight: { height: 6, left: '100%', top: 2, borderTopRightRadius: 3, borderBottomRightRadius: 3 },
+  radarLabel: { position: 'absolute', fontSize: 10, fontFamily: 'Outfit_900Black', color: '#1b263b' },
+  radarLabelTop: { bottom: 55, left: -10, width: 30, textAlign: 'center' },
+  radarLabelBottom: { top: 55, left: -10, width: 30, textAlign: 'center' },
+  radarLabelLeft: { right: 55, top: -4, width: 30, textAlign: 'right' },
+  radarLabelRight: { left: 55, top: -4, width: 30 },
 });
 
 export default ProgressScreen;

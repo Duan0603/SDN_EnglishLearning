@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   StatusBar,
   RefreshControl,
+  Alert,
+  Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Menu, Divider } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 
+import client from '../api/client';
 import useAuthStore from '../store/useAuthStore';
 
 // Brutalist shadow wrapper
@@ -53,14 +56,63 @@ const HomeScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
   const [refreshing, setRefreshing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [showStreakModal, setShowStreakModal] = useState(false);
 
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
 
-  const onRefresh = useCallback(() => {
+  const fetchStats = async () => {
+    if (!user) return null;
+    try {
+      const res = await client.get('/users/me/stats', { hideToast: true });
+      if (res.data?.success) {
+        const data = res.data.data || res.data.metadata || null;
+        setStats(data);
+        return data;
+      }
+    } catch (err) {
+      console.log('Error fetching home stats:', err);
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    fetchStats().then(data => {
+      if (data && data.hasCheckedInToday === false && user) {
+        setShowStreakModal(true);
+      }
+    });
+  }, [user]);
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1500);
-  }, []);
+    await fetchStats();
+    setRefreshing(false);
+  }, [user]);
+
+  const handleCheckIn = async () => {
+    if (!user) {
+      Alert.alert('Notice', 'Vui lòng đăng nhập để điểm danh!');
+      return navigate('Login');
+    }
+    
+    if (stats?.hasCheckedInToday) {
+      Alert.alert('Thành công', `Bạn đã điểm danh hôm nay rồi!\nStreak hiện tại: ${stats.currentStreak} ngày 🔥`);
+      return;
+    }
+
+    try {
+      const res = await client.post('/users/me/checkin');
+      if (res.data?.success) {
+        setShowStreakModal(false);
+        Alert.alert('Điểm danh thành công!', `Streak của bạn đã tăng lên: ${res.data.data.currentStreak} ngày 🔥`);
+        fetchStats(); // refresh stats
+      }
+    } catch (error) {
+      Alert.alert('Lỗi', error?.response?.data?.message || 'Không thể điểm danh lúc này.');
+    }
+  };
 
   const firstName = user?.fullName?.split(' ').slice(-1)[0] || 'Guest';
   const initial   = user?.fullName?.charAt(0)?.toUpperCase() || 'U';
@@ -70,6 +122,32 @@ const HomeScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fcfbf7" />
+
+      {/* STREAK MODAL */}
+      <Modal visible={showStreakModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <BrutalistShadow style={styles.modalContent} offset={6}>
+            <View style={styles.modalInner}>
+              <View style={styles.modalHeaderBox}>
+                <Ionicons name="flame" size={50} color="#c92a2a" />
+                <Text style={styles.modalTitle}>DAILY CHECK-IN</Text>
+              </View>
+              
+              <Text style={styles.modalSubtitle}>Don't break your streak!</Text>
+              <Text style={styles.modalStreakText}>{stats?.currentStreak || 0} Days 🔥</Text>
+              <Text style={styles.modalDesc}>Check in today to keep your streak alive and track your consistency.</Text>
+              
+              <TouchableOpacity style={styles.checkInBtn} onPress={handleCheckIn}>
+                <Text style={styles.checkInBtnText}>CHECK IN NOW</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.closeModalBtn} onPress={() => setShowStreakModal(false)}>
+                <Text style={styles.closeModalText}>LATER</Text>
+              </TouchableOpacity>
+            </View>
+          </BrutalistShadow>
+        </View>
+      </Modal>
 
       {/* Top App Bar */}
       <View style={styles.appBar}>
@@ -81,9 +159,9 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.appBarRight}>
-          <TouchableOpacity style={styles.iconBtn}>
+          <TouchableOpacity style={styles.iconBtn} onPress={handleCheckIn}>
             <Ionicons name="notifications-outline" size={24} color="#1b263b" />
-            <View style={styles.notifDot} />
+            {!stats?.hasCheckedInToday && <View style={styles.notifDot} />}
           </TouchableOpacity>
 
           {user ? (
@@ -125,10 +203,10 @@ const HomeScreen = ({ navigation }) => {
               Ready to crush your IELTS today? Type sits on the rule, ink lives in the margin.
             </Text>
             <View style={styles.stickyFooter}>
-              <Text style={styles.stickyBadge}>IELTS WEEK 09</Text>
+              <Text style={styles.stickyBadge}>IELTS WEEK {stats?.weeksActive ? stats.weeksActive.toString().padStart(2, '0') : '01'}</Text>
               <View style={styles.streakBadge}>
                 <Ionicons name="flame" size={12} color="#c92a2a" />
-                <Text style={styles.streakText}>7 Days</Text>
+                <Text style={styles.streakText}>{stats?.currentStreak || 0} Days</Text>
               </View>
             </View>
           </View>
@@ -145,7 +223,7 @@ const HomeScreen = ({ navigation }) => {
               tutor="Whisper & Gemini" 
               bg="#fcfbf7" 
               color="#c92a2a" 
-              progress={62}
+              progress={stats?.speakingBand ? Math.min(100, Math.round((stats.speakingBand / 9) * 100)) : 0}
               onPress={() => navigate(user ? 'Practice' : 'Login')} 
             />
             <ModuleCard 
@@ -153,7 +231,7 @@ const HomeScreen = ({ navigation }) => {
               tutor="Criteria Grader" 
               bg="#fcfbf7" 
               color="#d97706" 
-              progress={45}
+              progress={stats?.writingBand ? Math.min(100, Math.round((stats.writingBand / 9) * 100)) : 0}
               onPress={() => navigate(user ? 'Practice' : 'Login')} 
             />
             <ModuleCard 
@@ -161,7 +239,7 @@ const HomeScreen = ({ navigation }) => {
               tutor="Cambridge Pool" 
               bg="#fcfbf7" 
               color="#4682b4" 
-              progress={78}
+              progress={stats?.readingBand ? Math.min(100, Math.round((stats.readingBand / 9) * 100)) : 0}
               onPress={() => navigate(user ? 'Practice' : 'Login')} 
             />
             <ModuleCard 
@@ -169,7 +247,7 @@ const HomeScreen = ({ navigation }) => {
               tutor="Audio Stream" 
               bg="#fcfbf7" 
               color="#005c42" 
-              progress={33}
+              progress={stats?.listeningBand ? Math.min(100, Math.round((stats.listeningBand / 9) * 100)) : 0}
               onPress={() => navigate(user ? 'Practice' : 'Login')} 
             />
           </View>
@@ -188,28 +266,28 @@ const HomeScreen = ({ navigation }) => {
               </View>
               
               <View style={styles.scoreMain}>
-                <Text style={styles.scoreBig}>7.5</Text>
+                <Text style={styles.scoreBig}>{stats?.overallBand ? stats.overallBand.toFixed(1) : '—'}</Text>
                 <View style={styles.stampBox}>
-                  <Text style={styles.stampText}>A+</Text>
+                  <Text style={styles.stampText}>{stats?.overallBand >= 8 ? 'A+' : stats?.overallBand >= 7 ? 'A' : stats?.overallBand >= 6 ? 'B' : '?'}</Text>
                 </View>
               </View>
 
               <View style={styles.scoreList}>
                 <View style={styles.scoreItem}>
                   <Text style={styles.scoreItemLabel}>Reading</Text>
-                  <Text style={[styles.scoreItemVal, { color: '#4682b4' }]}>7.5</Text>
+                  <Text style={[styles.scoreItemVal, { color: '#4682b4' }]}>{stats?.readingBand ? stats.readingBand.toFixed(1) : '—'}</Text>
                 </View>
                 <View style={styles.scoreItem}>
                   <Text style={styles.scoreItemLabel}>Listening</Text>
-                  <Text style={[styles.scoreItemVal, { color: '#005c42' }]}>8.5</Text>
+                  <Text style={[styles.scoreItemVal, { color: '#005c42' }]}>{stats?.listeningBand ? stats.listeningBand.toFixed(1) : '—'}</Text>
                 </View>
                 <View style={styles.scoreItem}>
                   <Text style={styles.scoreItemLabel}>Writing</Text>
-                  <Text style={[styles.scoreItemVal, { color: '#d97706' }]}>6.5</Text>
+                  <Text style={[styles.scoreItemVal, { color: '#d97706' }]}>{stats?.writingBand ? stats.writingBand.toFixed(1) : '—'}</Text>
                 </View>
                 <View style={styles.scoreItem}>
                   <Text style={styles.scoreItemLabel}>Speaking</Text>
-                  <Text style={[styles.scoreItemVal, { color: '#c92a2a' }]}>7.0</Text>
+                  <Text style={[styles.scoreItemVal, { color: '#c92a2a' }]}>{stats?.speakingBand ? stats.speakingBand.toFixed(1) : '—'}</Text>
                 </View>
               </View>
 
@@ -474,6 +552,78 @@ const styles = StyleSheet.create({
   },
   adminBtnText: {
     fontFamily: 'Outfit_900Black', fontSize: 14, color: '#1b263b',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(27, 38, 59, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    borderRadius: 8,
+  },
+  modalInner: {
+    backgroundColor: '#fff',
+    padding: 32,
+    alignItems: 'center',
+  },
+  modalHeaderBox: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#1b263b',
+    marginTop: 8,
+    letterSpacing: 1,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1b263b',
+    marginBottom: 8,
+  },
+  modalStreakText: {
+    fontSize: 48,
+    fontWeight: '900',
+    color: '#c92a2a',
+    marginVertical: 16,
+  },
+  modalDesc: {
+    fontSize: 14,
+    color: '#1b263b',
+    textAlign: 'center',
+    marginBottom: 32,
+    opacity: 0.8,
+  },
+  checkInBtn: {
+    backgroundColor: '#c92a2a',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  checkInBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  closeModalBtn: {
+    paddingVertical: 8,
+  },
+  closeModalText: {
+    color: '#1b263b',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
   },
 });
 

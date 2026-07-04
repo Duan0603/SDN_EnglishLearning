@@ -84,7 +84,7 @@ const PracticeScreen = ({ navigation }) => {
   const handleExamPress = (exam) => {
     const type = exam.type?.toLowerCase() || activeTab.toLowerCase();
     if (type === 'speaking') {
-      navigation.navigate('Speaking', { title: exam.title });
+      navigation.navigate('Speaking', { title: exam.title, examId: exam.id });
     } else {
       // Truyền examId thật để ExamScreen load từ API
       navigation.navigate('Exam', {
@@ -210,7 +210,7 @@ const PracticeScreen = ({ navigation }) => {
                   )}
                   
                   <View style={styles.examAction}>
-                    <Text style={[styles.examActionText, { color }]}>START MOCK EXAM</Text>
+                    <Text style={[styles.examActionText, { color }]}>START EXAM</Text>
                     <Ionicons name="arrow-forward" size={16} color={color} />
                   </View>
                 </View>
