@@ -30,8 +30,16 @@ export default function PracticeWorkspace() {
   const [listeningExams, setListeningExams] = useState<any[]>([]);
   const [listeningExamsLoading, setListeningExamsLoading] = useState(false);
 
-  // Mentors Booking State
-  const [bookedSessions, setBookedSessions] = useState<string[]>([]);
+  // Mentors Booking State (real API)
+  const [mentorsList, setMentorsList] = useState<any[]>([]);
+  const [mentorsLoading, setMentorsLoading] = useState(false);
+  const [selectedMentor, setSelectedMentor] = useState<any>(null);
+  const [mentorSlots, setMentorSlots] = useState<any[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [bookingNotes, setBookingNotes] = useState('');
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   // Fetch lists based on active tab
   useEffect(() => {
@@ -110,12 +118,61 @@ export default function PracticeWorkspace() {
     }
   }, [activeTab]);
 
-  const handleBookMentor = (mentorName: string) => {
-    if (bookedSessions.includes(mentorName)) {
-      setBookedSessions(bookedSessions.filter((s) => s !== mentorName));
-    } else {
-      setBookedSessions([...bookedSessions, mentorName]);
-      alert(`Đã đặt lịch thành công với Mentor ${mentorName}! Hãy kiểm tra email để nhận link họp Zoom.`);
+  // Fetch all active mentors when mentors tab is opened
+  useEffect(() => {
+    if (activeTab === 'mentors') {
+      const fetchMentors = async () => {
+        setMentorsLoading(true);
+        try {
+          const res = await apiClient.get('/mentors');
+          if (res.data?.success) setMentorsList(res.data.data);
+        } catch (err) {
+          console.error('Error fetching mentors:', err);
+        } finally {
+          setMentorsLoading(false);
+        }
+      };
+      fetchMentors();
+    }
+  }, [activeTab]);
+
+  // Fetch availability slots when a mentor is selected
+  useEffect(() => {
+    if (selectedMentor) {
+      const fetchSlots = async () => {
+        setSlotsLoading(true);
+        setMentorSlots([]);
+        try {
+          const res = await apiClient.get(`/mentors/${selectedMentor.id}/availabilities`);
+          if (res.data?.success) setMentorSlots(res.data.data);
+        } catch (err) {
+          console.error('Error fetching slots:', err);
+        } finally {
+          setSlotsLoading(false);
+        }
+      };
+      fetchSlots();
+    }
+  }, [selectedMentor]);
+
+  const handleBookSlot = async (availabilityId: string) => {
+    setBookingLoading(true);
+    setBookingSuccess(null);
+    setBookingError(null);
+    try {
+      const res = await apiClient.post('/bookings', { availabilityId, notes: bookingNotes });
+      if (res.data?.success) {
+        setBookingSuccess('🎉 Đặt lịch thành công! Kiểm tra Profile để xem lịch học.');
+        // Refresh slots
+        const slotsRes = await apiClient.get(`/mentors/${selectedMentor.id}/availabilities`);
+        if (slotsRes.data?.success) setMentorSlots(slotsRes.data.data);
+        setBookingNotes('');
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Đặt lịch thất bại, vui lòng thử lại.';
+      setBookingError(msg);
+    } finally {
+      setBookingLoading(false);
     }
   };
 
@@ -397,7 +454,7 @@ export default function PracticeWorkspace() {
               </div>
             )}
 
-            {/* TAB CONTENT: MENTORS */}
+            {/* TAB CONTENT: MENTORS — Real API */}
             {activeTab === 'mentors' && (
               <div className="space-y-6">
                 <div>
@@ -406,34 +463,136 @@ export default function PracticeWorkspace() {
                   <p className="text-xs text-gray-500 font-semibold mt-1">Đặt lịch học tập trực tiếp cùng chuyên gia IELTS để sửa lỗi và nhận tư vấn định hướng ôn thi.</p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  {[
-                    { name: 'Emily Smith', title: 'Certified IELTS Examiner (Ex-British Council)', score: '9.0 Overall', desc: 'Chuyên gia luyện Nói & Viết cốt lõi với hơn 10 năm kinh nghiệm.', color: 'bg-emerald-50 border-emerald-300' },
-                    { name: 'David Lee', title: 'Senior Writing Expert & Author', score: '8.5 overall', desc: 'Chuyên trị Writing Task 1 & 2 với cấu trúc lập luận sắc bén.', color: 'bg-indigo-50 border-indigo-300' }
-                  ].map((mentor) => (
-                    <div key={mentor.name} className={`${mentor.color} border-2 rounded-2xl p-5 flex flex-col justify-between min-h-[200px] shadow-sm`}>
-                      <div className="space-y-2 text-left">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-serif font-black text-lg text-[#1b263b]">{mentor.name}</h3>
-                          <span className="text-[10px] bg-white border border-[#1b263b] font-black px-2 py-0.5 rounded uppercase tracking-wider">{mentor.score}</span>
-                        </div>
-                        <p className="text-[11px] font-bold text-gray-500 uppercase">{mentor.title}</p>
-                        <p className="text-xs text-gray-700 leading-relaxed font-semibold">{mentor.desc}</p>
-                      </div>
+                {/* Global booking feedback */}
+                {bookingSuccess && (
+                  <div className="bg-emerald-50 border-2 border-emerald-600 text-emerald-800 px-4 py-3 rounded-2xl text-sm font-bold shadow-[2px_2px_0px_0px_#1b263b] flex items-center gap-2">
+                    {bookingSuccess}
+                    <button onClick={() => setBookingSuccess(null)} className="ml-auto text-emerald-600 hover:text-emerald-800 font-black">✕</button>
+                  </div>
+                )}
+                {bookingError && (
+                  <div className="bg-red-50 border-2 border-red-500 text-red-800 px-4 py-3 rounded-2xl text-sm font-bold shadow-[2px_2px_0px_0px_#1b263b] flex items-center gap-2">
+                    ⚠ {bookingError}
+                    <button onClick={() => setBookingError(null)} className="ml-auto text-red-500 hover:text-red-800 font-black">✕</button>
+                  </div>
+                )}
 
-                      <button
-                        onClick={() => handleBookMentor(mentor.name)}
-                        className={`w-full mt-4 border-2 border-[#1b263b] py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-[2px_2px_0px_0px_#1b263b] ${
-                          bookedSessions.includes(mentor.name)
-                            ? 'bg-[#c92a2a] text-white hover:bg-[#b01e1e]'
-                            : 'bg-white text-[#1b263b] hover:bg-gray-50'
-                        }`}
-                      >
-                        {bookedSessions.includes(mentor.name) ? 'Hủy lịch đã đặt ✖' : 'Đặt lịch hẹn Zoom 📅'}
-                      </button>
+                {/* Mentor List */}
+                {!selectedMentor && (
+                  mentorsLoading ? (
+                    <div className="text-center py-16 text-sm font-bold text-gray-400 animate-pulse">⏳ Đang tải danh sách mentor...</div>
+                  ) : mentorsList.length === 0 ? (
+                    <div className="text-center py-16 text-sm font-bold text-gray-400">Hiện chưa có mentor nào khả dụng.</div>
+                  ) : (
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {mentorsList.map((mentor, idx) => {
+                        const colors = [
+                          'bg-emerald-50 border-emerald-300',
+                          'bg-indigo-50 border-indigo-300',
+                          'bg-amber-50 border-amber-300',
+                          'bg-rose-50 border-rose-300'
+                        ];
+                        const color = colors[idx % colors.length];
+                        return (
+                          <div key={mentor.id} className={`${color} border-2 rounded-2xl p-5 flex flex-col justify-between min-h-[200px] shadow-sm`}>
+                            <div className="space-y-2 text-left">
+                              <div className="flex items-center gap-3">
+                                {mentor.avatar ? (
+                                  <img src={mentor.avatar} alt={mentor.fullName} className="w-10 h-10 rounded-full border-2 border-[#1b263b] object-cover" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-full border-2 border-[#1b263b] bg-[#1b263b] text-white flex items-center justify-center font-black text-sm">
+                                    {(mentor.fullName || 'M')[0].toUpperCase()}
+                                  </div>
+                                )}
+                                <div>
+                                  <h3 className="font-serif font-black text-base text-[#1b263b]">{mentor.fullName || mentor.username}</h3>
+                                  <p className="text-[10px] text-gray-500 font-bold">{mentor.email}</p>
+                                </div>
+                              </div>
+                              {mentor.expertise && (
+                                <span className="inline-block text-[9px] bg-white border border-[#1b263b] font-black px-2 py-0.5 rounded uppercase tracking-wider">{mentor.expertise}</span>
+                              )}
+                              {mentor.bio && (
+                                <p className="text-xs text-gray-700 leading-relaxed font-semibold line-clamp-3">{mentor.bio}</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => { setSelectedMentor(mentor); setBookingSuccess(null); setBookingError(null); }}
+                              className="w-full mt-4 border-2 border-[#1b263b] py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-white text-[#1b263b] hover:bg-[#1b263b] hover:text-white transition-all shadow-[2px_2px_0px_0px_#1b263b]"
+                            >
+                              Xem lịch trống & Đặt lịch 📅
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
+                  )
+                )}
+
+                {/* Slot Booking Panel */}
+                {selectedMentor && (
+                  <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-6 shadow-[5px_5px_0px_0px_#1b263b] space-y-5">
+                    <div className="flex items-center gap-3 border-b border-[#1b263b]/10 pb-4">
+                      <button
+                        onClick={() => { setSelectedMentor(null); setMentorSlots([]); setBookingNotes(''); }}
+                        className="text-xs font-black border border-[#1b263b] px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-all"
+                      >← Quay lại</button>
+                      <div>
+                        <h3 className="font-serif font-black text-base text-[#1b263b]">Đặt lịch với: {selectedMentor.fullName || selectedMentor.username}</h3>
+                        <p className="text-[10px] text-gray-500 font-bold">{selectedMentor.email}</p>
+                      </div>
+                    </div>
+
+                    {/* Notes input */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Mục tiêu buổi học (ghi chú)</label>
+                      <textarea
+                        value={bookingNotes}
+                        onChange={(e) => setBookingNotes(e.target.value)}
+                        rows={2}
+                        placeholder="Ví dụ: Cần sửa lỗi Writing Task 2 và luyện Speaking Part 2..."
+                        className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2 text-xs font-bold text-[#1b263b] outline-none resize-none focus:bg-gray-50"
+                      />
+                    </div>
+
+                    {/* Available slots */}
+                    <div className="space-y-2">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-gray-500">Chọn khung giờ học phù hợp</p>
+                      {slotsLoading ? (
+                        <p className="text-sm font-bold text-gray-400 animate-pulse py-6 text-center">⏳ Đang tải lịch...</p>
+                      ) : mentorSlots.length === 0 ? (
+                        <p className="text-sm font-bold text-gray-500 py-6 text-center">Mentor chưa có lịch trống nào. Vui lòng thử lại sau.</p>
+                      ) : (
+                        <div className="grid sm:grid-cols-2 gap-3">
+                          {mentorSlots.map((slot) => {
+                            const start = new Date(slot.startTime);
+                            const end = new Date(slot.endTime);
+                            const dateStr = start.toLocaleDateString('vi-VN', { weekday: 'short', month: 'long', day: 'numeric' });
+                            const timeStr = `${start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+                            return (
+                              <div key={slot.id} className="border-2 border-[#1b263b] rounded-2xl p-4 bg-white space-y-2 shadow-[2px_2px_0px_0px_#1b263b]">
+                                <div>
+                                  <p className="text-[10px] font-black uppercase text-gray-400">{dateStr}</p>
+                                  <p className="text-sm font-black text-[#1b263b]">{timeStr}</p>
+                                  {slot.meetingLink && (
+                                    <p className="text-[10px] text-sky-500 font-bold">🔗 Có link phòng học</p>
+                                  )}
+                                </div>
+                                <button
+                                  disabled={bookingLoading}
+                                  onClick={() => handleBookSlot(slot.id)}
+                                  className="w-full bg-[#1b263b] text-white border-2 border-[#1b263b] py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-[#0f1a2a] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {bookingLoading ? 'Đang xử lý...' : 'Chọn khung giờ này ✓'}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -668,7 +668,7 @@ export default function ProfilePage() {
                     <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-10 shadow-[4px_4px_0px_0px_#1b263b] text-center space-y-4">
                       <p className="text-sm font-black text-gray-500">Bạn chưa đặt buổi học nào với Mentor.</p>
                       <Link
-                        to="/practice"
+                        to="/practice?tab=mentors"
                         className="inline-block bg-[#b03030] text-white border-2 border-[#1b263b] px-6 py-2.5 rounded-xl text-xs font-black shadow-[3px_3px_0px_0px_#1b263b] hover:translate-y-[-1px] transition-all"
                       >
                         Tìm Mentor và Đặt lịch ngay 👥
