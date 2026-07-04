@@ -606,6 +606,9 @@ export default function PracticeWorkspace() {
                         </button>
                       </div>
                     ))}
+                    {writingExams.length === 0 && (
+                      <p className="text-sm font-semibold text-gray-500 col-span-2 text-center py-12">Không tìm thấy đề thi nào.</p>
+                    )}
                   </div>
                 )}
               </div>
