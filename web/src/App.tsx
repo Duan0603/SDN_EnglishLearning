@@ -7,6 +7,10 @@ import AdminDashboard from './features/admin/AdminDashboard'
 import HomeNewTests from './features/landing/HomeNewTests'
 import PracticeWorkspace from './features/practice/PracticeWorkspace'
 import ProfilePage from './features/profile/ProfilePage'
+import ReadingWorkspace from './features/practice/ReadingWorkspace'
+import ListeningWorkspace from './features/practice/ListeningWorkspace'
+import WritingWorkspace from './features/practice/WritingWorkspace'
+import SpeakingWorkspace from './features/practice/SpeakingWorkspace'
 
 // Protected Route Guard
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -86,6 +90,38 @@ function App() {
           element={
             <ProtectedRoute>
               <PracticeWorkspace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/practice/reading/:examId"
+          element={
+            <ProtectedRoute>
+              <ReadingWorkspace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/practice/listening/:examId"
+          element={
+            <ProtectedRoute>
+              <ListeningWorkspace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/practice/writing/:examId"
+          element={
+            <ProtectedRoute>
+              <WritingWorkspace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/practice/speaking/:examId"
+          element={
+            <ProtectedRoute>
+              <SpeakingWorkspace />
             </ProtectedRoute>
           }
         />
