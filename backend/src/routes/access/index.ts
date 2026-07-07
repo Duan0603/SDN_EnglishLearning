@@ -14,6 +14,7 @@ accessRouter.post('/check-exists', asyncHandler(AccessController.checkExists));
 
 // SignIn 
 accessRouter.post('/login', asyncHandler(AccessController.signIn));
+accessRouter.post('/verify-2fa', asyncHandler(AccessController.verify2FA));
 
 // Google Login
 accessRouter.post('/google-login', asyncHandler(AccessController.googleLogin));
@@ -31,4 +32,5 @@ accessRouter.post('/logout', asyncHandler(AccessController.logout));
 accessRouter.get('/profile', asyncHandler(AccessController.getProfile));
 accessRouter.patch('/profile', asyncHandler(AccessController.updateProfile));
 accessRouter.post('/upload-avatar', asyncHandler(AccessController.uploadAvatar));
+accessRouter.post('/change-password', asyncHandler(PasswordController.changePassword));
 

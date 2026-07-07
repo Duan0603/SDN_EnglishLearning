@@ -10,6 +10,7 @@ export const userRouter = express.Router();
 // Auth routes for user
 userRouter.post('/signup', asyncHandler(AccessController.signUp))
 userRouter.post('/login', asyncHandler(AccessController.signIn))
+userRouter.post('/verify-2fa', asyncHandler(AccessController.verify2FA))
 
 // Forgot password routes
 userRouter.post('/forgot-password', asyncHandler(PasswordController.forgotPassword))
@@ -21,6 +22,7 @@ userRouter.use(authentication)
 userRouter.get('/profile', asyncHandler(AccessController.getProfile))
 userRouter.patch('/profile', asyncHandler(AccessController.updateProfile))
 userRouter.post('/upload-avatar', asyncHandler(AccessController.uploadAvatar))
+userRouter.post('/change-password', asyncHandler(PasswordController.changePassword))
 
 // Progress & analytics endpoints (used by mobile ProgressScreen)
 userRouter.get('/me/results', asyncHandler(getUserResults))

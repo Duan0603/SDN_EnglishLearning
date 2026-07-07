@@ -49,6 +49,7 @@ model User {
   verify             Boolean              @default(false)
   bio                String?
   expertise          String?
+  isTwoFactorEnabled Boolean              @default(false)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   

@@ -41,8 +41,8 @@ export default function AdminDashboard() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
 
-  // Tab State: 'dashboard' | 'users' | 'orders' | 'exams'
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'orders' | 'exams'>('dashboard')
+  // Tab State: 'dashboard' | 'users' | 'orders' | 'exams' | 'submissions'
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'orders' | 'exams' | 'submissions'>('dashboard')
   
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('')
@@ -123,6 +123,14 @@ export default function AdminDashboard() {
   const [showBulkImportModal, setShowBulkImportModal] = useState(false)
   const [bulkJsonPayload, setBulkJsonPayload] = useState('')
 
+  // Submissions (Practice Results) State
+  const [submissionsList, setSubmissionsList] = useState<any[]>([])
+  const [submissionsLoading, setSubmissionsLoading] = useState(false)
+  const [submissionsError, setSubmissionsError] = useState<string | null>(null)
+  const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null)
+  const [showSubmissionModal, setShowSubmissionModal] = useState(false)
+  const [submissionFilterType, setSubmissionFilterType] = useState<'ALL' | 'Reading' | 'Listening' | 'Writing' | 'Speaking'>('ALL')
+
   // ────────────────────────────────────────────────────────
   // AUTH GUARD
   // ────────────────────────────────────────────────────────
@@ -162,6 +170,103 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (activeTab === 'users') {
       fetchUsers()
+    }
+  }, [activeTab])
+
+  const fetchSubmissions = async () => {
+    setSubmissionsLoading(true)
+    setSubmissionsError(null)
+    try {
+      const res = await apiClient.get('/admin/submissions')
+      const raw = res.data?.metadata?.submissions || res.data || []
+      setSubmissionsList(raw)
+    } catch (err: any) {
+      console.warn('Failed to fetch submissions from backend:', err.message)
+      // Fallback mockup submissions data matching the new brutalist design and DB models
+      setSubmissionsList([
+        {
+          id: 'SUB001',
+          userId: 'usr1',
+          student: { fullName: 'Nguyen Van A', username: 'nguyenvana', email: 'a@gmail.com' },
+          testId: 'tst1',
+          test: { title: 'IELTS Cambridge 19 - Test 1', type: 'Reading' },
+          type: 'Reading',
+          bandScore: 7.5,
+          correctCount: 33,
+          timeTaken: 2400,
+          createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+          answers: [
+            { questionNumber: 1, userAnswer: 'A', correctAnswer: 'A', isCorrect: true, explanation: 'The text in paragraph A mentions standard procedures.' },
+            { questionNumber: 2, userAnswer: 'B', correctAnswer: 'C', isCorrect: false, explanation: 'Paragraph B explicitly denies that option B was selected.' },
+            { questionNumber: 3, userAnswer: 'TRUE', correctAnswer: 'TRUE', isCorrect: true, explanation: 'The author states "absolutely yes".' },
+            { questionNumber: 4, userAnswer: 'NOT GIVEN', correctAnswer: 'FALSE', isCorrect: false, explanation: 'The opposite is stated in paragraph D.' },
+          ]
+        },
+        {
+          id: 'SUB002',
+          userId: 'usr2',
+          student: { fullName: 'Tran Thi B', username: 'tranthib', email: 'b@gmail.com' },
+          testId: 'tst2',
+          test: { title: 'IELTS Cambridge 18 - Test 1', type: 'Writing' },
+          prompt: 'Some people think that children should begin learning a foreign language as soon as they start school. Discuss both views and give your opinion.',
+          type: 'Writing',
+          essayText: 'Nowadays, learning a foreign language is becoming extremely popular. In my opinion, children should learn foreign languages as early as possible because it helps their brain development and makes them more flexible. However, some parents think it will confuse their children at school...',
+          bandScore: 6.5,
+          taskAchievement: 6.5,
+          coherenceCohesion: 6.0,
+          lexicalResource: 7.0,
+          grammarAccuracy: 6.5,
+          aiFeedback: {
+            overall: 'Excellent effort. Your arguments are clear and properly structured. However, you should aim to introduce more complex sentence structures and vary your transition words.',
+            strengths: ['Strong thesis statement', 'Logical paragraph division', 'Excellent vocabulary related to child development'],
+            weaknesses: ['Repeated use of "however" and "moreover"', 'Minor subject-verb agreement issues in paragraph 3']
+          },
+          createdAt: new Date(Date.now() - 3600000 * 24).toISOString()
+        },
+        {
+          id: 'SUB003',
+          userId: 'usr3',
+          student: { fullName: 'Le Van C', username: 'levanc', email: 'c@gmail.com' },
+          testId: 'tst3',
+          test: { title: 'Speaking IELTS Practice 12', type: 'Speaking' },
+          prompt: 'Describe a traditional festival in your country that you enjoy.',
+          type: 'Speaking',
+          audioUrl: 'https://res.cloudinary.com/demo/video/upload/dog.mp3',
+          transcription: 'I would like to tell you about Tet holiday. Tet holiday is the most important traditional celebration in Vietnam. It usually takes place in late January or early February. Families gather together, cook Banh Chung, and visit temples to pray for luck...',
+          bandScore: 7.0,
+          fluencyCoherence: 7.0,
+          lexicalResource: 7.0,
+          grammarAccuracy: 6.5,
+          pronunciation: 7.5,
+          aiFeedback: {
+            overall: 'A very fluent description with clear articulation and natural rhythm. Pronunciation is a key strength, but work on grammatical accuracy, particularly passive voice construction.',
+            strengths: ['Clear pronunciation of consonants', 'Good flow with minimal pausing', 'Appropriate idiomatic expressions (gather together, pray for luck)'],
+            weaknesses: ['Slight hesitation before complex words', 'Preposition errors (e.g. "in late January" was perfect, but "at Tet holiday" is slightly non-standard)']
+          },
+          createdAt: new Date(Date.now() - 3600000 * 48).toISOString()
+        }
+      ])
+      setSubmissionsError('Đang dùng dữ liệu mô phỏng. Kết nối backend để tải kết quả thực tế.')
+    } finally {
+      setSubmissionsLoading(false)
+    }
+  }
+
+  const handleDeleteSubmission = async (item: any) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa kết quả làm bài của học viên "${item.student?.fullName || 'Học viên'}"?`)) return
+    try {
+      await apiClient.delete(`/admin/submissions/${item.id}?type=${item.type}`)
+      setSubmissionsList((prev) => prev.filter((s) => s.id !== item.id))
+      alert('Xóa kết quả thành công!')
+    } catch (err: any) {
+      setSubmissionsList((prev) => prev.filter((s) => s.id !== item.id))
+      alert('Đã xóa (mô phỏng cục bộ)')
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'submissions') {
+      fetchSubmissions()
     }
   }, [activeTab])
 
@@ -369,31 +474,47 @@ export default function AdminDashboard() {
     return examsList.filter((ex) => ex.title.toLowerCase().includes(searchQuery.toLowerCase()))
   }, [examsList, searchQuery])
 
+  const filteredSubmissions = useMemo(() => {
+    return submissionsList.filter((sub) => {
+      const studentName = sub.student?.fullName || ''
+      const studentEmail = sub.student?.email || ''
+      const testTitle = sub.test?.title || ''
+      const matchesSearch =
+        studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        studentEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        testTitle.toLowerCase().includes(searchQuery.toLowerCase())
+      
+      if (submissionFilterType === 'ALL') return matchesSearch
+      return matchesSearch && sub.type === submissionFilterType
+    })
+  }, [submissionsList, searchQuery, submissionFilterType])
+
   return (
-    <div className="flex h-screen bg-[#0c0c0e] text-zinc-200 overflow-hidden font-sans">
+    <div className="flex h-screen bg-[#f5f3dc] bg-notebook-paper bg-notebook bg-repeat text-[#1b263b] overflow-hidden font-sans custom-pencil-cursor select-none">
       {/* SIDEBAR NAVIGATION */}
-      <div className="w-64 bg-[#111112] border-r border-[#222224] flex flex-col justify-between relative z-20">
+      <div className="w-64 bg-[#fcfbf7] border-r-2 border-[#1b263b] flex flex-col justify-between relative z-20 shadow-[2px_0_10px_rgba(27,38,59,0.05)]">
         <div>
           {/* Logo Brand */}
-          <div className="p-6 border-b border-[#222224] flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#00CC99] to-[#008866] rounded-xl flex items-center justify-center text-black font-black text-xl shadow-[0_0_20px_rgba(0,204,153,0.25)]">
+          <div className="p-6 border-b-2 border-[#1b263b] flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#c92a2a] border-2 border-[#1b263b] rounded-xl flex items-center justify-center text-white font-serif font-black text-xl shadow-[2px_2px_0px_0px_#1b263b]">
               A
             </div>
             <div>
-              <h2 className="font-extrabold text-white text-base tracking-wide">Apex Admin</h2>
-              <span className="text-[9px] bg-[#005C42]/50 text-[#00cc99] px-2 py-0.5 rounded-full font-bold border border-[#00cc99]/20">
+              <h2 className="font-serif font-extrabold text-[#1b263b] text-base tracking-wide">Apex Admin</h2>
+              <span className="text-[9px] bg-[#a7f3d0] text-[#005c42] px-2 py-0.5 rounded-full font-bold border border-[#1b263b]/20 shadow-[1px_1px_0px_0px_#1b263b]">
                 Workspace
               </span>
             </div>
           </div>
 
           {/* Navigation Menu */}
-          <div className="px-4 py-6 space-y-1.5">
+          <div className="px-4 py-6 space-y-2">
             {[
               { id: 'dashboard', name: 'Dashboard', icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z' },
               { id: 'users', name: 'Quản lý Người dùng', icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z' },
               { id: 'orders', name: 'Quản lý Đơn hàng', icon: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z' },
-              { id: 'exams', name: 'Quản lý Đề thi', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' }
+              { id: 'exams', name: 'Quản lý Đề thi', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+              { id: 'submissions', name: 'Kết quả làm bài', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' }
             ].map((item) => {
               const isActive = activeTab === item.id
               return (
@@ -403,16 +524,13 @@ export default function AdminDashboard() {
                     setActiveTab(item.id as any)
                     setSearchQuery('')
                   }}
-                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-300 relative group ${
+                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-300 relative group border-2 ${
                     isActive
-                      ? 'bg-[#00cc99]/10 border border-[#00cc99]/20 text-[#00cc99] font-bold shadow-[0_0_15px_rgba(0,204,153,0.03)]'
-                      : 'text-zinc-400 border border-transparent hover:bg-zinc-900/60 hover:text-white'
+                      ? 'bg-[#ffd54f] border-[#1b263b] text-[#1b263b] font-black shadow-[2px_2px_0px_0px_#1b263b]'
+                      : 'text-[#1b263b]/70 border-transparent hover:bg-white/50 hover:text-[#1b263b]'
                   }`}
                 >
-                  {isActive && (
-                    <span className="absolute left-0 top-3 bottom-3 w-1 bg-[#00cc99] rounded-r-md" />
-                  )}
-                  <svg className={`w-5 h-5 transition-transform duration-300 group-hover:scale-110 ${isActive ? 'text-[#00cc99]' : 'text-zinc-500 group-hover:text-zinc-300'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <svg className={`w-5 h-5 transition-transform duration-300 group-hover:scale-110 ${isActive ? 'text-[#1b263b]' : 'text-[#1b263b]/60 group-hover:text-[#1b263b]'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                   </svg>
                   <span className="text-sm">{item.name}</span>
@@ -423,16 +541,16 @@ export default function AdminDashboard() {
         </div>
 
         {/* LOGOUT / PROFILE BAR */}
-        <div className="p-4 border-t border-[#222224] bg-zinc-950/40 flex items-center justify-between">
+        <div className="p-4 border-t-2 border-[#1b263b] bg-white/40 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00CC99] to-[#005C42] flex items-center justify-center text-white font-bold text-xs shadow-md border border-[#00cc99]/20">
+            <div className="w-9 h-9 rounded-full bg-[#a7f3d0] flex items-center justify-center text-[#005c42] font-black text-xs border-2 border-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b]">
               AD
             </div>
             <div>
-              <p className="text-xs font-bold text-white max-w-[110px] truncate">
+              <p className="text-xs font-black text-[#1b263b] max-w-[110px] truncate">
                 {user?.fullName || 'Administrator'}
               </p>
-              <p className="text-[9px] text-zinc-500 font-semibold tracking-wider">SYSTEM ADMIN</p>
+              <p className="text-[9px] text-[#1b263b]/60 font-black tracking-wider">SYSTEM ADMIN</p>
             </div>
           </div>
           <button
@@ -441,7 +559,7 @@ export default function AdminDashboard() {
               navigate('/')
             }}
             title="Đăng xuất"
-            className="w-8 h-8 rounded-xl bg-zinc-900 hover:bg-rose-500/20 hover:text-rose-400 border border-zinc-800 hover:border-rose-500/30 transition-all flex items-center justify-center text-zinc-400"
+            className="w-8 h-8 rounded-xl bg-[#fbcfe8] hover:bg-[#c92a2a] hover:text-white border-2 border-[#1b263b] transition-all flex items-center justify-center text-[#9d174d] shadow-[1px_1px_0px_0px_#1b263b] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -451,24 +569,25 @@ export default function AdminDashboard() {
       </div>
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col bg-[#0c0c0e] overflow-hidden relative z-10">
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
         {/* HEADER BAR */}
-        <header className="h-16 border-b border-[#222224] bg-[#111112]/80 backdrop-blur-md flex items-center justify-between px-8">
+        <header className="h-16 border-b-2 border-[#1b263b] bg-[#fcfbf7]/90 backdrop-blur-md flex items-center justify-between px-8">
           <div>
-            <h1 className="text-lg font-black text-white capitalize tracking-wide flex items-center gap-2">
+            <h1 className="text-lg font-black text-[#1b263b] capitalize tracking-wide flex items-center gap-2 font-serif">
               {activeTab === 'dashboard' && 'Dashboard Overview'}
               {activeTab === 'users' && 'Quản Lý Người Dùng'}
               {activeTab === 'orders' && 'Quản Lý Đơn Hàng'}
               {activeTab === 'exams' && 'Quản Lý Đề Thi'}
+              {activeTab === 'submissions' && 'Quản Lý Kết Quả Làm Bài'}
             </h1>
-            <p className="text-xs text-zinc-500">Hệ thống quản trị và kiểm duyệt dữ liệu Apex IELTS</p>
+            <p className="text-xs text-[#1b263b]/70 font-semibold">Hệ thống quản trị và kiểm duyệt dữ liệu Apex IELTS</p>
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-2 text-[10px] font-bold text-[#00cc99] bg-[#005C42]/20 border border-[#00cc99]/30 px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-[0_0_15px_rgba(0,204,153,0.1)]">
+            <span className="flex items-center gap-2 text-[10px] font-black text-[#005c42] bg-[#a7f3d0] border-2 border-[#1b263b] px-3.5 py-1 rounded-full uppercase tracking-wider shadow-[2px_2px_0px_0px_#1b263b]">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00cc99] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00cc99]"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#005c42] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#005c42]"></span>
               </span>
               Live System
             </span>
@@ -476,28 +595,30 @@ export default function AdminDashboard() {
         </header>
 
         {/* WORKSPACE CONTENT */}
-        <main className="flex-1 overflow-y-auto p-8 space-y-8">
+        <main className="flex-1 overflow-y-auto p-8 pl-14 space-y-8 relative">
+          {/* Vertical notebook red line */}
+          <div className="absolute left-[35px] top-0 bottom-0 w-[2px] bg-[#e0565b]/30 pointer-events-none z-0" />
+
           {/* ────────────────────────────────────────────────────────
               DASHBOARD VIEW
              ──────────────────────────────────────────────────────── */}
           {activeTab === 'dashboard' && (
-            <div className="space-y-8 animate-fade-in">
+            <div className="space-y-8 animate-fade-in relative z-10">
               {/* Welcome / Hero Banner */}
-              <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-r from-[#003828] to-[#005c42]/80 border border-[#00cc99]/20 p-6 shadow-lg shadow-[#005c42]/10">
-                <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-64 h-64 bg-[#00cc99]/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative overflow-hidden rounded-[24px] bg-[#a7f3d0] border-2 border-[#1b263b] p-6 shadow-[3px_3px_0px_0px_#1b263b]">
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div>
-                    <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                    <h2 className="text-xl md:text-2xl font-serif font-black text-[#005c42] tracking-tight">
                       Chào mừng trở lại, {user?.fullName || 'Admin'}! 👋
                     </h2>
-                    <p className="text-xs text-zinc-300 mt-1 max-w-xl">
+                    <p className="text-xs text-[#1b263b] mt-1 max-w-xl font-bold">
                       Hệ thống đang hoạt động ổn định. Tất cả các dịch vụ API, cơ sở dữ liệu MongoDB và Redis đều đang ở trạng thái tốt nhất. Bạn có 3 hồ sơ Mentor đang chờ phê duyệt.
                     </p>
                   </div>
                   <div className="flex gap-2.5">
                     <button 
                       onClick={() => setActiveTab('users')}
-                      className="bg-[#00cc99] hover:bg-[#00b386] text-black font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-[#00cc99]/20"
+                      className="bg-[#ffd54f] text-[#1b263b] border-2 border-[#1b263b] font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-[2px_2px_0px_0px_#1b263b] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_#1b263b]"
                     >
                       Duyệt Mentor ngay
                     </button>
@@ -515,18 +636,18 @@ export default function AdminDashboard() {
                 ].map((stat, idx) => (
                   <div 
                     key={idx} 
-                    className="group bg-[#111112]/60 border border-[#222224] hover:border-[#00cc99]/30 rounded-2xl p-6 flex items-center justify-between shadow-md hover:shadow-[0_0_25px_rgba(0,204,153,0.02)] hover:-translate-y-0.5 transition-all duration-300"
+                    className="group bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 flex items-center justify-between shadow-[3px_3px_0px_0px_#1b263b] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_0px_#1b263b] transition-all duration-300"
                   >
                     <div className="space-y-2">
-                      <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">{stat.title}</p>
-                      <h3 className="text-2xl font-black text-white tracking-tight">{stat.value}</h3>
+                      <p className="text-xs text-[#1b263b]/70 font-black uppercase tracking-wider">{stat.title}</p>
+                      <h3 className="text-2xl font-serif font-black text-[#1b263b] tracking-tight">{stat.value}</h3>
                       <div>
-                        <span className="text-[10px] text-[#00cc99] font-bold bg-[#00cc99]/10 border border-[#00cc99]/15 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] text-[#005c42] font-bold bg-[#a7f3d0] border border-[#1b263b]/20 px-2.5 py-0.5 rounded-full shadow-[1px_1px_0px_0px_#1b263b]">
                           {stat.change}
                         </span>
                       </div>
                     </div>
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-zinc-900 group-hover:bg-[#00cc99]/10 text-zinc-400 group-hover:text-[#00cc99] border border-zinc-800 group-hover:border-[#00cc99]/20 transition-all duration-300">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#fbcfe8] text-[#9d174d] border-2 border-[#1b263b] transition-all duration-300">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d={stat.icon} />
                       </svg>
@@ -538,19 +659,19 @@ export default function AdminDashboard() {
               {/* Chart Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Revenue Chart */}
-                <div className="lg:col-span-2 bg-[#111112]/60 border border-[#222224] rounded-2xl p-6 shadow-md">
+                <div className="lg:col-span-2 bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b]">
                   <div className="flex justify-between items-center mb-6">
                     <div>
-                      <h4 className="text-sm font-extrabold text-white">Thống Kê Doanh Thu H1 2026</h4>
-                      <p className="text-xs text-zinc-500">Phí đặt lịch Mentor & Khóa học (Triệu VND)</p>
+                      <h4 className="text-sm font-extrabold text-[#1b263b] font-serif">Thống Kê Doanh Thu H1 2026</h4>
+                      <p className="text-xs text-[#1b263b]/70">Phí đặt lịch Mentor & Khóa học (Triệu VND)</p>
                     </div>
-                    <span className="text-[10px] font-bold text-[#00cc99] bg-[#00cc99]/10 border border-[#00cc99]/20 px-3 py-1 rounded-full">
+                    <span className="text-[10px] font-black text-[#1b263b] bg-[#ffd54f] border-2 border-[#1b263b] px-3 py-1 rounded-full shadow-[1px_1px_0px_0px_#1b263b]">
                       Hàng Tháng
                     </span>
                   </div>
 
                   {/* SVG Bar Chart representing revenue */}
-                  <div className="flex items-end justify-between h-48 pt-6 border-b border-zinc-800">
+                  <div className="flex items-end justify-between h-48 pt-6 border-b-2 border-[#1b263b]">
                     {[
                       { m: 'T1', val: 68 },
                       { m: 'T2', val: 74 },
@@ -560,31 +681,31 @@ export default function AdminDashboard() {
                       { m: 'T6', val: 124 },
                     ].map((item, i) => (
                       <div key={i} className="flex flex-col items-center w-12 group">
-                        <span className="text-[10px] text-[#00cc99] font-bold opacity-0 group-hover:opacity-100 transition-opacity mb-2 font-mono">
+                        <span className="text-[10px] text-[#1b263b] font-black opacity-0 group-hover:opacity-100 transition-opacity mb-2 font-mono">
                           {item.val}M
                         </span>
                         <div
                           style={{ height: `${(item.val / 140) * 100}%` }}
-                          className={`w-full rounded-t-lg transition-all duration-500 relative overflow-hidden ${
+                          className={`w-full rounded-t-lg transition-all duration-500 relative overflow-hidden border-t-2 border-x-2 border-[#1b263b] ${
                             i === 5 
-                              ? 'bg-gradient-to-t from-[#005C42] to-[#00CC99] shadow-[0_0_15px_rgba(0,204,153,0.3)]' 
-                              : 'bg-zinc-800 group-hover:bg-gradient-to-t group-hover:from-zinc-700 group-hover:to-[#00CC99]/70'
+                              ? 'bg-[#ffd54f] shadow-[2px_0_0_#1b263b]' 
+                              : 'bg-[#f5f3dc] group-hover:bg-[#ffd54f]/50'
                           }`}
                         >
                           {/* Gloss reflection overlay */}
                           <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent pointer-events-none" />
                         </div>
-                        <span className="text-[10px] text-zinc-400 mt-2 font-bold">{item.m}</span>
+                        <span className="text-[10px] text-[#1b263b] mt-2 font-bold">{item.m}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* System Status / Health */}
-                <div className="bg-[#111112]/60 border border-[#222224] rounded-2xl p-6 shadow-md space-y-4">
+                <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-4">
                   <div>
-                    <h4 className="text-sm font-extrabold text-white">Hệ Thống & Khóa Học</h4>
-                    <p className="text-xs text-zinc-500">Trạng thái API & Database thời gian thực</p>
+                    <h4 className="text-sm font-extrabold text-[#1b263b] font-serif">Hệ Thống & Khóa Học</h4>
+                    <p className="text-xs text-[#1b263b]/70">Trạng thái API & Database thời gian thực</p>
                   </div>
 
                   <div className="space-y-2.5 pt-2">
@@ -594,11 +715,11 @@ export default function AdminDashboard() {
                       { name: 'Redis Cache (Locking)', status: 'Active', ok: true },
                       { name: 'Gemini AI Integration', status: 'Healthy', ok: true },
                     ].map((srv, idx) => (
-                      <div key={idx} className="flex justify-between items-center py-2 border-b border-zinc-850 last:border-0">
-                        <span className="text-xs font-semibold text-zinc-400">{srv.name}</span>
-                        <div className="flex items-center gap-1.5 bg-[#005C42]/20 border border-[#00cc99]/20 px-2.5 py-0.5 rounded-full shadow-[0_0_10px_rgba(0,204,153,0.05)]">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#00cc99] animate-pulse" />
-                          <span className="text-[9px] font-black text-[#00cc99] tracking-wider uppercase">{srv.status}</span>
+                      <div key={idx} className="flex justify-between items-center py-2 border-b border-[#1b263b]/10 last:border-0">
+                        <span className="text-xs font-semibold text-[#1b263b]/80">{srv.name}</span>
+                        <div className="flex items-center gap-1.5 bg-[#a7f3d0] border border-[#1b263b]/30 px-2.5 py-0.5 rounded-full shadow-[1px_1px_0px_0px_#1b263b]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#005c42] animate-pulse" />
+                          <span className="text-[9px] font-black text-[#005c42] tracking-wider uppercase">{srv.status}</span>
                         </div>
                       </div>
                     ))}
@@ -612,21 +733,21 @@ export default function AdminDashboard() {
               USERS MANAGEMENT VIEW
              ──────────────────────────────────────────────────────── */}
           {activeTab === 'users' && (
-            <div className="space-y-6">
+            <div className="space-y-6 relative z-10 animate-fade-in">
               {/* Backend Error Warning Display */}
               {usersError && (
-                <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-5 py-3 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-md">
+                <div className="bg-[#fbcfe8] border-2 border-[#1b263b] text-[#9d174d] px-5 py-3 rounded-2xl text-xs font-black flex items-center justify-between shadow-[2px_2px_0px_0px_#1b263b]">
                   <span>⚠️ {usersError}</span>
-                  <button onClick={() => setUsersError(null)} className="text-red-400 hover:text-red-300 font-bold ml-2">✕</button>
+                  <button onClick={() => setUsersError(null)} className="text-[#9d174d] hover:text-rose-700 font-bold ml-2">✕</button>
                 </div>
               )}
 
-              <div className="bg-[#111112]/60 border border-[#222224] rounded-2xl p-6 shadow-md space-y-6">
+              <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-6">
                 {/* Controls bar */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   {/* Search Bar */}
-                  <div className="flex items-center bg-zinc-900 border border-[#222224] focus-within:border-[#00cc99]/40 rounded-xl px-4 py-2.5 w-full md:w-96 transition-all">
-                    <svg className="w-4 h-4 text-zinc-500 mr-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <div className="flex items-center bg-white border-2 border-[#1b263b] focus-within:border-[#c92a2a] rounded-xl px-4 py-2.5 w-full md:w-96 transition-all shadow-[2px_2px_0px_0px_#1b263b]">
+                    <svg className="w-4 h-4 text-[#1b263b]/60 mr-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                     <input
@@ -634,21 +755,23 @@ export default function AdminDashboard() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Tìm theo tên, email, tài khoản..."
-                      className="bg-transparent border-0 outline-none text-xs text-white placeholder-zinc-500 w-full"
+                      className="bg-transparent border-0 outline-none text-xs text-[#1b263b] placeholder-[#1b263b]/50 font-bold w-full"
                     />
                   </div>
 
                   {/* Filter Switcher */}
                   <div className="flex items-center gap-2">
-                    <div className="bg-zinc-900 p-1 rounded-xl border border-[#222224] flex gap-1">
+                    <div className="bg-white p-1 rounded-xl border-2 border-[#1b263b] flex gap-1 shadow-[2px_2px_0px_0px_#1b263b]">
                       {(['ALL', 'STUDENT', 'MENTOR', 'PENDING'] as const).map((flt) => {
                         const isActive = roleFilter === flt
                         return (
                           <button
                             key={flt}
                             onClick={() => setRoleFilter(flt)}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold tracking-wider uppercase transition-all ${
-                              isActive ? 'bg-[#00cc99] text-black font-black' : 'text-zinc-400 hover:text-white'
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition-all ${
+                              isActive 
+                                ? 'bg-[#ffd54f] border border-[#1b263b] text-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b]' 
+                                : 'text-[#1b263b]/70 hover:bg-[#f5f3dc]'
                             }`}
                           >
                             {flt === 'PENDING' ? 'Chờ duyệt' : flt}
@@ -659,7 +782,7 @@ export default function AdminDashboard() {
 
                     <button
                       onClick={() => setShowCreateUserModal(true)}
-                      className="bg-[#00cc99] hover:bg-[#00b386] text-black font-black text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-md shadow-[#00cc99]/20 hover:opacity-95 active:scale-95 transition-all"
+                      className="bg-[#c92a2a] text-white border-2 border-[#1b263b] font-black text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-[2px_2px_0px_0px_#1b263b] hover:bg-[#b01e1e] active:scale-95 transition-all"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -670,54 +793,54 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Users table */}
-                <div className="overflow-x-auto border border-[#222224] rounded-xl bg-zinc-950/20">
+                <div className="overflow-x-auto border-2 border-[#1b263b] rounded-xl bg-white shadow-[2px_2px_0px_0px_#1b263b]">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-zinc-900/80 border-b border-[#222224]">
-                        <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider">Tên & Tài Khoản</th>
-                        <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider">Email & SĐT</th>
-                        <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider">CMND / Ngày sinh</th>
-                        <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider">Vai trò</th>
-                        <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider">Trạng thái</th>
-                        <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider text-right">Thao Tác</th>
+                      <tr className="bg-[#f5f3dc] border-b-2 border-[#1b263b]">
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Tên & Tài Khoản</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Email & SĐT</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">CMND / Ngày sinh</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Vai trò</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Trạng thái</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider text-right">Thao Tác</th>
                       </tr>
                     </thead>
                     <tbody>
                       {usersLoading ? (
                         <tr>
-                          <td colSpan={6} className="p-8 text-center text-zinc-500 font-medium">
+                          <td colSpan={6} className="p-8 text-center text-[#1b263b]/60 font-black">
                             <span className="inline-block animate-pulse">Đang tải người dùng...</span>
                           </td>
                         </tr>
                       ) : filteredUsers.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="p-8 text-center text-zinc-500 font-medium">
+                          <td colSpan={6} className="p-8 text-center text-[#1b263b]/60 font-black">
                             Không tìm thấy người dùng phù hợp.
                           </td>
                         </tr>
                       ) : (
                         filteredUsers.map((item) => (
-                          <tr key={item.id} className="border-b border-[#222224] hover:bg-zinc-900/30 transition-colors">
+                          <tr key={item.id} className="border-b border-[#1b263b]/10 hover:bg-[#f5f3dc]/25 transition-colors">
                             <td className="p-4">
-                              <p className="text-sm font-bold text-white">{item.fullName}</p>
-                              <p className="text-xs text-zinc-500">@{item.username}</p>
+                              <p className="text-sm font-bold text-[#1b263b]">{item.fullName}</p>
+                              <p className="text-xs text-[#1b263b]/60 font-semibold">@{item.username}</p>
                             </td>
                             <td className="p-4">
-                              <p className="text-xs font-semibold text-zinc-300">{item.email}</p>
-                              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">{item.phone || 'N/A'}</p>
+                              <p className="text-xs font-bold text-[#1b263b]">{item.email}</p>
+                              <p className="text-[10px] text-[#1b263b]/60 font-mono mt-0.5">{item.phone || 'N/A'}</p>
                             </td>
                             <td className="p-4">
-                              <p className="text-xs text-zinc-300 font-mono">{item.identityNumber || 'N/A'}</p>
-                              <p className="text-[10px] text-zinc-500 mt-0.5">{item.birthday || 'N/A'}</p>
+                              <p className="text-xs text-[#1b263b] font-mono">{item.identityNumber || 'N/A'}</p>
+                              <p className="text-[10px] text-[#1b263b]/60 mt-0.5">{item.birthday || 'N/A'}</p>
                             </td>
                             <td className="p-4">
                               <span
-                                className={`px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider ${
+                                className={`px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider border-2 border-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b] ${
                                   item.role === 'ADMIN'
-                                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                    ? 'bg-[#ffd54f] text-[#1b263b]'
                                     : item.role === 'MENTOR'
-                                    ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                                    : 'bg-[#00cc99]/10 text-[#00cc99] border border-[#00cc99]/20'
+                                    ? 'bg-[#fbcfe8] text-[#9d174d]'
+                                    : 'bg-[#a7f3d0] text-[#005c42]'
                                 }`}
                               >
                                 {item.role}
@@ -725,21 +848,21 @@ export default function AdminDashboard() {
                             </td>
                             <td className="p-4">
                               <span
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold ${
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black border-2 border-[#1b263b]/40 ${
                                   item.status === 'active'
-                                    ? 'bg-[#00cc99]/10 text-[#00cc99] border border-[#00cc99]/15'
+                                    ? 'bg-[#a7f3d0] text-[#005c42]'
                                     : item.status === 'pending'
-                                    ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/15 animate-pulse'
-                                    : 'bg-red-500/10 text-red-400 border border-red-500/15'
+                                    ? 'bg-yellow-500/10 text-yellow-700 animate-pulse'
+                                    : 'bg-[#fbcfe8] text-[#9d174d]'
                                 }`}
                               >
                                 <span
                                   className={`w-1.5 h-1.5 rounded-full ${
                                     item.status === 'active'
-                                      ? 'bg-[#00cc99]'
+                                      ? 'bg-[#005c42]'
                                       : item.status === 'pending'
-                                      ? 'bg-yellow-400'
-                                      : 'bg-red-400'
+                                      ? 'bg-yellow-600'
+                                      : 'bg-[#9d174d]'
                                   }`}
                                 />
                                 {item.status === 'active' ? 'Hoạt động' : item.status === 'pending' ? 'Chờ duyệt' : 'Đình chỉ'}
@@ -749,7 +872,7 @@ export default function AdminDashboard() {
                               {item.role === 'MENTOR' && item.status === 'pending' && (
                                 <button
                                   onClick={() => handleApproveMentor(item)}
-                                  className="bg-[#00cc99] hover:bg-[#00b386] text-black px-2.5 py-1.5 rounded-lg text-[10px] font-black tracking-wide shadow-sm shadow-[#00cc99]/10 transition-all"
+                                  className="bg-[#a7f3d0] hover:bg-emerald-300 border-2 border-[#1b263b] text-[#005c42] px-2.5 py-1.5 rounded-lg text-[10px] font-black tracking-wide shadow-[1px_1px_0px_0px_#1b263b] transition-all"
                                 >
                                   Phê duyệt
                                 </button>
@@ -758,23 +881,23 @@ export default function AdminDashboard() {
                                 <>
                                   <button
                                     onClick={() => handleToggleStatus(item)}
-                                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
+                                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all border-2 border-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b] ${
                                       item.status === 'active'
-                                        ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20'
-                                        : 'bg-[#00cc99]/10 text-[#00cc99] border-[#00cc99]/20 hover:bg-[#00cc99]/20'
+                                        ? 'bg-[#fbcfe8] text-[#9d174d] hover:bg-rose-200'
+                                        : 'bg-[#a7f3d0] text-[#005c42] hover:bg-emerald-200'
                                     }`}
                                   >
                                     {item.status === 'active' ? 'Đình chỉ' : 'Kích hoạt'}
                                   </button>
                                   <button
                                     onClick={() => openEditModal(item)}
-                                    className="bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+                                    className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] px-2.5 py-1.5 rounded-lg text-[10px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
                                   >
                                     Sửa
                                   </button>
                                   <button
                                     onClick={() => handleDeleteUser(item)}
-                                    className="bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/30 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+                                    className="bg-[#fbcfe8] hover:bg-rose-200 border-2 border-[#1b263b] text-[#9d174d] px-2.5 py-1.5 rounded-lg text-[10px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
                                   >
                                     Xóa
                                   </button>
@@ -795,11 +918,11 @@ export default function AdminDashboard() {
               ORDERS / BOOKINGS VIEW
              ──────────────────────────────────────────────────────── */}
           {activeTab === 'orders' && (
-            <div className="bg-[#111112]/60 border border-[#222224] rounded-2xl p-6 shadow-md space-y-6 animate-fade-in">
+            <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-6 animate-fade-in relative z-10">
               {/* Controls bar */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center bg-zinc-900 border border-[#222224] focus-within:border-[#00cc99]/40 rounded-xl px-4 py-2.5 w-full md:w-96 transition-all">
-                  <svg className="w-4 h-4 text-zinc-500 mr-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <div className="flex items-center bg-white border-2 border-[#1b263b] focus-within:border-[#c92a2a] rounded-xl px-4 py-2.5 w-full md:w-96 transition-all shadow-[2px_2px_0px_0px_#1b263b]">
+                  <svg className="w-4 h-4 text-[#1b263b]/60 mr-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <input
@@ -807,52 +930,50 @@ export default function AdminDashboard() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Tìm kiếm mã đặt lịch, học viên, mentor..."
-                    className="bg-transparent border-0 outline-none text-xs text-white placeholder-zinc-500 w-full"
+                    className="bg-transparent border-0 outline-none text-xs text-[#1b263b] placeholder-[#1b263b]/50 font-bold w-full"
                   />
                 </div>
               </div>
 
               {/* Bookings table */}
-              <div className="overflow-x-auto border border-[#222224] rounded-xl bg-zinc-950/20">
+              <div className="overflow-x-auto border-2 border-[#1b263b] rounded-xl bg-white shadow-[2px_2px_0px_0px_#1b263b]">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-zinc-900/80 border-b border-[#222224]">
-                      <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider">Mã Đơn</th>
-                      <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider">Học Viên</th>
-                      <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider">Mentor</th>
-                      <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider">Thời Gian Đặt</th>
-                      <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider">Chi Phí</th>
-                      <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider">Trạng Thái</th>
-                      <th className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider text-right">Hành Động</th>
+                    <tr className="bg-[#f5f3dc] border-b-2 border-[#1b263b]">
+                      <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Mã Đơn</th>
+                      <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Học Viên</th>
+                      <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Mentor</th>
+                      <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Thời Gian Đặt</th>
+                      <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Chi Phí</th>
+                      <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Trạng Thái</th>
+                      <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider text-right">Hành Động</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredBookings.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-zinc-500 font-medium">
+                        <td colSpan={7} className="p-8 text-center text-[#1b263b]/60 font-black">
                           Không có giao dịch/lịch đặt nào phù hợp.
                         </td>
                       </tr>
                     ) : (
                       filteredBookings.map((bk) => (
-                        <tr key={bk.id} className="border-b border-[#222224] hover:bg-zinc-900/30 transition-colors">
-                          <td className="p-4 text-xs font-bold text-zinc-500 font-mono">{bk.id}</td>
-                          <td className="p-4 text-sm font-bold text-white">{bk.studentName}</td>
-                          <td className="p-4 text-sm font-bold text-white">{bk.mentorName}</td>
-                          <td className="p-4 text-xs text-zinc-300 font-mono">{bk.dateTime}</td>
-                          <td className="p-4 text-xs font-black text-[#00cc99] font-mono">
+                        <tr key={bk.id} className="border-b border-[#1b263b]/10 hover:bg-[#f5f3dc]/25 transition-colors">
+                          <td className="p-4 text-xs font-bold text-[#1b263b]/60 font-mono">{bk.id}</td>
+                          <td className="p-4 text-sm font-bold text-[#1b263b]">{bk.studentName}</td>
+                          <td className="p-4 text-sm font-bold text-[#1b263b]">{bk.mentorName}</td>
+                          <td className="p-4 text-xs text-[#1b263b] font-mono">{bk.dateTime}</td>
+                          <td className="p-4 text-xs font-black text-[#c92a2a] font-mono">
                             {bk.amount.toLocaleString()}đ
                           </td>
                           <td className="p-4">
                             <span
-                              className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                              className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border-2 border-[#1b263b]/40 shadow-[1px_1px_0px_0px_#1b263b] ${
                                 bk.status === 'Confirmed'
-                                  ? 'bg-[#00cc99]/10 text-[#00cc99] border border-[#00cc99]/15'
+                                  ? 'bg-[#a7f3d0] text-[#005c42]'
                                   : bk.status === 'Pending'
-                                  ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/15'
-                                  : bk.status === 'Cancelled'
-                                  ? 'bg-red-500/10 text-red-400 border border-red-500/15'
-                                  : 'bg-zinc-800 text-zinc-400'
+                                  ? 'bg-[#ffd54f] text-[#1b263b]'
+                                  : 'bg-[#fbcfe8] text-[#9d174d]'
                               }`}
                             >
                               {bk.status}
@@ -863,13 +984,13 @@ export default function AdminDashboard() {
                               <>
                                 <button
                                   onClick={() => handleBookingConfirm(bk.id)}
-                                  className="bg-[#00cc99] hover:bg-[#00b386] text-black px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all"
+                                  className="bg-[#a7f3d0] hover:bg-emerald-300 border-2 border-[#1b263b] text-[#005c42] px-2.5 py-1.5 rounded-lg text-[10px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
                                 >
                                   Xác nhận
                                 </button>
                                 <button
                                   onClick={() => handleBookingCancel(bk.id)}
-                                  className="bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+                                  className="bg-[#fbcfe8] hover:bg-rose-200 border-2 border-[#1b263b] text-[#9d174d] px-2.5 py-1.5 rounded-lg text-[10px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
                                 >
                                   Hủy bỏ
                                 </button>
@@ -889,11 +1010,11 @@ export default function AdminDashboard() {
               EXAMS VIEW
              ──────────────────────────────────────────────────────── */}
           {activeTab === 'exams' && (
-            <div className="bg-[#111112]/60 border border-[#222224] rounded-2xl p-6 shadow-md space-y-6 animate-fade-in">
+            <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-6 animate-fade-in relative z-10">
               {/* Controls bar */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center bg-zinc-900 border border-[#222224] focus-within:border-[#00cc99]/40 rounded-xl px-4 py-2.5 w-full md:w-96 transition-all">
-                  <svg className="w-4 h-4 text-zinc-500 mr-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <div className="flex items-center bg-white border-2 border-[#1b263b] focus-within:border-[#c92a2a] rounded-xl px-4 py-2.5 w-full md:w-96 transition-all shadow-[2px_2px_0px_0px_#1b263b]">
+                  <svg className="w-4 h-4 text-[#1b263b]/60 mr-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <input
@@ -901,20 +1022,20 @@ export default function AdminDashboard() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Tìm đề thi IELTS..."
-                    className="bg-transparent border-0 outline-none text-xs text-white placeholder-zinc-500 w-full"
+                    className="bg-transparent border-0 outline-none text-xs text-[#1b263b] placeholder-[#1b263b]/50 font-bold w-full"
                   />
                 </div>
 
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setShowBulkImportModal(true)}
-                    className="bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition-all"
+                    className="bg-white border-2 border-[#1b263b] text-[#1b263b] hover:bg-gray-100 font-black text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-[2px_2px_0px_0px_#1b263b] transition-all"
                   >
                     Bulk Import JSON
                   </button>
                   <button
                     onClick={() => setShowCreateExamModal(true)}
-                    className="bg-[#00cc99] hover:bg-[#00b386] text-black font-black text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-md shadow-[#00cc99]/20 hover:opacity-95 active:scale-95 transition-all"
+                    className="bg-[#c92a2a] text-white border-2 border-[#1b263b] font-black text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-[2px_2px_0px_0px_#1b263b] hover:bg-[#b01e1e] hover:opacity-95 active:scale-95 transition-all"
                   >
                     Tạo Đề Thi
                   </button>
@@ -924,35 +1045,35 @@ export default function AdminDashboard() {
               {/* Grid of Exams */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredExams.map((ex) => (
-                  <div key={ex.id} className="bg-zinc-900/60 border border-[#222224] hover:border-[#00cc99]/25 rounded-2xl p-6 flex flex-col justify-between shadow-md hover:shadow-[0_0_20px_rgba(0,204,153,0.015)] transition-all duration-300">
+                  <div key={ex.id} className="bg-white border-2 border-[#1b263b] hover:border-[#c92a2a] rounded-2xl p-6 flex flex-col justify-between shadow-[3px_3px_0px_0px_#1b263b] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_0px_#1b263b] transition-all duration-300">
                     <div>
                       <div className="flex justify-between items-start mb-4">
-                        <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                        <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border-2 border-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b] ${
                           ex.type === 'Reading'
-                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/25'
+                            ? 'bg-blue-50 text-blue-700'
                             : ex.type === 'Listening'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+                            ? 'bg-[#a7f3d0] text-[#005c42]'
                             : ex.type === 'Writing'
-                            ? 'bg-purple-500/10 text-purple-400 border-purple-500/25'
-                            : 'bg-amber-500/10 text-amber-400 border-amber-500/25'
+                            ? 'bg-purple-50 text-purple-700'
+                            : 'bg-amber-50 text-amber-700'
                         }`}>
                           {ex.type}
                         </span>
-                        <span className="text-[10px] font-bold text-zinc-500 font-mono bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-md">
+                        <span className="text-[10px] font-black text-[#1b263b] font-mono bg-[#f5f3dc] border-2 border-[#1b263b] px-2 py-0.5 rounded-md">
                           ⏱️ {ex.duration} phút
                         </span>
                       </div>
 
-                      <h4 className="text-base font-extrabold text-white leading-relaxed mb-1.5">
+                      <h4 className="text-base font-serif font-black text-[#1b263b] leading-relaxed mb-1.5">
                         {ex.title}
                       </h4>
-                      <p className="text-xs text-zinc-400 font-medium flex items-center gap-1.5">
+                      <p className="text-xs text-[#1b263b]/70 font-semibold flex items-center gap-1.5">
                         📚 {ex.questionsCount} Câu hỏi
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2 border-t border-[#222224] pt-4 mt-6">
-                      <button className="bg-zinc-950 border border-zinc-800 hover:bg-zinc-900 text-zinc-300 font-bold text-[10px] px-3.5 py-2 rounded-lg transition-all">
+                    <div className="flex items-center justify-end gap-2 border-t-2 border-[#1b263b]/10 pt-4 mt-6">
+                      <button className="bg-white border-2 border-[#1b263b] hover:bg-gray-100 text-[#1b263b] font-black text-[10px] px-3.5 py-2 rounded-lg shadow-[1px_1px_0px_0px_#1b263b] transition-all">
                         Sửa đề
                       </button>
                       <button
@@ -961,7 +1082,7 @@ export default function AdminDashboard() {
                             setExamsList((prev) => prev.filter((e) => e.id !== ex.id))
                           }
                         }}
-                        className="bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 hover:border-rose-500/30 text-rose-400 font-bold text-[10px] px-3.5 py-2 rounded-lg transition-all"
+                        className="bg-[#fbcfe8] hover:bg-rose-200 border-2 border-[#1b263b] text-[#9d174d] font-black text-[10px] px-3.5 py-2 rounded-lg shadow-[1px_1px_0px_0px_#1b263b] transition-all"
                       >
                         Xóa
                       </button>
@@ -971,19 +1092,172 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+
+          {/* ────────────────────────────────────────────────────────
+              SUBMISSIONS / PRACTICE RESULTS VIEW
+             ──────────────────────────────────────────────────────── */}
+          {activeTab === 'submissions' && (
+            <div className="space-y-6 relative z-10 animate-fade-in">
+              {/* Backend Error/Warning Display */}
+              {submissionsError && (
+                <div className="bg-[#fbcfe8] border-2 border-[#1b263b] text-[#9d174d] px-5 py-3 rounded-2xl text-xs font-black flex items-center justify-between shadow-[2px_2px_0px_0px_#1b263b]">
+                  <span>⚠️ {submissionsError}</span>
+                  <button onClick={() => setSubmissionsError(null)} className="text-[#9d174d] hover:text-rose-700 font-bold ml-2">✕</button>
+                </div>
+              )}
+
+              <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-6">
+                {/* Controls bar */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* Search Bar */}
+                  <div className="flex items-center bg-white border-2 border-[#1b263b] focus-within:border-[#c92a2a] rounded-xl px-4 py-2.5 w-full md:w-96 transition-all shadow-[2px_2px_0px_0px_#1b263b]">
+                    <svg className="w-4 h-4 text-[#1b263b]/60 mr-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Tìm tên học viên, email, đề thi..."
+                      className="bg-transparent border-0 outline-none text-xs text-[#1b263b] placeholder-[#1b263b]/50 font-bold w-full"
+                    />
+                  </div>
+
+                  {/* Skill/Type Filter Switcher */}
+                  <div className="flex items-center gap-2">
+                    <div className="bg-white p-1 rounded-xl border-2 border-[#1b263b] flex gap-1 shadow-[2px_2px_0px_0px_#1b263b] overflow-x-auto max-w-full">
+                      {(['ALL', 'Reading', 'Listening', 'Writing', 'Speaking'] as const).map((t) => {
+                        const isActive = submissionFilterType === t
+                        return (
+                          <button
+                            key={t}
+                            onClick={() => setSubmissionFilterType(t)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition-all whitespace-nowrap ${
+                              isActive 
+                                ? 'bg-[#ffd54f] border border-[#1b263b] text-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b]' 
+                                : 'text-[#1b263b]/70 hover:bg-[#f5f3dc]'
+                            }`}
+                          >
+                            {t === 'ALL' ? 'Tất cả kỹ năng' : t}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submissions table */}
+                <div className="overflow-x-auto border-2 border-[#1b263b] rounded-xl bg-white shadow-[2px_2px_0px_0px_#1b263b]">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#f5f3dc] border-b-2 border-[#1b263b]">
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Học Viên</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Kỹ năng</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Đề thi / Bài tập</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Kết Quả / Điểm số</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Thời gian nộp</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider text-right">Thao Tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {submissionsLoading ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-[#1b263b]/60 font-black">
+                            <span className="inline-block animate-pulse">Đang tải danh sách bài làm...</span>
+                          </td>
+                        </tr>
+                      ) : filteredSubmissions.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-[#1b263b]/60 font-black">
+                            Không tìm thấy kết quả làm bài nào phù hợp.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredSubmissions.map((item) => (
+                          <tr key={item.id} className="border-b border-[#1b263b]/10 hover:bg-[#f5f3dc]/25 transition-colors">
+                            <td className="p-4">
+                              <p className="text-sm font-bold text-[#1b263b]">{item.student?.fullName}</p>
+                              <p className="text-xs text-[#1b263b]/60 font-semibold">@{item.student?.username || 'user'}</p>
+                            </td>
+                            <td className="p-4">
+                              <span
+                                className={`px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider border-2 border-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b] ${
+                                  item.type === 'Reading'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : item.type === 'Listening'
+                                    ? 'bg-green-100 text-green-800'
+                                    : item.type === 'Writing'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-amber-100 text-amber-800'
+                                }`}
+                              >
+                                {item.type}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              <p className="text-xs font-bold text-[#1b263b] max-w-xs truncate" title={item.test?.title}>
+                                {item.test?.title || 'Bài tập tự do'}
+                              </p>
+                              {item.prompt && (
+                                <p className="text-[10px] text-[#1b263b]/60 font-semibold max-w-xs truncate italic">
+                                  Đề: {item.prompt}
+                                </p>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-[#c92a2a] bg-red-50 border border-red-200 px-2 py-0.5 rounded font-mono">
+                                  Band {item.bandScore}
+                                </span>
+                                {(item.type === 'Reading' || item.type === 'Listening') && (
+                                  <span className="text-xs text-[#1b263b]/60 font-mono">
+                                    ({item.correctCount}/40 câu)
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4 text-xs font-mono text-[#1b263b]">
+                              {new Date(item.createdAt).toLocaleString('vi-VN')}
+                            </td>
+                            <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
+                              <button
+                                onClick={() => {
+                                  setSelectedSubmission(item)
+                                  setShowSubmissionModal(true)
+                                }}
+                                className="bg-[#ffd54f] hover:bg-amber-400 border-2 border-[#1b263b] text-[#1b263b] px-3 py-1.5 rounded-lg text-[10px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
+                              >
+                                Xem chi tiết
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSubmission(item)}
+                                className="bg-[#fbcfe8] hover:bg-rose-200 border-2 border-[#1b263b] text-[#9d174d] px-3 py-1.5 rounded-lg text-[10px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
+                              >
+                                Xóa
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
 
       {/* ────────────────────────────────────────────────────────
-          MODALS & FORM DIALOGS (GLASSMORPHISM)
+          MODALS & FORM DIALOGS (BRUTALIST NOTEBOOK STYLE)
          ──────────────────────────────────────────────────────── */}
       {/* Create User Modal */}
       {showCreateUserModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-[#111112] border border-[#222224] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b border-[#222224] pb-4">
-              <h3 className="text-base font-black text-white">Tạo Mới Người Dùng</h3>
-              <button onClick={() => setShowCreateUserModal(false)} className="text-zinc-500 hover:text-white font-bold text-lg">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-[#fcfbf7] border-4 border-[#1b263b] rounded-2xl max-w-xl w-full p-6 shadow-[6px_6px_0px_0px_#1b263b] space-y-6">
+            <div className="flex justify-between items-center border-b-2 border-[#1b263b] pb-4">
+              <h3 className="text-base font-serif font-black text-[#1b263b]">Tạo Mới Người Dùng</h3>
+              <button onClick={() => setShowCreateUserModal(false)} className="text-[#1b263b] hover:text-[#c92a2a] font-black text-lg transition-colors">
                 ✕
               </button>
             </div>
@@ -991,24 +1265,24 @@ export default function AdminDashboard() {
             <form onSubmit={handleCreateUserSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Họ Tên</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Họ Tên</label>
                   <input
                     type="text"
                     value={createUserForm.fullName}
                     onChange={(e) => setCreateUserForm({ ...createUserForm, fullName: e.target.value })}
                     placeholder="Nguyen Van A"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all placeholder-zinc-700"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all placeholder-[#1b263b]/40 font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Tên tài khoản</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Tên tài khoản</label>
                   <input
                     type="text"
                     value={createUserForm.username}
                     onChange={(e) => setCreateUserForm({ ...createUserForm, username: e.target.value })}
                     placeholder="nguyenvana"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all placeholder-zinc-700"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all placeholder-[#1b263b]/40 font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                     required
                   />
                 </div>
@@ -1016,24 +1290,24 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Email</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Email</label>
                   <input
                     type="email"
                     value={createUserForm.email}
                     onChange={(e) => setCreateUserForm({ ...createUserForm, email: e.target.value })}
                     placeholder="a@gmail.com"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all placeholder-zinc-700"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all placeholder-[#1b263b]/40 font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Mật khẩu</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Mật khẩu</label>
                   <input
                     type="password"
                     value={createUserForm.password}
                     onChange={(e) => setCreateUserForm({ ...createUserForm, password: e.target.value })}
                     placeholder="••••••••"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all placeholder-zinc-700"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all placeholder-[#1b263b]/40 font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                     required
                   />
                 </div>
@@ -1041,11 +1315,11 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Vai trò</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Vai trò</label>
                   <select
                     value={createUserForm.role}
                     onChange={(e) => setCreateUserForm({ ...createUserForm, role: e.target.value as any })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   >
                     <option value="STUDENT">STUDENT</option>
                     <option value="MENTOR">MENTOR</option>
@@ -1053,36 +1327,36 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Số điện thoại</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Số điện thoại</label>
                   <input
                     type="text"
                     value={createUserForm.phone}
                     onChange={(e) => setCreateUserForm({ ...createUserForm, phone: e.target.value })}
                     placeholder="09xxxxxxxx"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all placeholder-zinc-700"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all placeholder-[#1b263b]/40 font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Ngày sinh</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Ngày sinh</label>
                   <input
                     type="text"
                     value={createUserForm.birthday}
                     onChange={(e) => setCreateUserForm({ ...createUserForm, birthday: e.target.value })}
                     placeholder="DD/MM/YYYY"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all placeholder-zinc-700"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all placeholder-[#1b263b]/40 font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Số CCCD</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Số CCCD</label>
                   <input
                     type="text"
                     value={createUserForm.identityNumber}
                     onChange={(e) => setCreateUserForm({ ...createUserForm, identityNumber: e.target.value })}
                     placeholder="001xxxxxxxx"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all placeholder-zinc-700"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all placeholder-[#1b263b]/40 font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   />
                 </div>
               </div>
@@ -1091,13 +1365,13 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowCreateUserModal(false)}
-                  className="bg-transparent border border-zinc-800 text-zinc-400 font-bold text-xs px-5 py-2.5 rounded-xl hover:bg-zinc-900 transition-all"
+                  className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] transition-all"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#00cc99] hover:bg-[#00b386] text-black font-black text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#00cc99]/15 transition-all"
+                  className="bg-[#c92a2a] hover:bg-[#b01e1e] text-white border-2 border-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all"
                 >
                   Xác nhận
                 </button>
@@ -1109,11 +1383,11 @@ export default function AdminDashboard() {
 
       {/* Edit User Modal */}
       {showEditUserModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-[#111112] border border-[#222224] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b border-[#222224] pb-4">
-              <h3 className="text-base font-black text-white">Chỉnh Sửa Thông Tin</h3>
-              <button onClick={() => setShowEditUserModal(false)} className="text-zinc-500 hover:text-white font-bold text-lg">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-[#fcfbf7] border-4 border-[#1b263b] rounded-2xl max-w-xl w-full p-6 shadow-[6px_6px_0px_0px_#1b263b] space-y-6">
+            <div className="flex justify-between items-center border-b-2 border-[#1b263b] pb-4">
+              <h3 className="text-base font-serif font-black text-[#1b263b]">Chỉnh Sửa Thông Tin</h3>
+              <button onClick={() => setShowEditUserModal(false)} className="text-[#1b263b] hover:text-[#c92a2a] font-black text-lg transition-colors">
                 ✕
               </button>
             </div>
@@ -1121,22 +1395,22 @@ export default function AdminDashboard() {
             <form onSubmit={handleUpdateUserSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Họ Tên</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Họ Tên</label>
                   <input
                     type="text"
                     value={editUserForm.fullName}
                     onChange={(e) => setEditUserForm({ ...editUserForm, fullName: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Tên tài khoản</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Tên tài khoản</label>
                   <input
                     type="text"
                     value={editUserForm.username}
                     onChange={(e) => setEditUserForm({ ...editUserForm, username: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                     required
                   />
                 </div>
@@ -1144,34 +1418,34 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Email</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Email</label>
                   <input
                     type="email"
                     value={editUserForm.email}
                     onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Mật khẩu mới (Để trống nếu giữ nguyên)</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Mật khẩu mới (Để trống nếu giữ nguyên)</label>
                   <input
                     type="password"
                     value={editUserForm.password}
                     onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })}
                     placeholder="••••••••"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all placeholder-[#1b263b]/40 font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Vai trò</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Vai trò</label>
                   <select
                     value={editUserForm.role}
                     onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value as any })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   >
                     <option value="STUDENT">STUDENT</option>
                     <option value="MENTOR">MENTOR</option>
@@ -1179,33 +1453,33 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Số điện thoại</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Số điện thoại</label>
                   <input
                     type="text"
                     value={editUserForm.phone}
                     onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Ngày sinh</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Ngày sinh</label>
                   <input
                     type="text"
                     value={editUserForm.birthday}
                     onChange={(e) => setEditUserForm({ ...editUserForm, birthday: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Số CCCD</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Số CCCD</label>
                   <input
                     type="text"
                     value={editUserForm.identityNumber}
                     onChange={(e) => setEditUserForm({ ...editUserForm, identityNumber: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   />
                 </div>
               </div>
@@ -1214,13 +1488,13 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowEditUserModal(false)}
-                  className="bg-transparent border border-zinc-800 text-zinc-400 font-bold text-xs px-5 py-2.5 rounded-xl hover:bg-zinc-900 transition-all"
+                  className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] transition-all"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#00cc99] hover:bg-[#00b386] text-black font-black text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#00cc99]/15 transition-all"
+                  className="bg-[#c92a2a] hover:bg-[#b01e1e] text-white border-2 border-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all"
                 >
                   Lưu thay đổi
                 </button>
@@ -1232,35 +1506,35 @@ export default function AdminDashboard() {
 
       {/* Create Exam Modal */}
       {showCreateExamModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-[#111112] border border-[#222224] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b border-[#222224] pb-4">
-              <h3 className="text-base font-black text-white">Thêm Mới Đề Thi IELTS</h3>
-              <button onClick={() => setShowCreateExamModal(false)} className="text-zinc-500 hover:text-white font-bold text-lg">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-[#fcfbf7] border-4 border-[#1b263b] rounded-2xl max-w-md w-full p-6 shadow-[6px_6px_0px_0px_#1b263b] space-y-6">
+            <div className="flex justify-between items-center border-b-2 border-[#1b263b] pb-4">
+              <h3 className="text-base font-serif font-black text-[#1b263b]">Thêm Mới Đề Thi IELTS</h3>
+              <button onClick={() => setShowCreateExamModal(false)} className="text-[#1b263b] hover:text-[#c92a2a] font-black text-lg transition-colors">
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleCreateExamSubmit} className="space-y-4">
               <div>
-                <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Tiêu Đề Đề Thi</label>
+                <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Tiêu Đề Đề Thi</label>
                 <input
                   type="text"
                   value={newExamTitle}
                   onChange={(e) => setNewExamTitle(e.target.value)}
                   placeholder="IELTS Cambridge 19 - Test 1"
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60 transition-all placeholder-zinc-700"
+                  className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all placeholder-[#1b263b]/40 font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Kỹ năng</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Kỹ năng</label>
                   <select
                     value={newExamType}
                     onChange={(e) => setNewExamType(e.target.value as any)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   >
                     <option value="Reading">Reading</option>
                     <option value="Listening">Listening</option>
@@ -1269,24 +1543,24 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Thời gian (Phút)</label>
+                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Thời gian (Phút)</label>
                   <input
                     type="number"
                     value={newExamDuration}
                     onChange={(e) => setNewExamDuration(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60"
+                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Số lượng câu hỏi</label>
+                <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Số lượng câu hỏi</label>
                 <input
                   type="number"
                   value={newExamQuestions}
                   onChange={(e) => setNewExamQuestions(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#00cc99]/60"
+                  className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   required
                 />
               </div>
@@ -1295,13 +1569,13 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowCreateExamModal(false)}
-                  className="bg-transparent border border-zinc-800 text-zinc-400 font-bold text-xs px-5 py-2.5 rounded-xl hover:bg-zinc-900 transition-all"
+                  className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] transition-all"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#00cc99] hover:bg-[#00b386] text-black font-black text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#00cc99]/15 transition-all"
+                  className="bg-[#c92a2a] hover:bg-[#b01e1e] text-white border-2 border-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all"
                 >
                   Khởi tạo
                 </button>
@@ -1313,18 +1587,18 @@ export default function AdminDashboard() {
 
       {/* Bulk Import Modal */}
       {showBulkImportModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-[#111112] border border-[#222224] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b border-[#222224] pb-4">
-              <h3 className="text-base font-black text-white">Nhập Đề Thi Số Lượng Lớn (JSON Payload)</h3>
-              <button onClick={() => setShowBulkImportModal(false)} className="text-zinc-500 hover:text-white font-bold text-lg">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-[#fcfbf7] border-4 border-[#1b263b] rounded-2xl max-w-xl w-full p-6 shadow-[6px_6px_0px_0px_#1b263b] space-y-6">
+            <div className="flex justify-between items-center border-b-2 border-[#1b263b] pb-4">
+              <h3 className="text-base font-serif font-black text-[#1b263b]">Nhập Đề Thi Số Lượng Lớn (JSON Payload)</h3>
+              <button onClick={() => setShowBulkImportModal(false)} className="text-[#1b263b] hover:text-[#c92a2a] font-black text-lg transition-colors">
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleBulkImportSubmit} className="space-y-4">
               <div>
-                <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">
+                <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">
                   Dán chuỗi đề thi JSON (theo cấu trúc Cambridge Mock Test)
                 </label>
                 <textarea
@@ -1332,7 +1606,7 @@ export default function AdminDashboard() {
                   onChange={(e) => setBulkJsonPayload(e.target.value)}
                   placeholder={`{\n  "title": "Cambridge 19 - Test 1",\n  "type": "Reading",\n  "duration": 60,\n  "sections": [...]\n}`}
                   rows={10}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs font-mono text-white outline-none focus:border-[#00cc99]/60 resize-none placeholder-zinc-700"
+                  className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-mono text-[#1b263b] outline-none focus:border-[#c92a2a] resize-none placeholder-[#1b263b]/40 font-bold shadow-[2px_2px_0px_0px_#1b263b]"
                   required
                 />
               </div>
@@ -1341,18 +1615,297 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowBulkImportModal(false)}
-                  className="bg-transparent border border-zinc-800 text-zinc-400 font-bold text-xs px-5 py-2.5 rounded-xl hover:bg-zinc-900 transition-all"
+                  className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] transition-all"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#00cc99] hover:bg-[#00b386] text-black font-black text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#00cc99]/15 transition-all"
+                  className="bg-[#c92a2a] hover:bg-[#b01e1e] text-white border-2 border-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all"
                 >
                   Bắt đầu Import
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Submission / Practice Result Detail Modal */}
+      {showSubmissionModal && selectedSubmission && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-[#fcfbf7] border-4 border-[#1b263b] rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-[6px_6px_0px_0px_#1b263b] space-y-6 relative">
+            
+            {/* Spiral binding representation for brutalist notebook design */}
+            <div className="absolute top-0 left-0 right-0 h-3 bg-[#ffd54f] border-b-2 border-[#1b263b] rounded-t-lg flex justify-around px-4 pointer-events-none">
+              {[...Array(12)].map((_, i) => (
+                <div key={i} className="w-1.5 h-4 bg-[#1b263b] rounded-t-full transform -translate-y-1.5 border border-white/20" />
+              ))}
+            </div>
+
+            <div className="flex justify-between items-start border-b-2 border-[#1b263b] pb-4 pt-3">
+              <div>
+                <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border-2 border-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b] ${
+                  selectedSubmission.type === 'Reading'
+                    ? 'bg-blue-100 text-blue-800'
+                    : selectedSubmission.type === 'Listening'
+                    ? 'bg-green-100 text-green-800'
+                    : selectedSubmission.type === 'Writing'
+                    ? 'bg-purple-100 text-purple-800'
+                    : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {selectedSubmission.type} Test Details
+                </span>
+                <h3 className="text-xl font-serif font-black text-[#1b263b] mt-1.5">
+                  {selectedSubmission.test?.title || 'Bài tập tự do'}
+                </h3>
+                <p className="text-xs text-[#1b263b]/70 font-semibold mt-0.5">
+                  Học viên: <span className="font-extrabold text-[#1b263b]">{selectedSubmission.student?.fullName}</span> (@{selectedSubmission.student?.username})
+                </p>
+              </div>
+
+              <div className="flex flex-col items-end gap-1">
+                <button 
+                  onClick={() => setShowSubmissionModal(false)} 
+                  className="w-8 h-8 rounded-xl bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all flex items-center justify-center"
+                >
+                  ✕
+                </button>
+                <div className="bg-[#ffd54f] border-2 border-[#1b263b] px-3.5 py-1 rounded-xl shadow-[3px_3px_0px_0px_#1b263b] text-center mt-2">
+                  <p className="text-[9px] font-black uppercase text-[#1b263b]/60 tracking-wider">Band Score</p>
+                  <p className="text-xl font-black text-[#1b263b] font-mono leading-none">{selectedSubmission.bandScore}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 1. READING OR LISTENING RESULTS */}
+            {(selectedSubmission.type === 'Reading' || selectedSubmission.type === 'Listening') && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="bg-white border-2 border-[#1b263b] p-3 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
+                    <span className="text-[9px] font-black text-[#1b263b]/60 uppercase tracking-wider block">Số câu đúng</span>
+                    <span className="text-base font-black text-[#1b263b]">{selectedSubmission.correctCount || 0} / 40</span>
+                  </div>
+                  <div className="bg-white border-2 border-[#1b263b] p-3 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
+                    <span className="text-[9px] font-black text-[#1b263b]/60 uppercase tracking-wider block">Thời gian làm bài</span>
+                    <span className="text-base font-black text-[#1b263b]">
+                      {Math.floor((selectedSubmission.timeTaken || 0) / 60)} phút { (selectedSubmission.timeTaken || 0) % 60 } giây
+                    </span>
+                  </div>
+                  <div className="bg-white border-2 border-[#1b263b] p-3 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] col-span-2 md:col-span-1">
+                    <span className="text-[9px] font-black text-[#1b263b]/60 uppercase tracking-wider block">Ngày hoàn thành</span>
+                    <span className="text-xs font-bold text-[#1b263b]">
+                      {new Date(selectedSubmission.createdAt).toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-black text-[#1b263b] uppercase tracking-wider mb-2.5">Bảng chi tiết câu trả lời</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1">
+                    {selectedSubmission.answers && Array.isArray(selectedSubmission.answers) ? (
+                      selectedSubmission.answers.map((ans: any, idx: number) => (
+                        <div key={idx} className={`p-3 border-2 border-[#1b263b] rounded-xl flex flex-col gap-1.5 shadow-[2px_2px_0px_0px_#1b263b] ${
+                          ans.isCorrect ? 'bg-[#a7f3d0]/30' : 'bg-[#fbcfe8]/30'
+                        }`}>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-black text-[#1b263b]">Câu {ans.questionNumber || idx + 1}</span>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
+                              ans.isCorrect 
+                                ? 'bg-emerald-100 border-emerald-400 text-emerald-800' 
+                                : 'bg-rose-100 border-rose-400 text-rose-800'
+                            }`}>
+                              {ans.isCorrect ? 'Đúng' : 'Sai'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1 text-[11px] font-semibold">
+                            <div>Bài làm: <span className="font-black text-rose-800">{ans.userAnswer || '(Trống)'}</span></div>
+                            <div>Đáp án đúng: <span className="font-black text-emerald-800">{ans.correctAnswer}</span></div>
+                          </div>
+                          {ans.explanation && (
+                            <p className="text-[10px] text-[#1b263b]/70 border-t border-[#1b263b]/10 pt-1 mt-1 italic">
+                              Giải thích: {ans.explanation}
+                            </p>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-[#1b263b]/60 italic col-span-2">Không tìm thấy chi tiết câu trả lời.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 2. WRITING SUBMISSION DETAILS */}
+            {selectedSubmission.type === 'Writing' && (
+              <div className="space-y-4">
+                {selectedSubmission.prompt && (
+                  <div className="bg-[#ffd54f]/10 border-2 border-[#1b263b] p-4 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
+                    <span className="text-[9px] font-black text-[#1b263b]/60 uppercase tracking-wider block">Đề bài (Prompt)</span>
+                    <p className="text-xs font-bold text-[#1b263b] leading-relaxed mt-1">{selectedSubmission.prompt}</p>
+                  </div>
+                )}
+
+                {/* Subscores Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Task Achievement', score: selectedSubmission.taskAchievement },
+                    { label: 'Coherence & Cohesion', score: selectedSubmission.coherenceCohesion },
+                    { label: 'Lexical Resource', score: selectedSubmission.lexicalResource },
+                    { label: 'Grammar Accuracy', score: selectedSubmission.grammarAccuracy },
+                  ].map((sub, i) => (
+                    <div key={i} className="bg-white border-2 border-[#1b263b] p-3 rounded-xl text-center shadow-[2px_2px_0px_0px_#1b263b]">
+                      <span className="text-[9px] font-black text-[#1b263b]/60 uppercase tracking-wider block leading-tight">{sub.label}</span>
+                      <span className="text-lg font-black text-[#c92a2a] font-mono block mt-1">{sub.score || 'N/A'}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Student Essay text */}
+                <div>
+                  <span className="text-[9px] font-black text-[#1b263b]/60 uppercase tracking-wider block mb-1">Bài viết của học viên</span>
+                  <div className="bg-white border-2 border-[#1b263b] rounded-xl p-4 shadow-[3px_3px_0px_0px_#1b263b] font-serif text-sm leading-relaxed text-[#1b263b] max-h-80 overflow-y-auto select-text whitespace-pre-wrap">
+                    {selectedSubmission.essayText}
+                  </div>
+                </div>
+
+                {/* AI feedback section */}
+                {selectedSubmission.aiFeedback && (
+                  <div className="bg-[#a7f3d0]/20 border-2 border-[#1b263b] rounded-xl p-4 space-y-3 shadow-[3px_3px_0px_0px_#1b263b]">
+                    <div className="flex items-center gap-2 border-b border-[#1b263b]/10 pb-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
+                      <h4 className="text-xs font-black text-[#005c42] uppercase tracking-wider">Đánh giá & Gợi ý sửa đổi từ AI</h4>
+                    </div>
+
+                    <div className="space-y-3 text-xs text-[#1b263b]">
+                      <div>
+                        <span className="font-extrabold block text-[10px] text-[#1b263b]/70 uppercase">Nhận xét tổng quan:</span>
+                        <p className="mt-1 leading-relaxed">{selectedSubmission.aiFeedback.overall || selectedSubmission.aiFeedback}</p>
+                      </div>
+                      
+                      {selectedSubmission.aiFeedback.strengths && (
+                        <div>
+                          <span className="font-extrabold block text-[10px] text-[#005c42] uppercase">Điểm mạnh:</span>
+                          <ul className="list-disc pl-5 mt-1 space-y-1">
+                            {selectedSubmission.aiFeedback.strengths.map((str: string, index: number) => (
+                              <li key={index} className="leading-relaxed">{str}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {selectedSubmission.aiFeedback.weaknesses && (
+                        <div>
+                          <span className="font-extrabold block text-[10px] text-rose-800 uppercase">Điểm cần cải thiện:</span>
+                          <ul className="list-disc pl-5 mt-1 space-y-1">
+                            {selectedSubmission.aiFeedback.weaknesses.map((wk: string, index: number) => (
+                              <li key={index} className="leading-relaxed">{wk}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 3. SPEAKING SUBMISSION DETAILS */}
+            {selectedSubmission.type === 'Speaking' && (
+              <div className="space-y-4">
+                {selectedSubmission.prompt && (
+                  <div className="bg-[#ffd54f]/10 border-2 border-[#1b263b] p-4 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
+                    <span className="text-[9px] font-black text-[#1b263b]/60 uppercase tracking-wider block">Chủ đề (Prompt)</span>
+                    <p className="text-xs font-bold text-[#1b263b] leading-relaxed mt-1">{selectedSubmission.prompt}</p>
+                  </div>
+                )}
+
+                {/* Subscores Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Fluency & Coherence', score: selectedSubmission.fluencyCoherence },
+                    { label: 'Lexical Resource', score: selectedSubmission.lexicalResource },
+                    { label: 'Grammar Accuracy', score: selectedSubmission.grammarAccuracy },
+                    { label: 'Pronunciation', score: selectedSubmission.pronunciation },
+                  ].map((sub, i) => (
+                    <div key={i} className="bg-white border-2 border-[#1b263b] p-3 rounded-xl text-center shadow-[2px_2px_0px_0px_#1b263b]">
+                      <span className="text-[9px] font-black text-[#1b263b]/60 uppercase tracking-wider block leading-tight">{sub.label}</span>
+                      <span className="text-lg font-black text-[#c92a2a] font-mono block mt-1">{sub.score || 'N/A'}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Audio Player and Transcription */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-1 bg-white border-2 border-[#1b263b] p-4 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] flex flex-col justify-center items-center">
+                    <span className="text-[9px] font-black text-[#1b263b]/60 uppercase tracking-wider block mb-3">File ghi âm học viên</span>
+                    {selectedSubmission.audioUrl ? (
+                      <audio controls src={selectedSubmission.audioUrl} className="w-full animate-fade-in" />
+                    ) : (
+                      <p className="text-xs text-[#1b263b]/60 italic">Không có file ghi âm</p>
+                    )}
+                  </div>
+                  <div className="md:col-span-2">
+                    <span className="text-[9px] font-black text-[#1b263b]/60 uppercase tracking-wider block mb-1">Bản ghi Text (Transcription)</span>
+                    <div className="bg-white border-2 border-[#1b263b] rounded-xl p-4 shadow-[2px_2px_0px_0px_#1b263b] text-xs font-semibold leading-relaxed text-[#1b263b] max-h-48 overflow-y-auto select-text whitespace-pre-wrap">
+                      {selectedSubmission.transcription || 'Không có bản dịch transcription.'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* AI feedback section */}
+                {selectedSubmission.aiFeedback && (
+                  <div className="bg-[#a7f3d0]/20 border-2 border-[#1b263b] rounded-xl p-4 space-y-3 shadow-[3px_3px_0px_0px_#1b263b]">
+                    <div className="flex items-center gap-2 border-b border-[#1b263b]/10 pb-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
+                      <h4 className="text-xs font-black text-[#005c42] uppercase tracking-wider">Đánh giá giọng nói & Phát âm từ AI</h4>
+                    </div>
+
+                    <div className="space-y-3 text-xs text-[#1b263b]">
+                      <div>
+                        <span className="font-extrabold block text-[10px] text-[#1b263b]/70 uppercase">Nhận xét tổng quan:</span>
+                        <p className="mt-1 leading-relaxed">{selectedSubmission.aiFeedback.overall || selectedSubmission.aiFeedback}</p>
+                      </div>
+                      
+                      {selectedSubmission.aiFeedback.strengths && (
+                        <div>
+                          <span className="font-extrabold block text-[10px] text-[#005c42] uppercase">Điểm mạnh:</span>
+                          <ul className="list-disc pl-5 mt-1 space-y-1">
+                            {selectedSubmission.aiFeedback.strengths.map((str: string, index: number) => (
+                              <li key={index} className="leading-relaxed">{str}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {selectedSubmission.aiFeedback.weaknesses && (
+                        <div>
+                          <span className="font-extrabold block text-[10px] text-rose-800 uppercase">Điểm cần cải thiện:</span>
+                          <ul className="list-disc pl-5 mt-1 space-y-1">
+                            {selectedSubmission.aiFeedback.weaknesses.map((wk: string, index: number) => (
+                              <li key={index} className="leading-relaxed">{wk}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Footer buttons */}
+            <div className="flex justify-end pt-4 border-t-2 border-[#1b263b]/10">
+              <button
+                type="button"
+                onClick={() => setShowSubmissionModal(false)}
+                className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs px-6 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all"
+              >
+                Đóng
+              </button>
+            </div>
+
           </div>
         </div>
       )}
