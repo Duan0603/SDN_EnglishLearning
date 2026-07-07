@@ -94,7 +94,7 @@ export class MentorController {
   static async getMentorPublicSlots(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const slots = await MentorService.getAvailabilities(id, true);
+      const slots = await MentorService.getAvailabilities(id, false);
       res.status(200).json({
         success: true,
         data: slots,

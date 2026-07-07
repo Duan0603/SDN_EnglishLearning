@@ -18,5 +18,8 @@ bookingRouter.post('/', roleGuard(['STUDENT']), asyncHandler(BookingController.b
 // Cancel a booking (accessible to students/mentors)
 bookingRouter.patch('/:id/cancel', asyncHandler(BookingController.cancel));
 
+// Accept a booking (restricted to mentors only)
+bookingRouter.patch('/:id/accept', roleGuard(['MENTOR']), asyncHandler(BookingController.accept));
+
 // Add mentor review notes (restricted to mentors only)
 bookingRouter.patch('/:id/notes', roleGuard(['MENTOR']), asyncHandler(BookingController.addNotes));

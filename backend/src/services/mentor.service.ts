@@ -39,9 +39,6 @@ export class MentorService {
     });
   }
 
-  /**
-   * Get availability slots of a mentor (either all slots or only unbooked slots).
-   */
   static async getAvailabilities(mentorId: string, unbookedOnly: boolean = false) {
     const whereClause: any = { mentorId };
     if (unbookedOnly) {
@@ -50,6 +47,21 @@ export class MentorService {
 
     return await prisma.availability.findMany({
       where: whereClause,
+      include: {
+        booking: {
+          include: {
+            student: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                phone: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
       orderBy: {
         startTime: 'asc',
       },

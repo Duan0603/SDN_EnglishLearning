@@ -99,7 +99,8 @@ export class BookingController {
         return next(new ApiError('Unauthorized', 401));
       }
 
-      const booking = await BookingService.cancelBooking(userId, role, id);
+      const { cancelReason } = req.body;
+      const booking = await BookingService.cancelBooking(userId, role, id, cancelReason);
 
       res.status(200).json({
         success: true,
@@ -108,6 +109,30 @@ export class BookingController {
       });
     } catch (error: any) {
       next(new ApiError(error.message || 'Cancellation failed.', 400));
+    }
+  }
+
+  /**
+   * PATCH /api/v1/bookings/:id/accept
+   */
+  static async accept(req: any, res: Response, next: NextFunction) {
+    try {
+      const mentorId = req.currentUser?.id || req.user?.userId;
+      const { id } = req.params;
+
+      if (!mentorId) {
+        return next(new ApiError('Unauthorized', 401));
+      }
+
+      const booking = await BookingService.acceptBooking(mentorId, id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Booking accepted successfully.',
+        data: booking,
+      });
+    } catch (error: any) {
+      next(new ApiError(error.message || 'Acceptance failed.', 400));
     }
   }
 }

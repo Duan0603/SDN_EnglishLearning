@@ -52,6 +52,10 @@ model User {
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   
+  // Streak tracking & Daily check-in
+  currentStreak      Int                  @default(0)
+  lastCheckIn        DateTime?
+  
   // Quan hệ đặt lịch (Epic 4)
   studentBookings    Booking[]            @relation("StudentBookings")
   mentorBookings     Booking[]            @relation("MentorBookings")
@@ -105,6 +109,7 @@ model Booking {
   status         BookingStatus @default(PENDING)
   notes          String?       // Học viên ghi chú mục tiêu buổi học
   mentorNotes    String?       // Mentor nhận xét sau buổi học
+  cancelReason   String?       // Lý do hủy lịch
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 }
