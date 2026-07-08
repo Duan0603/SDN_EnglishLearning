@@ -113,6 +113,7 @@ export default function AdminDashboard() {
   const [newExamTitle, setNewExamTitle] = useState('')
   const [newExamType, setNewExamType] = useState<'Reading' | 'Listening' | 'Writing' | 'Speaking'>('Reading')
   const [newExamDuration, setNewExamDuration] = useState('60')
+  const [examFilterType, setExamFilterType] = useState<'ALL' | 'Reading' | 'Listening' | 'Writing' | 'Speaking'>('ALL')
 
   // Wizard states for section/question manager
   const [examStep, setExamStep] = useState(1)
@@ -725,8 +726,12 @@ export default function AdminDashboard() {
   }, [bookingsList, searchQuery])
 
   const filteredExams = useMemo(() => {
-    return examsList.filter((ex) => ex.title.toLowerCase().includes(searchQuery.toLowerCase()))
-  }, [examsList, searchQuery])
+    return examsList.filter((ex) => {
+      const matchesSearch = ex.title.toLowerCase().includes(searchQuery.toLowerCase())
+      if (examFilterType === 'ALL') return matchesSearch
+      return matchesSearch && ex.type === examFilterType
+    })
+  }, [examsList, searchQuery, examFilterType])
 
   const filteredSubmissions = useMemo(() => {
     return submissionsList.filter((sub) => {
@@ -1267,7 +1272,7 @@ export default function AdminDashboard() {
             <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-6 animate-fade-in relative z-10">
               {/* Controls bar */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center bg-white border-2 border-[#1b263b] focus-within:border-[#c92a2a] rounded-xl px-4 py-2.5 w-full md:w-96 transition-all shadow-[2px_2px_0px_0px_#1b263b]">
+                <div className="flex items-center bg-white border-2 border-[#1b263b] focus-within:border-[#c92a2a] rounded-xl px-4 py-2.5 w-full md:w-80 transition-all shadow-[2px_2px_0px_0px_#1b263b]">
                   <svg className="w-4 h-4 text-[#1b263b]/60 mr-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
@@ -1278,6 +1283,26 @@ export default function AdminDashboard() {
                     placeholder="Tìm đề thi IELTS..."
                     className="bg-transparent border-0 outline-none text-xs text-[#1b263b] placeholder-[#1b263b]/50 font-bold w-full"
                   />
+                </div>
+
+                {/* Exam Skill Filter Tabs */}
+                <div className="bg-white p-1 rounded-xl border-2 border-[#1b263b] flex gap-1 shadow-[2px_2px_0px_0px_#1b263b] overflow-x-auto max-w-full">
+                  {(['ALL', 'Listening', 'Reading', 'Writing', 'Speaking'] as const).map((type) => {
+                    const isActive = examFilterType === type
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => setExamFilterType(type)}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition-all whitespace-nowrap ${
+                          isActive 
+                            ? 'bg-[#ffd54f] border border-[#1b263b] text-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b]' 
+                            : 'text-[#1b263b]/70 hover:bg-[#f5f3dc]'
+                        }`}
+                      >
+                        {type === 'ALL' ? 'Tất cả' : type}
+                      </button>
+                    )
+                  })}
                 </div>
 
                 <div className="flex items-center gap-3">
