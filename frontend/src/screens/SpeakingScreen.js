@@ -385,9 +385,7 @@ const SpeakingScreen = ({ route, navigation }) => {
                     key={idx}
                     onPress={() => {
                       setActiveSectionIndex(idx);
-                      setResult(null);
-                      setIsRecording(false);
-                      setDuration(0);
+                      resetRecording();
                     }}
                     style={[
                       S.partTabItem,
@@ -488,13 +486,14 @@ const SpeakingScreen = ({ route, navigation }) => {
                 {recordingState === 'stopped' && (
                   <View style={{ alignItems: 'center', gap: 12, width: '100%' }}>
                     <TouchableOpacity
-                      style={[S.micButton, { backgroundColor: COLORS.primary }]}
+                      style={[S.ctrlBtn, { backgroundColor: COLORS.primary, width: '60%', paddingVertical: 14 }]}
                       onPress={submitAudio}
                     >
-                      <AppIcon name="mic-active" size={28} color={COLORS.textInverse} />
+                      <Ionicons name="cloud-upload" size={24} color={COLORS.textInverse} />
+                      <Text style={[S.ctrlBtnText, { fontSize: 16, marginLeft: 8 }]}>Nộp bài chấm điểm</Text>
                     </TouchableOpacity>
                     <Text style={[S.micInstruction, { color: COLORS.primary }]}>
-                      Bấm nộp để AI chấm — hoặc xóa để ghi lại
+                      Bạn có thể gửi để AI chấm hoặc xóa ghi lại
                     </Text>
                     <TouchableOpacity style={[S.ctrlBtn, { backgroundColor: '#666' }]} onPress={resetRecording}>
                       <Ionicons name="trash" size={18} color="#fff" />
@@ -577,18 +576,18 @@ const SpeakingScreen = ({ route, navigation }) => {
               )}
 
               {/* Transcript */}
-              {result.transcript && result.transcript.trim().length > 5 && (
+              {result.transcription && result.transcription.trim().length > 5 && (
                 <View style={S.transcriptSection}>
                   <Text style={S.sectionHeading}>📝 TRANSCRIPT (Bài nói của bạn)</Text>
                   <ScrollView style={S.transcriptScroll} nestedScrollEnabled>
-                    <Text style={S.transcriptText}>{result.transcript}</Text>
+                    <Text style={S.transcriptText}>{result.transcription}</Text>
                   </ScrollView>
                 </View>
               )}
 
               {/* Action Buttons */}
               <View style={S.actionsRow}>
-                <TouchableOpacity style={S.retryBtn} onPress={() => setResult(null)}>
+                <TouchableOpacity style={S.retryBtn} onPress={resetRecording}>
                   <Text style={S.retryText}>🔄 Luyện lại</Text>
                 </TouchableOpacity>
 
@@ -597,9 +596,7 @@ const SpeakingScreen = ({ route, navigation }) => {
                     style={[S.retryBtn, { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}
                     onPress={() => {
                       setActiveSectionIndex(activeSectionIndex + 1);
-                      setResult(null);
-                      setIsRecording(false);
-                      setDuration(0);
+                      resetRecording();
                     }}
                   >
                     <Text style={[S.retryText, { color: COLORS.textInverse }]}>Part Tiếp Theo →</Text>
