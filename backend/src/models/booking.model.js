@@ -27,7 +27,7 @@ const bookingSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['PENDING', 'CONFIRMED', 'CANCELLED'],
+        enum: ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED'],
         default: 'PENDING'
     },
     notes: {
@@ -35,6 +35,14 @@ const bookingSchema = new Schema({
         default: ''
     },
     mentorNotes: {
+        type: String,
+        default: ''
+    },
+    rating: {
+        type: Number,
+        default: null
+    },
+    comment: {
         type: String,
         default: ''
     }

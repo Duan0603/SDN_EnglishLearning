@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import Toast from 'react-native-toast-message';
 
 import client from '../api/client';
 import useAuthStore from '../store/useAuthStore';
+import { useNotificationStore } from '../store/useNotificationStore';
 
 // Brutalist shadow wrapper
 const BrutalistShadow = ({ children, style, offset = 4 }) => (
@@ -55,6 +56,8 @@ const ModuleCard = ({ title, tutor, bg, color, onPress, progress }) => (
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
+  const { readNotifIds, loadReadNotifIds, markAsRead, markAllAsRead } = useNotificationStore();
+  
   const [refreshing, setRefreshing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [stats, setStats] = useState(null);
@@ -63,6 +66,15 @@ const HomeScreen = ({ navigation }) => {
   // Notifications Bell dropdown states
   const [notifications, setNotifications] = useState([]);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+
+  useEffect(() => {
+    setNotifications(prev => 
+      prev.map(n => ({
+        ...n,
+        isRead: readNotifIds.includes(n.id) || n.isRead
+      }))
+    );
+  }, [readNotifIds]);
 
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
@@ -81,7 +93,7 @@ const HomeScreen = ({ navigation }) => {
       {
         id: 'welcome',
         text: 'Chào mừng bạn đến với hệ thống đặt lịch học gia sư SDN!',
-        isRead: true,
+        isRead: readNotifIds.includes('welcome') || true,
         createdAt: new Date()
       }
     ];
@@ -92,14 +104,14 @@ const HomeScreen = ({ navigation }) => {
         list.push({
           id: 'streak-today',
           text: `Bạn đã điểm danh hôm nay thành công! Chuỗi streak hiện tại: ${checkinStats.currentStreak || 1} ngày 🔥`,
-          isRead: true,
+          isRead: readNotifIds.includes('streak-today') || true,
           createdAt: checkinStats.lastCheckIn || new Date()
         });
       } else {
         list.push({
           id: 'streak-missing',
           text: `Bạn chưa điểm danh hôm nay! Bấm vào đây để điểm danh và nhận streak ngay! ⏳`,
-          isRead: false,
+          isRead: readNotifIds.includes('streak-missing') || false,
           createdAt: new Date()
         });
       }
@@ -110,31 +122,34 @@ const HomeScreen = ({ navigation }) => {
       const partnerName = isUserMentor ? b.student?.fullName : b.mentor?.fullName;
       
       if (b.status === 'PENDING') {
+        const notifId = `pending-${b.id}`;
         list.push({
-          id: `pending-${b.id}`,
+          id: notifId,
           text: isUserMentor 
             ? `Học viên ${partnerName || 'học viên'} đã đặt lịch hẹn ngày ${dateStr} đang chờ bạn duyệt.`
             : `Yêu cầu đặt lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đang chờ duyệt.`,
-          isRead: false,
+          isRead: readNotifIds.includes(notifId) || false,
           createdAt: b.updatedAt || b.createdAt || new Date()
         });
       } else if (b.status === 'CONFIRMED') {
+        const notifId = `confirmed-${b.id}`;
         list.push({
-          id: `confirmed-${b.id}`,
+          id: notifId,
           text: isUserMentor
             ? `Bạn đã duyệt thành công lịch dạy với học viên ${partnerName || 'học viên'} ngày ${dateStr}.`
             : `Lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đã được PHÊ DUYỆT thành công! 🎉`,
-          isRead: true,
+          isRead: readNotifIds.includes(notifId) || true,
           createdAt: b.updatedAt || b.createdAt || new Date()
         });
       } else if (b.status === 'CANCELLED') {
         const reasonText = b.cancelReason ? ` (Lý do: "${b.cancelReason}")` : '';
+        const notifId = `cancelled-${b.id}`;
         list.push({
-          id: `cancelled-${b.id}`,
+          id: notifId,
           text: isUserMentor
             ? `Lịch dạy với học viên ${partnerName || 'học viên'} ngày ${dateStr} đã bị hủy${reasonText}.`
             : `Lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đã bị HỦY${reasonText}. ⚠️`,
-          isRead: true,
+          isRead: readNotifIds.includes(notifId) || true,
           createdAt: b.updatedAt || b.createdAt || new Date()
         });
       }
@@ -158,11 +173,13 @@ const HomeScreen = ({ navigation }) => {
             availability: { startTime: s.startTime, endTime: s.endTime },
             mentor: { fullName: user.fullName }
           }));
-        setNotifications(generateBookingNotifications(mentorBookings, true, statsObj));
+        const list = generateBookingNotifications(mentorBookings, true, statsObj);
+        setNotifications(list.map(n => ({ ...n, isRead: readNotifIds.includes(n.id) || n.isRead })));
       } else {
         const res = await client.get('/bookings', { hideToast: true });
         const bookingsList = res.data?.data || [];
-        setNotifications(generateBookingNotifications(bookingsList, false, statsObj));
+        const list = generateBookingNotifications(bookingsList, false, statsObj);
+        setNotifications(list.map(n => ({ ...n, isRead: readNotifIds.includes(n.id) || n.isRead })));
       }
     } catch (err) {
       console.log('Error fetching notifications:', err);
@@ -186,6 +203,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
+    loadReadNotifIds();
     fetchStats().then(data => {
       if (data && data.hasCheckedInToday === false && user) {
         setShowStreakModal(true);
@@ -274,6 +292,10 @@ const HomeScreen = ({ navigation }) => {
             onPress={() => {
               fetchNotifications();
               setShowNotificationsDropdown(!showNotificationsDropdown);
+              if (!showNotificationsDropdown) {
+                const ids = notifications.map(n => n.id);
+                markAllAsRead(ids);
+              }
             }}
           >
             <Ionicons name="notifications-outline" size={24} color="#1b263b" />
@@ -326,7 +348,8 @@ const HomeScreen = ({ navigation }) => {
               </Text>
               <TouchableOpacity 
                 onPress={() => {
-                  setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                  const ids = notifications.map(n => n.id);
+                  markAllAsRead(ids);
                 }}
               >
                 <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 10, color: '#4682b4' }}>
@@ -345,11 +368,10 @@ const HomeScreen = ({ navigation }) => {
                   <TouchableOpacity 
                     key={n.id}
                     onPress={() => {
+                      setShowNotificationsDropdown(false);
+                      markAsRead(n.id);
                       if (n.id === 'streak-missing') {
-                        setShowNotificationsDropdown(false);
                         handleCheckIn();
-                      } else {
-                        setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, isRead: true } : item));
                       }
                     }}
                     style={{

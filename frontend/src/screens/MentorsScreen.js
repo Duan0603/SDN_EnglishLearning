@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import client from '../api/client';
 import useAuthStore from '../store/useAuthStore';
 import { socket } from '../utils/socket';
+import { useNotificationStore } from '../store/useNotificationStore';
 
 // Brutalist shadow wrapper
 const BrutalistShadow = ({ children, style, offset = 4 }) => (
@@ -128,6 +129,7 @@ const MentorsScreen = ({ navigation }) => {
   const [mentorNotesEdit, setMentorNotesEdit] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -136,6 +138,13 @@ const MentorsScreen = ({ navigation }) => {
   const [cancelReasonInput, setCancelReasonInput] = useState('');
   const [showCancelReasonForm, setShowCancelReasonForm] = useState(false);
 
+  // States for student rating / comment
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [selectedBookingForRating, setSelectedBookingForRating] = useState(null);
+  const [ratingValue, setRatingValue] = useState(5);
+  const [commentInput, setCommentInput] = useState('');
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+
   // States and Ref for Custom Confirmation Modal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalTitle, setConfirmModalTitle] = useState('');
@@ -143,9 +152,19 @@ const MentorsScreen = ({ navigation }) => {
   const confirmCallbackRef = useRef(null);
 
   // States for Notifications Bell dropdown & Streak Stats
+  const { readNotifIds, loadReadNotifIds, markAsRead, markAllAsRead } = useNotificationStore();
   const [notifications, setNotifications] = useState([]);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    setNotifications(prev => 
+      prev.map(n => ({
+        ...n,
+        isRead: readNotifIds.includes(n.id) || n.isRead
+      }))
+    );
+  }, [readNotifIds]);
 
   const fetchStats = async () => {
     try {
@@ -179,7 +198,7 @@ const MentorsScreen = ({ navigation }) => {
       {
         id: 'welcome',
         text: 'Chào mừng bạn đến với hệ thống đặt lịch học gia sư SDN!',
-        isRead: true,
+        isRead: readNotifIds.includes('welcome') || true,
         createdAt: new Date()
       }
     ];
@@ -191,14 +210,14 @@ const MentorsScreen = ({ navigation }) => {
         list.push({
           id: 'streak-today',
           text: `Bạn đã điểm danh hôm nay thành công! Chuỗi streak hiện tại: ${statsObj.currentStreak || 1} ngày 🔥`,
-          isRead: true,
+          isRead: readNotifIds.includes('streak-today') || true,
           createdAt: statsObj.lastCheckIn || new Date()
         });
       } else {
         list.push({
           id: 'streak-missing',
           text: `Bạn chưa điểm danh hôm nay! Bấm vào đây để điểm danh và nhận streak ngay! ⏳`,
-          isRead: false,
+          isRead: readNotifIds.includes('streak-missing') || false,
           createdAt: new Date()
         });
       }
@@ -209,31 +228,34 @@ const MentorsScreen = ({ navigation }) => {
       const partnerName = isUserMentor ? b.student?.fullName : b.mentor?.fullName;
       
       if (b.status === 'PENDING') {
+        const notifId = `pending-${b.id}`;
         list.push({
-          id: `pending-${b.id}`,
+          id: notifId,
           text: isUserMentor 
             ? `Học viên ${partnerName || 'học viên'} đã đặt lịch hẹn ngày ${dateStr} đang chờ bạn duyệt.`
             : `Yêu cầu đặt lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đang chờ duyệt.`,
-          isRead: false,
+          isRead: readNotifIds.includes(notifId) || false,
           createdAt: b.updatedAt || b.createdAt || new Date()
         });
       } else if (b.status === 'CONFIRMED') {
+        const notifId = `confirmed-${b.id}`;
         list.push({
-          id: `confirmed-${b.id}`,
+          id: notifId,
           text: isUserMentor
             ? `Bạn đã duyệt thành công lịch dạy với học viên ${partnerName || 'học viên'} ngày ${dateStr}.`
             : `Lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đã được PHÊ DUYỆT thành công! 🎉`,
-          isRead: true,
+          isRead: readNotifIds.includes(notifId) || true,
           createdAt: b.updatedAt || b.createdAt || new Date()
         });
       } else if (b.status === 'CANCELLED') {
         const reasonText = b.cancelReason ? ` (Lý do: "${b.cancelReason}")` : '';
+        const notifId = `cancelled-${b.id}`;
         list.push({
-          id: `cancelled-${b.id}`,
+          id: notifId,
           text: isUserMentor
             ? `Lịch dạy với học viên ${partnerName || 'học viên'} ngày ${dateStr} đã bị hủy${reasonText}.`
             : `Lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đã bị HỦY${reasonText}. ⚠️`,
-          isRead: true,
+          isRead: readNotifIds.includes(notifId) || true,
           createdAt: b.updatedAt || b.createdAt || new Date()
         });
       }
@@ -255,11 +277,13 @@ const MentorsScreen = ({ navigation }) => {
             availability: { startTime: s.startTime, endTime: s.endTime },
             mentor: { fullName: user?.fullName }
           }));
-        setNotifications(generateBookingNotifications(mentorBookings, true, statsObj));
+        const list = generateBookingNotifications(mentorBookings, true, statsObj);
+        setNotifications(list.map(n => ({ ...n, isRead: readNotifIds.includes(n.id) || n.isRead })));
       } else {
         const res = await client.get('/bookings', { hideToast: true });
         const bookingsList = res.data?.data || [];
-        setNotifications(generateBookingNotifications(bookingsList, false, statsObj));
+        const list = generateBookingNotifications(bookingsList, false, statsObj);
+        setNotifications(list.map(n => ({ ...n, isRead: readNotifIds.includes(n.id) || n.isRead })));
       }
     } catch (err) {
       console.log('Error fetching notifications:', err);
@@ -356,6 +380,7 @@ const MentorsScreen = ({ navigation }) => {
 
   // Fetch initial directory data & notifications & stats
   useEffect(() => {
+    loadReadNotifIds();
     if (isMentor) {
       fetchMySlots();
     } else {
@@ -615,6 +640,36 @@ const MentorsScreen = ({ navigation }) => {
     }
   };
 
+  const handleCompleteBooking = async (bookingId) => {
+    setIsCompleting(true);
+    try {
+      await client.patch(`/bookings/${bookingId}/complete`);
+      
+      setNotifications(prev => [
+        {
+          id: String(Date.now()),
+          text: `Bạn đã đánh dấu HOÀN THÀNH lớp học thành công.`,
+          isRead: false,
+          createdAt: new Date()
+        },
+        ...prev
+      ]);
+
+      setSuccessMessage('Hoàn thành buổi học thành công! Bạn hiện đã có quyền nhận xét học viên.');
+      setShowSlotDetailModal(false);
+      fetchMySlots();
+    } catch (err) {
+      console.error('Complete booking error:', err);
+      if (err.response?.data?.message) {
+        setErrorMessage(err.response.data.message);
+      } else {
+        setErrorMessage('Đánh dấu hoàn thành lịch học thất bại.');
+      }
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   const handleCancelBookingByMentor = async (bookingId) => {
     showCustomConfirm(
       'Hủy lịch học',
@@ -705,6 +760,36 @@ const MentorsScreen = ({ navigation }) => {
     }
   };
 
+  const handleOpenRatingModal = (booking) => {
+    setSelectedBookingForRating(booking);
+    setRatingValue(5);
+    setCommentInput('');
+    setShowRatingModal(true);
+  };
+
+  const handleSubmitRating = async () => {
+    if (!selectedBookingForRating) return;
+    setIsSubmittingRating(true);
+    try {
+      await client.patch(`/bookings/${selectedBookingForRating.id}/rate`, {
+        rating: ratingValue,
+        comment: commentInput.trim(),
+      });
+      setSuccessMessage('Đánh giá buổi học thành công! Cảm ơn ý kiến đóng góp của bạn. ❤️');
+      setShowRatingModal(false);
+      fetchMyBookings();
+    } catch (err) {
+      console.error('Submit rating error:', err);
+      if (err.response?.data?.message) {
+        setErrorMessage(err.response.data.message);
+      } else {
+        setErrorMessage('Không thể gửi đánh giá. Vui lòng thử lại.');
+      }
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  };
+
   const filteredMentors = mentors.filter((m) =>
     m.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.expertise?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -739,6 +824,10 @@ const MentorsScreen = ({ navigation }) => {
             onPress={() => {
               fetchNotifications();
               setShowNotificationsDropdown(!showNotificationsDropdown);
+              if (!showNotificationsDropdown) {
+                const ids = notifications.map(n => n.id);
+                markAllAsRead(ids);
+              }
             }}
             style={{ position: 'relative', marginRight: 14, padding: 4 }}
           >
@@ -831,7 +920,8 @@ const MentorsScreen = ({ navigation }) => {
               </Text>
               <TouchableOpacity 
                 onPress={() => {
-                  setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                  const ids = notifications.map(n => n.id);
+                  markAllAsRead(ids);
                 }}
               >
                 <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 10, color: '#4682b4' }}>
@@ -850,11 +940,10 @@ const MentorsScreen = ({ navigation }) => {
                   <TouchableOpacity 
                     key={n.id}
                     onPress={() => {
+                      setShowNotificationsDropdown(false);
+                      markAsRead(n.id);
                       if (n.id === 'streak-missing') {
-                        setShowNotificationsDropdown(false);
                         handleCheckIn();
-                      } else {
-                        setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, isRead: true } : item));
                       }
                     }}
                     style={{
@@ -1193,10 +1282,12 @@ const MentorsScreen = ({ navigation }) => {
                           borderColor: '#1b263b',
                           backgroundColor: 
                             booking.status === 'CONFIRMED' ? '#a7f3d0' : 
+                            booking.status === 'COMPLETED' ? '#c7d2fe' : 
                             booking.status === 'PENDING' ? '#ffd54f' : '#f8d7da'
                         }}>
                           <Text style={{ fontSize: 10, fontFamily: 'Outfit_900Black', color: '#1b263b' }}>
                             {booking.status === 'CONFIRMED' ? 'ĐÃ DUYỆT' : 
+                             booking.status === 'COMPLETED' ? 'HOÀN THÀNH' : 
                              booking.status === 'PENDING' ? 'CHỜ DUYỆT' : 'ĐÃ HỦY'}
                           </Text>
                         </View>
@@ -1232,6 +1323,39 @@ const MentorsScreen = ({ navigation }) => {
                         </View>
                       )}
 
+                      {/* Rated comment display */}
+                      {booking.rating ? (
+                        <View style={{ backgroundColor: '#fffbeb', borderWidth: 2, borderColor: '#1b263b', borderRadius: 8, padding: 10, marginBottom: 12 }}>
+                          <Text style={{ fontSize: 11, fontFamily: 'Outfit_900Black', color: '#b45309', marginBottom: 4 }}>
+                            ĐÁNH GIÁ CỦA BẠN: {'⭐'.repeat(booking.rating)}
+                          </Text>
+                          {booking.comment ? (
+                            <Text style={{ fontSize: 11, fontFamily: 'Outfit_700Bold', color: '#555' }}>"{booking.comment}"</Text>
+                          ) : null}
+                        </View>
+                      ) : null}
+
+                      {/* If COMPLETED, let student rate/comment */}
+                      {booking.status === 'COMPLETED' && !booking.rating && (
+                        <TouchableOpacity 
+                          onPress={() => handleOpenRatingModal(booking)}
+                          style={{
+                            backgroundColor: '#ffd54f',
+                            borderWidth: 2,
+                            borderColor: '#1b263b',
+                            borderRadius: 10,
+                            paddingVertical: 10,
+                            alignItems: 'center',
+                            marginTop: 4
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontFamily: 'Outfit_900Black', color: '#1b263b' }}>
+                            ĐÁNH GIÁ BUỔI HỌC ⭐
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* If PENDING or CONFIRMED, let them cancel */}
                       {(booking.status === 'PENDING' || booking.status === 'CONFIRMED') && (
                         <TouchableOpacity 
                           onPress={() => handleCancelBooking(booking.id)}
@@ -1613,57 +1737,144 @@ const MentorsScreen = ({ navigation }) => {
                             {isAccepting ? <ActivityIndicator color="#005c42" /> : <Text style={[styles.confirmBtnText, { color: '#005c42' }]}>PHÊ DUYỆT</Text>}
                           </TouchableOpacity>
                           <View style={{ width: 12 }} />
+                          <TouchableOpacity 
+                            onPress={() => handleCancelBookingByMentor(selectedSlotForDetail.booking.id)}
+                            style={[styles.cancelBtn, { flex: 1, backgroundColor: '#f8d7da', borderColor: '#c92a2a' }]}
+                          >
+                            <Text style={[styles.cancelBtnText, { color: '#c92a2a' }]}>HỦY LỊCH HẸN</Text>
+                          </TouchableOpacity>
                         </>
                       )}
-                      
-                      {(selectedSlotForDetail.booking.status === 'PENDING' || selectedSlotForDetail.booking.status === 'CONFIRMED') && (
-                        <TouchableOpacity 
-                          onPress={() => {
-                            if (selectedSlotForDetail.booking.status === 'CONFIRMED') {
-                              setShowCancelReasonForm(true);
-                            } else {
-                              handleCancelBookingByMentor(selectedSlotForDetail.booking.id);
-                            }
-                          }}
-                          style={[styles.cancelBtn, { flex: 1, backgroundColor: '#f8d7da', borderColor: '#c92a2a' }]}
-                        >
-                          <Text style={[styles.cancelBtnText, { color: '#c92a2a' }]}>HỦY LỊCH HẸN</Text>
-                        </TouchableOpacity>
+
+                      {selectedSlotForDetail.booking.status === 'CONFIRMED' && (
+                        <>
+                          <TouchableOpacity 
+                            onPress={() => handleCompleteBooking(selectedSlotForDetail.booking.id)}
+                            disabled={isCompleting}
+                            style={[styles.confirmBtn, { flex: 1, backgroundColor: '#a7f3d0' }]}
+                          >
+                            {isCompleting ? <ActivityIndicator color="#005c42" /> : <Text style={[styles.confirmBtnText, { color: '#005c42' }]}>HOÀN THÀNH</Text>}
+                          </TouchableOpacity>
+                          <View style={{ width: 12 }} />
+                          <TouchableOpacity 
+                            onPress={() => setShowCancelReasonForm(true)}
+                            style={[styles.cancelBtn, { flex: 1, backgroundColor: '#f8d7da', borderColor: '#c92a2a' }]}
+                          >
+                            <Text style={[styles.cancelBtnText, { color: '#c92a2a' }]}>HỦY LỊCH HẸN</Text>
+                          </TouchableOpacity>
+                        </>
                       )}
                     </View>
                   )}
 
                   {/* Mentor notes */}
-                  <Text style={styles.inputLabel}>NHẬN XÉT CỦA BẠN (MENTOR NOTES)</Text>
-                  <TextInput
-                    multiline
-                    numberOfLines={4}
-                    value={mentorNotesEdit}
-                    onChangeText={setMentorNotesEdit}
-                    placeholder="Nhập nhận xét hoặc feedback sau buổi học..."
-                    placeholderTextColor="#999"
-                    style={[styles.textArea, { marginBottom: 24 }]}
-                  />
+                  {selectedSlotForDetail.booking.status === 'COMPLETED' ? (
+                    <>
+                      <Text style={styles.inputLabel}>NHẬN XÉT CỦA BẠN (MENTOR NOTES)</Text>
+                      <TextInput
+                        multiline
+                        numberOfLines={4}
+                        value={mentorNotesEdit}
+                        onChangeText={setMentorNotesEdit}
+                        placeholder="Nhập nhận xét hoặc feedback sau buổi học..."
+                        placeholderTextColor="#999"
+                        style={[styles.textArea, { marginBottom: 24 }]}
+                      />
 
-                  <View style={styles.modalActions}>
-                    <TouchableOpacity onPress={() => setShowSlotDetailModal(false)} style={styles.cancelBtn}>
-                      <Text style={styles.cancelBtnText}>ĐÓNG</Text>
-                    </TouchableOpacity>
-                    <View style={{ width: 12 }} />
-                    <TouchableOpacity 
-                      onPress={handleSaveMentorNotes} 
-                      disabled={isSavingNotes} 
-                      style={[styles.confirmBtn, { backgroundColor: '#005c42' }]}
-                    >
-                      {isSavingNotes ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmBtnText}>LƯU NHẬN XÉT</Text>}
-                    </TouchableOpacity>
-                  </View>
+                      <View style={styles.modalActions}>
+                        <TouchableOpacity onPress={() => setShowSlotDetailModal(false)} style={styles.cancelBtn}>
+                          <Text style={styles.cancelBtnText}>ĐÓNG</Text>
+                        </TouchableOpacity>
+                        <View style={{ width: 12 }} />
+                        <TouchableOpacity 
+                          onPress={handleSaveMentorNotes} 
+                          disabled={isSavingNotes} 
+                          style={[styles.confirmBtn, { backgroundColor: '#005c42' }]}
+                        >
+                          {isSavingNotes ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmBtnText}>LƯU NHẬN XÉT</Text>}
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <View style={{ backgroundColor: '#f3f4f6', borderWidth: 2, borderColor: '#d1d5db', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+                        <Text style={{ fontSize: 12, fontFamily: 'Outfit_700Bold', color: '#666', textAlign: 'center' }}>
+                          🔒 Nhận xét học viên chỉ khả dụng sau khi gia sư bấm HOÀN THÀNH lịch học.
+                        </Text>
+                      </View>
+                      <View style={styles.modalActions}>
+                        <TouchableOpacity onPress={() => setShowSlotDetailModal(false)} style={[styles.cancelBtn, { flex: 1 }]}>
+                          <Text style={styles.cancelBtnText}>ĐÓNG</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
                 </ScrollView>
               )}
             </View>
           </View>
         </Modal>
       )}
+
+      {/* STUDENT RATING & COMMENT MODAL */}
+      <Modal visible={showRatingModal} transparent={true} animationType="slide" onRequestClose={() => setShowRatingModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Đánh Giá Buổi Học</Text>
+              <TouchableOpacity onPress={() => setShowRatingModal(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={24} color="#1b263b" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#666', marginBottom: 16, textAlign: 'center' }}>
+                Vui lòng đánh giá chất lượng buổi học và đóng góp ý kiến để gia sư hoàn thiện hơn nhé!
+              </Text>
+
+              {/* Star rating selection */}
+              <Text style={styles.inputLabel}>ĐÁNH GIÁ (SAO)</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 24 }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity key={star} onPress={() => setRatingValue(star)} style={{ marginHorizontal: 8 }}>
+                    <Ionicons 
+                      name={star <= ratingValue ? "star" : "star-outline"} 
+                      size={36} 
+                      color="#f59e0b" 
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Comment text area */}
+              <Text style={styles.inputLabel}>NHẬN XÉT CỦA BẠN (Ý KIẾN ĐÓNG GÓP)</Text>
+              <TextInput
+                multiline
+                numberOfLines={4}
+                value={commentInput}
+                onChangeText={setCommentInput}
+                placeholder="Nhập nhận xét hoặc cảm nghĩ về buổi học..."
+                placeholderTextColor="#999"
+                style={[styles.textArea, { marginBottom: 24 }]}
+              />
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity onPress={() => setShowRatingModal(false)} style={styles.cancelBtn}>
+                  <Text style={styles.cancelBtnText}>ĐÓNG</Text>
+                </TouchableOpacity>
+                <View style={{ width: 12 }} />
+                <TouchableOpacity 
+                  onPress={handleSubmitRating} 
+                  disabled={isSubmittingRating} 
+                  style={[styles.confirmBtn, { backgroundColor: '#ffd54f' }]}
+                >
+                  {isSubmittingRating ? <ActivityIndicator color="#1b263b" /> : <Text style={[styles.confirmBtnText, { color: '#1b263b' }]}>GỬI ĐÁNH GIÁ</Text>}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Error Message Modal */}
       <Modal visible={!!errorMessage} transparent animationType="fade" onRequestClose={() => setErrorMessage('')}>
