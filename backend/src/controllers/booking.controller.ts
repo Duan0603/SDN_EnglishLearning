@@ -74,6 +74,9 @@ export class BookingController {
         return next(new ApiError('mentorNotes is required.', 400));
       }
 
+      const validId = (typeof id === 'string' && id.length === 24) ? id : null;
+      if (!validId) return next(new ApiError('Invalid booking ID format.', 400));
+      
       const booking = await BookingService.updateMentorNotes(mentorId, id, mentorNotes);
 
       res.status(200).json({
@@ -100,6 +103,9 @@ export class BookingController {
       }
 
       const { cancelReason } = req.body;
+      const validId = (typeof id === 'string' && id.length === 24) ? id : null;
+      if (!validId) return next(new ApiError('Invalid booking ID format.', 400));
+      
       const booking = await BookingService.cancelBooking(userId, role, id, cancelReason);
 
       res.status(200).json({
@@ -124,6 +130,9 @@ export class BookingController {
         return next(new ApiError('Unauthorized', 401));
       }
 
+      const validId = (typeof id === 'string' && id.length === 24) ? id : null;
+      if (!validId) return next(new ApiError('Invalid booking ID format.', 400));
+      
       const booking = await BookingService.acceptBooking(mentorId, id);
 
       res.status(200).json({
@@ -152,6 +161,9 @@ export class BookingController {
         return next(new ApiError('rating is required.', 400));
       }
 
+      const validId = (typeof id === 'string' && id.length === 24) ? id : null;
+      if (!validId) return next(new ApiError('Invalid booking ID format.', 400));
+      
       const booking = await BookingService.rateBooking(studentId, id, Number(rating), comment || '');
 
       res.status(200).json({
@@ -176,6 +188,9 @@ export class BookingController {
         return next(new ApiError('Unauthorized', 401));
       }
 
+      const validId = (typeof id === 'string' && id.length === 24) ? id : null;
+      if (!validId) return next(new ApiError('Invalid booking ID format.', 400));
+      
       const booking = await BookingService.completeBooking(mentorId, id);
 
       res.status(200).json({

@@ -173,13 +173,50 @@ export class ExamController {
         return next(new ApiError('prompt is required.', 400));
       }
 
-      const result = await ExamService.evaluateWriting(userId, testId, prompt, essayText);
+      const validTestId = (typeof testId === 'string' && testId.length === 24) ? testId : null;
+
+      const result = await ExamService.evaluateWriting(userId, validTestId, prompt, essayText);
       res.status(200).json({
         success: true,
         data: result,
       });
     } catch (error: any) {
+      console.error('Evaluate writing error:', error);
       next(new ApiError(error.message || 'Failed to evaluate writing.', 400));
+    }
+  }
+
+  /**
+   * POST /api/v1/exams/evaluate-speaking
+   * Evaluate a student's speaking response.
+   */
+  static async evaluateSpeaking(req: any, res: Response, next: NextFunction) {
+    try {
+      const { testId, prompt, audioBase64, durationSeconds } = req.body;
+      const userId = req.user?.userId || req.user?.id || req.user?._id;
+
+      if (!userId) {
+        return next(new ApiError('Unauthorized', 401));
+      }
+
+      if (!audioBase64) {
+        return next(new ApiError('audioBase64 is required.', 400));
+      }
+
+      if (!prompt) {
+        return next(new ApiError('prompt is required.', 400));
+      }
+
+      const validTestId = (typeof testId === 'string' && testId.length === 24) ? testId : null;
+
+      const result = await ExamService.evaluateSpeaking(userId, validTestId, prompt, audioBase64, durationSeconds || 0);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      console.error('Evaluate speaking error:', error);
+      next(new ApiError(error.message || 'Failed to evaluate speaking.', 400));
     }
   }
 }

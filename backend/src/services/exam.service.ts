@@ -1,6 +1,10 @@
 import { prisma } from '../config/prisma.config';
 import { TestType } from '@prisma/client';
 import { GeminiService } from './gemini.service';
+import { STTService } from './stt.service';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 export class ExamService {
   /**
@@ -360,6 +364,46 @@ export class ExamService {
     });
 
     return submission;
+  }
+
+  /**
+   * Evaluates a student's speaking response with STT and Gemini AI.
+   */
+  static async evaluateSpeaking(userId: string, testId: string | null, prompt: string, audioBase64: string, durationSeconds: number) {
+    // 1. Write base64 to temp file
+    const tempFilePath = path.join(os.tmpdir(), `speaking-${Date.now()}.m4a`);
+    try {
+      fs.writeFileSync(tempFilePath, Buffer.from(audioBase64, 'base64'));
+
+      // 2. Transcribe audio using STTService
+      const transcription = await STTService.transcribeAudio(tempFilePath);
+
+      // 3. Evaluate transcription using GeminiService
+      const evaluation = await GeminiService.scoreSpeaking(transcription, prompt);
+
+      // 4. Save submission to database
+      const submission = await prisma.speakingSubmission.create({
+        data: {
+          userId,
+          testId: testId || null,
+          prompt,
+          audioUrl: "local/temp/path", // In production, upload to S3/Cloudinary and save the URL
+          transcription,
+          bandScore: evaluation.bandScore,
+          fluencyCoherence: evaluation.fluencyCoherence,
+          lexicalResource: evaluation.lexicalResource,
+          grammarAccuracy: evaluation.grammarAccuracy,
+          pronunciation: evaluation.pronunciation,
+          aiFeedback: evaluation.aiFeedback,
+        }
+      });
+
+      return submission;
+    } finally {
+      if (fs.existsSync(tempFilePath)) {
+        fs.unlinkSync(tempFilePath);
+      }
+    }
   }
 }
 
