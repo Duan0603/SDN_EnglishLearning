@@ -16,6 +16,7 @@ export const createApp = (): Application => {
 
   // Serve static images folder
   app.use('/images', express.static(path.join(__dirname, '../public/images')));
+  app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
   // Security middlewares
   app.use(helmet());
