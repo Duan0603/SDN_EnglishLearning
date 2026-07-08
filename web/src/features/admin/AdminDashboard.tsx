@@ -90,6 +90,7 @@ export default function AdminDashboard() {
   const [editTargetId, setEditTargetId] = useState<string | null>(null)
   const [showUserDetailModal, setShowUserDetailModal] = useState(false)
   const [selectedUserDetail, setSelectedUserDetail] = useState<User | null>(null)
+  const [userDetailTab, setUserDetailTab] = useState<'submissions' | 'bookings'>('submissions')
   const [editUserForm, setEditUserForm] = useState<{
     fullName: string
     username: string
@@ -135,6 +136,27 @@ export default function AdminDashboard() {
   const [showSubmissionModal, setShowSubmissionModal] = useState(false)
   const [submissionFilterType, setSubmissionFilterType] = useState<'ALL' | 'Reading' | 'Listening' | 'Writing' | 'Speaking'>('ALL')
 
+  const selectedUserSubmissions = useMemo(() => {
+    if (!selectedUserDetail) return []
+    return submissionsList.filter(sub => 
+      sub.userId === selectedUserDetail.id || 
+      (sub.student && (sub.student.id === selectedUserDetail.id || sub.student.username === selectedUserDetail.username || sub.student.email === selectedUserDetail.email))
+    )
+  }, [selectedUserDetail, submissionsList])
+
+  const selectedUserBookings = useMemo(() => {
+    if (!selectedUserDetail) return []
+    const isMentor = selectedUserDetail.role === 'MENTOR'
+    const nameToMatch = selectedUserDetail.fullName?.toLowerCase()
+    return bookingsList.filter(bk => {
+      if (isMentor) {
+        return bk.mentorName?.toLowerCase().includes(nameToMatch)
+      } else {
+        return bk.studentName?.toLowerCase().includes(nameToMatch)
+      }
+    })
+  }, [selectedUserDetail, bookingsList])
+
   // ────────────────────────────────────────────────────────
   // AUTH GUARD
   // ────────────────────────────────────────────────────────
@@ -171,10 +193,17 @@ export default function AdminDashboard() {
     }
   }
 
+  // Load initial data on mount for stats cards & detail views
   useEffect(() => {
-    if (activeTab === 'users') {
-      fetchUsers()
-    }
+    fetchUsers()
+    fetchSubmissions()
+    fetchExams()
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'users') fetchUsers()
+    if (activeTab === 'submissions') fetchSubmissions()
+    if (activeTab === 'exams') fetchExams()
   }, [activeTab])
 
   const fetchSubmissions = async () => {
@@ -274,11 +303,6 @@ export default function AdminDashboard() {
     }
   }
 
-  useEffect(() => {
-    if (activeTab === 'submissions') {
-      fetchSubmissions()
-    }
-  }, [activeTab])
 
   const fetchExams = async () => {
     try {
@@ -304,11 +328,6 @@ export default function AdminDashboard() {
     }
   }
 
-  useEffect(() => {
-    if (activeTab === 'exams') {
-      fetchExams()
-    }
-  }, [activeTab])
 
   // ────────────────────────────────────────────────────────
   // HANDLERS: User CRUD
@@ -1820,17 +1839,20 @@ export default function AdminDashboard() {
       {/* User Detail Modal */}
       {showUserDetailModal && selectedUserDetail && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-[#fcfbf7] border-4 border-[#1b263b] rounded-2xl max-w-xl w-full p-6 shadow-[6px_6px_0px_0px_#1b263b] space-y-6 relative">
+          <div className="bg-[#fcfbf7] border-4 border-[#1b263b] rounded-2xl max-w-4xl w-full p-6 shadow-[6px_6px_0px_0px_#1b263b] space-y-6 relative max-h-[90vh] overflow-y-auto">
             
             {/* Spiral binding representation */}
             <div className="absolute top-0 left-0 right-0 h-3 bg-[#ffd54f] border-b-2 border-[#1b263b] rounded-t-lg flex justify-around px-4 pointer-events-none">
-              {[...Array(10)].map((_, i) => (
+              {[...Array(16)].map((_, i) => (
                 <div key={i} className="w-1.5 h-4 bg-[#1b263b] rounded-t-full transform -translate-y-1.5 border border-white/20" />
               ))}
             </div>
 
             <div className="flex justify-between items-center border-b-2 border-[#1b263b] pb-4 pt-3">
-              <h3 className="text-base font-serif font-black text-[#1b263b]">Thông Tin Chi Tiết Thành Viên</h3>
+              <div>
+                <h3 className="text-lg font-serif font-black text-[#1b263b]">Thông Tin Chi Tiết Thành Viên</h3>
+                <p className="text-xs text-[#1b263b]/60 font-semibold mt-0.5">@{selectedUserDetail.username}</p>
+              </div>
               <button 
                 onClick={() => setShowUserDetailModal(false)} 
                 className="w-8 h-8 rounded-xl bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all flex items-center justify-center"
@@ -1839,50 +1861,186 @@ export default function AdminDashboard() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-xs font-bold text-[#1b263b]">
-              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
-                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Họ và Tên</span>
-                <span className="text-xs font-extrabold text-[#1b263b]">{selectedUserDetail.fullName}</span>
+            {/* Split layout: Profile (1/3) & Activity lists (2/3) */}
+            <div className="flex flex-col lg:flex-row gap-6">
+              
+              {/* Profile card sidebar */}
+              <div className="w-full lg:w-1/3 space-y-4">
+                <div className="bg-white border-2 border-[#1b263b] p-4 rounded-xl shadow-[3px_3px_0px_0px_#1b263b] space-y-3">
+                  <div className="border-b border-[#1b263b]/10 pb-2">
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Họ và Tên</span>
+                    <span className="text-xs font-extrabold text-[#1b263b]">{selectedUserDetail.fullName}</span>
+                  </div>
+                  <div className="border-b border-[#1b263b]/10 pb-2">
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Địa chỉ Email</span>
+                    <span className="text-xs font-semibold text-[#1b263b] font-mono break-all">{selectedUserDetail.email}</span>
+                  </div>
+                  <div className="border-b border-[#1b263b]/10 pb-2">
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Số điện thoại</span>
+                    <span className="text-xs font-semibold text-[#1b263b]">{selectedUserDetail.phone || 'Chưa cung cấp'}</span>
+                  </div>
+                  <div className="border-b border-[#1b263b]/10 pb-2">
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Ngày sinh</span>
+                    <span className="text-xs font-semibold text-[#1b263b]">{selectedUserDetail.birthday || 'Chưa cung cấp'}</span>
+                  </div>
+                  <div className="border-b border-[#1b263b]/10 pb-2">
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Số CCCD / Passport</span>
+                    <span className="text-xs font-semibold text-[#1b263b]">{selectedUserDetail.identityNumber || 'Chưa cung cấp'}</span>
+                  </div>
+                  <div className="border-b border-[#1b263b]/10 pb-2">
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Vai trò hệ thống</span>
+                    <span className={`inline-block px-2.5 py-0.5 mt-0.5 rounded-full text-[9px] font-black tracking-wider border-2 border-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b] ${
+                      selectedUserDetail.role === 'ADMIN' ? 'bg-[#ffd54f] text-[#1b263b]' :
+                      selectedUserDetail.role === 'MENTOR' ? 'bg-[#fbcfe8] text-[#9d174d]' : 'bg-[#a7f3d0] text-[#005c42]'
+                    }`}>{selectedUserDetail.role}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Trạng thái</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 mt-0.5 rounded-full text-[9px] font-black border-2 border-[#1b263b]/40 ${
+                      selectedUserDetail.status === 'active' ? 'bg-[#a7f3d0] text-[#005c42]' :
+                      selectedUserDetail.status === 'pending' ? 'bg-yellow-500/10 text-yellow-700 animate-pulse' : 'bg-[#fbcfe8] text-[#9d174d]'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        selectedUserDetail.status === 'active' ? 'bg-[#005c42]' :
+                        selectedUserDetail.status === 'pending' ? 'bg-yellow-600' : 'bg-[#9d174d]'
+                      }`} />
+                      {selectedUserDetail.status === 'active' ? 'Hoạt động' : selectedUserDetail.status === 'pending' ? 'Chờ duyệt' : 'Đình chỉ'}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
-                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Tên tài khoản</span>
-                <span className="text-xs font-extrabold text-[#1b263b]">@{selectedUserDetail.username}</span>
-              </div>
-              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] col-span-2">
-                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Địa chỉ Email</span>
-                <span className="text-xs font-extrabold text-[#1b263b] font-mono">{selectedUserDetail.email}</span>
-              </div>
-              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
-                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Số điện thoại</span>
-                <span className="text-xs font-mono text-[#1b263b]">{selectedUserDetail.phone || 'Chưa cung cấp'}</span>
-              </div>
-              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
-                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Ngày sinh</span>
-                <span className="text-xs font-mono text-[#1b263b]">{selectedUserDetail.birthday || 'Chưa cung cấp'}</span>
-              </div>
-              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
-                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Số CCCD / Passport</span>
-                <span className="text-xs font-mono text-[#1b263b]">{selectedUserDetail.identityNumber || 'Chưa cung cấp'}</span>
-              </div>
-              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
-                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Vai trò hệ thống</span>
-                <span className={`inline-block px-2.5 py-0.5 mt-0.5 rounded-full text-[9px] font-black tracking-wider border-2 border-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b] ${
-                  selectedUserDetail.role === 'ADMIN' ? 'bg-[#ffd54f] text-[#1b263b]' :
-                  selectedUserDetail.role === 'MENTOR' ? 'bg-[#fbcfe8] text-[#9d174d]' : 'bg-[#a7f3d0] text-[#005c42]'
-                }`}>{selectedUserDetail.role}</span>
-              </div>
-              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] col-span-2">
-                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Trạng thái tài khoản</span>
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 mt-0.5 rounded-full text-[9px] font-black border-2 border-[#1b263b]/40 ${
-                  selectedUserDetail.status === 'active' ? 'bg-[#a7f3d0] text-[#005c42]' :
-                  selectedUserDetail.status === 'pending' ? 'bg-yellow-500/10 text-yellow-700 animate-pulse' : 'bg-[#fbcfe8] text-[#9d174d]'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    selectedUserDetail.status === 'active' ? 'bg-[#005c42]' :
-                    selectedUserDetail.status === 'pending' ? 'bg-yellow-600' : 'bg-[#9d174d]'
-                  }`} />
-                  {selectedUserDetail.status === 'active' ? 'Hoạt động' : selectedUserDetail.status === 'pending' ? 'Chờ duyệt' : 'Đình chỉ'}
-                </span>
+
+              {/* Activity / Relational Details Main Pane */}
+              <div className="w-full lg:w-2/3 space-y-4">
+                
+                {/* Tab Switcher */}
+                <div className="bg-white p-1 rounded-xl border-2 border-[#1b263b] flex gap-1 shadow-[2px_2px_0px_0px_#1b263b] w-fit">
+                  <button
+                    onClick={() => setUserDetailTab('submissions')}
+                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition-all whitespace-nowrap ${
+                      userDetailTab === 'submissions'
+                        ? 'bg-[#ffd54f] border border-[#1b263b] text-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b]' 
+                        : 'text-[#1b263b]/70 hover:bg-[#f5f3dc]'
+                    }`}
+                  >
+                    Kết quả thi & Làm bài ({selectedUserSubmissions.length})
+                  </button>
+                  <button
+                    onClick={() => setUserDetailTab('bookings')}
+                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition-all whitespace-nowrap ${
+                      userDetailTab === 'bookings'
+                        ? 'bg-[#ffd54f] border border-[#1b263b] text-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b]' 
+                        : 'text-[#1b263b]/70 hover:bg-[#f5f3dc]'
+                    }`}
+                  >
+                    Lịch học Mentor ({selectedUserBookings.length})
+                  </button>
+                </div>
+
+                {/* Submissions List Tab Content */}
+                {userDetailTab === 'submissions' && (
+                  <div className="bg-white border-2 border-[#1b263b] rounded-xl p-4 shadow-[3px_3px_0px_0px_#1b263b] min-h-[300px]">
+                    <h4 className="text-[10px] font-black text-[#1b263b] uppercase tracking-wider mb-3">Lịch sử nộp bài luyện tập</h4>
+                    
+                    {selectedUserSubmissions.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <span className="text-2xl mb-1">📝</span>
+                        <p className="text-xs text-[#1b263b]/60 font-bold italic">Chưa có kết quả làm bài nào được ghi nhận cho học viên này.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto border-2 border-[#1b263b] rounded-xl">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-[#f5f3dc] border-b-2 border-[#1b263b] font-black text-[#1b263b]">
+                              <th className="p-3">Đề thi / Bài tập</th>
+                              <th className="p-3">Kỹ năng</th>
+                              <th className="p-3">Điểm số</th>
+                              <th className="p-3">Ngày nộp</th>
+                              <th className="p-3 text-right">Chi tiết</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedUserSubmissions.map((sub) => (
+                              <tr key={sub.id} className="border-b border-[#1b263b]/10 hover:bg-[#f5f3dc]/20 transition-colors font-semibold text-[#1b263b]">
+                                <td className="p-3 max-w-[200px] truncate" title={sub.test?.title || 'Bài tập tự do'}>
+                                  {sub.test?.title || 'Bài tập tự do'}
+                                </td>
+                                <td className="p-3">
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider border border-[#1b263b] ${
+                                    sub.type === 'Reading' ? 'bg-blue-100 text-blue-800' :
+                                    sub.type === 'Listening' ? 'bg-green-100 text-green-800' :
+                                    sub.type === 'Writing' ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'
+                                  }`}>{sub.type}</span>
+                                </td>
+                                <td className="p-3 font-black text-[#c92a2a]">
+                                  Band {sub.bandScore}
+                                </td>
+                                <td className="p-3 font-mono text-[10px]">
+                                  {new Date(sub.createdAt).toLocaleDateString('vi-VN')}
+                                </td>
+                                <td className="p-3 text-right">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSubmission(sub)
+                                      setShowSubmissionModal(true)
+                                    }}
+                                    className="bg-[#ffd54f] hover:bg-amber-400 border border-[#1b263b] text-[#1b263b] px-2 py-1 rounded text-[9px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
+                                  >
+                                    Xem bài
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Bookings List Tab Content */}
+                {userDetailTab === 'bookings' && (
+                  <div className="bg-white border-2 border-[#1b263b] rounded-xl p-4 shadow-[3px_3px_0px_0px_#1b263b] min-h-[300px]">
+                    <h4 className="text-[10px] font-black text-[#1b263b] uppercase tracking-wider mb-3">Lịch hẹn Mentor (Đặt chỗ học tập)</h4>
+                    
+                    {selectedUserBookings.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <span className="text-2xl mb-1">📅</span>
+                        <p className="text-xs text-[#1b263b]/60 font-bold italic">Chưa có lịch hẹn Mentor nào được đăng ký.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto border-2 border-[#1b263b] rounded-xl">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-[#f5f3dc] border-b-2 border-[#1b263b] font-black text-[#1b263b]">
+                              <th className="p-3">Mã lịch</th>
+                              <th className="p-3">Học viên</th>
+                              <th className="p-3">Mentor</th>
+                              <th className="p-3">Thời gian</th>
+                              <th className="p-3">Trạng thái</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedUserBookings.map((bk) => (
+                              <tr key={bk.id} className="border-b border-[#1b263b]/10 hover:bg-[#f5f3dc]/20 transition-colors font-semibold text-[#1b263b]">
+                                <td className="p-3 font-mono text-[10px]">{bk.id}</td>
+                                <td className="p-3">{bk.studentName}</td>
+                                <td className="p-3">{bk.mentorName}</td>
+                                <td className="p-3 font-mono text-[10px]">{bk.dateTime}</td>
+                                <td className="p-3">
+                                  <span className={`px-2 py-0.5 rounded border text-[9px] font-black ${
+                                    bk.status === 'Confirmed' ? 'bg-emerald-100 border-emerald-400 text-emerald-800' :
+                                    bk.status === 'Pending' ? 'bg-amber-100 border-amber-400 text-amber-800' : 'bg-gray-100 border-gray-400 text-gray-800'
+                                  }`}>{bk.status === 'Confirmed' ? 'Đã xác nhận' : bk.status === 'Pending' ? 'Chờ duyệt' : bk.status}</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
