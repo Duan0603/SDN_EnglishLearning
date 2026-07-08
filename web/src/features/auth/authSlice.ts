@@ -18,10 +18,34 @@ interface AuthState {
   error: string | null
 }
 
+const getInitialAuth = () => {
+  const token = localStorage.getItem('auth_token')
+  const userStr = localStorage.getItem('auth_user')
+  if (token && userStr) {
+    try {
+      return {
+        token,
+        user: JSON.parse(userStr),
+        isAuthenticated: true,
+      }
+    } catch (e) {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('auth_user')
+    }
+  }
+  return {
+    token: null,
+    user: null,
+    isAuthenticated: false,
+  }
+}
+
+const initialAuth = getInitialAuth()
+
 const initialState: AuthState = {
-  user: null,
-  token: null,
-  isAuthenticated: false,
+  user: initialAuth.user,
+  token: initialAuth.token,
+  isAuthenticated: initialAuth.isAuthenticated,
   loading: false,
   error: null,
 }
