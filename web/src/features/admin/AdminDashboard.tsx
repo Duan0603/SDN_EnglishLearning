@@ -192,7 +192,7 @@ export default function AdminDashboard() {
         { id: '6', fullName: 'Le Thi Hoa', username: 'thihoa', email: 'hoalt@gmail.com', role: 'STUDENT', status: 'active', birthday: '18/12/2000', phone: '0966554433', identityNumber: '001202002222' },
         { id: '7', fullName: 'Sarah Nguyen', username: 'sarah', email: 'sarah@mentor.com', role: 'MENTOR', status: 'active', birthday: '22/07/1992', phone: '0933221100', identityNumber: '001202003333' },
         { id: '8', fullName: 'Pham Minh Hoang', username: 'hoangpm', email: 'hoangpm@gmail.com', role: 'STUDENT', status: 'active', birthday: '30/04/1999', phone: '0911223344', identityNumber: '001202004444' },
-        { id: '9', fullName: 'Vu Hoang Lam', username: 'lamvh', email: 'lamvh@gmail.com', role: 'STUDENT', status: 'inactive', birthday: '14/02/2003', phone: '0988776655', identityNumber: '001202005555' },
+        { id: '9', fullName: 'Vu Hoang Lam', username: 'lamvh', email: 'lamvh@gmail.com', role: 'STUDENT', status: 'active', birthday: '14/02/2003', phone: '0988776655', identityNumber: '001202005555' },
         { id: '10', fullName: 'David Lee', username: 'davidlee', email: 'david@mentor.com', role: 'MENTOR', status: 'pending', birthday: '10/11/1993', phone: '0922334455', identityNumber: '001202006666' }
       ])
       setUsersError('Đang dùng dữ liệu mô phỏng. Kết nối backend để tải danh sách thực tế.')
@@ -462,20 +462,6 @@ export default function AdminDashboard() {
     } catch (err) {
       setUsersList((prev) => prev.filter((u) => u.id !== item.id))
       alert('Đã xóa (mô phỏng cục bộ)')
-    }
-  }
-
-  const handleToggleStatus = async (item: User) => {
-    const nextStatus = item.status === 'active' ? 'inactive' : 'active'
-    try {
-      await apiClient.patch(`/admin/users/${item.id}/status`, { status: nextStatus })
-      setUsersList((prev) =>
-        prev.map((u) => (u.id === item.id ? { ...u, status: nextStatus } : u))
-      )
-    } catch (err) {
-      setUsersList((prev) =>
-        prev.map((u) => (u.id === item.id ? { ...u, status: nextStatus } : u))
-      )
     }
   }
 
@@ -1196,21 +1182,17 @@ export default function AdminDashboard() {
                                 className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black border-2 border-[#1b263b]/40 ${
                                   item.status === 'active'
                                     ? 'bg-[#a7f3d0] text-[#005c42]'
-                                    : item.status === 'pending'
-                                    ? 'bg-yellow-500/10 text-yellow-700 animate-pulse'
-                                    : 'bg-[#fbcfe8] text-[#9d174d]'
+                                    : 'bg-yellow-500/10 text-yellow-700 animate-pulse'
                                 }`}
                               >
                                 <span
                                   className={`w-1.5 h-1.5 rounded-full ${
                                     item.status === 'active'
                                       ? 'bg-[#005c42]'
-                                      : item.status === 'pending'
-                                      ? 'bg-yellow-600'
-                                      : 'bg-[#9d174d]'
+                                      : 'bg-yellow-600'
                                   }`}
                                 />
-                                {item.status === 'active' ? 'Hoạt động' : item.status === 'pending' ? 'Chờ duyệt' : 'Đình chỉ'}
+                                {item.status === 'active' ? 'Hoạt động' : 'Chờ duyệt'}
                               </span>
                             </td>
                             <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
@@ -1233,16 +1215,6 @@ export default function AdminDashboard() {
                               )}
                               {item.role !== 'ADMIN' && (
                                 <>
-                                  <button
-                                    onClick={() => handleToggleStatus(item)}
-                                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all border-2 border-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b] ${
-                                      item.status === 'active'
-                                        ? 'bg-[#fbcfe8] text-[#9d174d] hover:bg-rose-200'
-                                        : 'bg-[#a7f3d0] text-[#005c42] hover:bg-emerald-200'
-                                    }`}
-                                  >
-                                    {item.status === 'active' ? 'Đình chỉ' : 'Kích hoạt'}
-                                  </button>
                                   <button
                                     onClick={() => openEditModal(item)}
                                     className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] px-2.5 py-1.5 rounded-lg text-[10px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
@@ -1956,14 +1928,12 @@ export default function AdminDashboard() {
                   <div>
                     <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Trạng thái</span>
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 mt-0.5 rounded-full text-[9px] font-black border-2 border-[#1b263b]/40 ${
-                      selectedUserDetail.status === 'active' ? 'bg-[#a7f3d0] text-[#005c42]' :
-                      selectedUserDetail.status === 'pending' ? 'bg-yellow-500/10 text-yellow-700 animate-pulse' : 'bg-[#fbcfe8] text-[#9d174d]'
+                      selectedUserDetail.status === 'active' ? 'bg-[#a7f3d0] text-[#005c42]' : 'bg-yellow-500/10 text-yellow-700 animate-pulse'
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${
-                        selectedUserDetail.status === 'active' ? 'bg-[#005c42]' :
-                        selectedUserDetail.status === 'pending' ? 'bg-yellow-600' : 'bg-[#9d174d]'
+                        selectedUserDetail.status === 'active' ? 'bg-[#005c42]' : 'bg-yellow-600'
                       }`} />
-                      {selectedUserDetail.status === 'active' ? 'Hoạt động' : selectedUserDetail.status === 'pending' ? 'Chờ duyệt' : 'Đình chỉ'}
+                      {selectedUserDetail.status === 'active' ? 'Hoạt động' : 'Chờ duyệt'}
                     </span>
                   </div>
                 </div>
