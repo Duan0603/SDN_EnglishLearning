@@ -236,3 +236,33 @@ export const checkInUser = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * MOCK ENDPOINT FOR TESTING STREAK
+ * POST /api/v1/users/me/test-streak
+ * Body: { lastCheckIn: Date string or null, checkInStreak: number }
+ */
+export const updateTestStreak = async (req: any, res: any, next: any) => {
+  try {
+    const userId = req.user?.userId || req.user?.id || req.headers['x-client-id'] as string;
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { lastCheckIn, checkInStreak } = req.body;
+    
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        lastCheckIn: lastCheckIn ? new Date(lastCheckIn) : null,
+        currentStreak: checkInStreak || 0
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Test streak updated successfully!',
+      data: { lastCheckIn, checkInStreak }
+    });
+  } catch (err) {
+    next(err);
+  }
+};

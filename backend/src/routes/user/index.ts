@@ -28,3 +28,7 @@ userRouter.post('/change-password', asyncHandler(PasswordController.changePasswo
 userRouter.get('/me/results', asyncHandler(getUserResults))
 userRouter.get('/me/stats',   asyncHandler(getUserStats))
 userRouter.post('/me/checkin', asyncHandler(checkInUser))
+userRouter.post('/me/test-streak', asyncHandler(async (req, res, next) => {
+    const { updateTestStreak } = require("../../controllers/user.controller");
+    await updateTestStreak(req, res, next);
+}))

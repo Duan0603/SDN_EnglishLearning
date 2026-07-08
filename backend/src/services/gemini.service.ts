@@ -28,7 +28,7 @@ Please evaluate the student's response strictly on the following 4 IELTS speakin
 3. Grammatical Range and Accuracy (0.0 - 9.0)
 4. Pronunciation (0.0 - 9.0) - Estimate based on typical errors matching the grammar/lexical level.
 
-You must return the result STRICTLY as a valid JSON object without any markdown wrapping (no \`\`\`json) matching this exact schema:
+You must return the result STRICTLY as a valid JSON object without any markdown wrapping (no \`\`\`json) matching this exact schema, AND ALL FEEDBACK TEXT MUST BE IN VIETNAMESE (TẤT CẢ PHẢN HỒI BẰNG TIẾNG VIỆT):
 {
   "fluencyCoherence": number,
   "lexicalResource": number,
@@ -89,7 +89,7 @@ Please evaluate the student's response strictly on the following 4 IELTS writing
 3. Lexical Resource (0.0 - 9.0)
 4. Grammatical Range and Accuracy (0.0 - 9.0)
 
-You must return the result STRICTLY as a valid JSON object without any markdown wrapping (no \`\`\`json) matching this exact schema:
+You must return the result STRICTLY as a valid JSON object without any markdown wrapping (no \`\`\`json) matching this exact schema, AND ALL FEEDBACK TEXT MUST BE IN VIETNAMESE (TẤT CẢ PHẢN HỒI BẰNG TIẾNG VIỆT):
 {
   "taskAchievement": number,
   "coherenceCohesion": number,
