@@ -47,12 +47,18 @@ const PracticeScreen = ({ route, navigation }) => {
       setActiveTab(route.params.initialTab);
     }
   }, [route?.params?.initialTab]);
-
   const [exams, setExams] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+
+  // Nếu navigate lại với initialTab khác thì cập nhật
+  useEffect(() => {
+    if (route?.params?.initialTab) {
+      setActiveTab(route.params.initialTab);
+    }
+  }, [route?.params?.initialTab]);
 
   const tabs = [
     { key: 'READING',   label: 'Reading',   icon: 'book' },

@@ -82,19 +82,27 @@ const ProfileScreen = ({ navigation }) => {
   }, [profileName]);
 
   const [apiStats, setApiStats] = useState(null);
+  const [recentActivities, setRecentActivities] = useState([]);
 
   React.useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const res = await client.get('/users/me/stats', { hideToast: true });
-        if (res.data?.success) {
-          setApiStats(res.data.data || res.data.metadata || null);
+        const [statsRes, resultsRes] = await Promise.all([
+          client.get('/users/me/stats', { hideToast: true }),
+          client.get('/users/me/results?limit=4', { hideToast: true })
+        ]);
+        
+        if (statsRes.data?.success) {
+          setApiStats(statsRes.data.data || statsRes.data.metadata || null);
+        }
+        if (resultsRes.data?.success) {
+          setRecentActivities(resultsRes.data.data.results || []);
         }
       } catch (err) {
-        console.log('Error fetching stats for profile:', err);
+        console.log('Error fetching data for profile:', err);
       }
     };
-    fetchStats();
+    fetchData();
   }, []);
 
   const overallBand = apiStats?.overallBand || 0;
@@ -235,7 +243,7 @@ const ProfileScreen = ({ navigation }) => {
             })}
           </View>
 
-          {/* Overview Tab */}
+              {/* Overview Tab */}
           {activeTab === 'overview' && (
             <View style={styles.overviewContainer}>
               
@@ -245,36 +253,48 @@ const ProfileScreen = ({ navigation }) => {
                   <View style={styles.tape} />
                   <Text style={styles.stickyTitle}>AI Advisor Feedback 🤖</Text>
                   <Text style={styles.stickyContent}>
-                    "Your Speaking fluency is improving, but watch out for subject-verb agreement in Writing Task 2. Focus on Reading Section 3 matching headings tomorrow!"
+                    {overallBand > 0 
+                      ? `Your overall band is ${overallBand.toFixed(1)}. ${
+                          Math.min(readingBand, listeningBand, writingBand, speakingBand) === readingBand && readingBand > 0 ? "Focus more on Reading practice to improve your vocabulary!" :
+                          Math.min(readingBand, listeningBand, writingBand, speakingBand) === listeningBand && listeningBand > 0 ? "Try listening to more English podcasts to boost your Listening score!" :
+                          Math.min(readingBand, listeningBand, writingBand, speakingBand) === writingBand && writingBand > 0 ? "Make sure to practice Writing task 2 structuring to raise your Writing band!" :
+                          Math.min(readingBand, listeningBand, writingBand, speakingBand) === speakingBand && speakingBand > 0 ? "Your Speaking needs a bit of work. Try recording yourself and analyzing pronunciation!" :
+                          "You're doing great! Keep maintaining your study streak!"
+                        }`
+                      : "Welcome to Apex IELTS! Complete some practice tests to get your first AI personalized feedback."}
                   </Text>
                   <View style={styles.stickyFooter}>
-                    <Text style={styles.stickyFooterText}>Apex AI Coach • 2 hours ago</Text>
+                    <Text style={styles.stickyFooterText}>Apex AI Coach • Updated today</Text>
                   </View>
                 </View>
               </View>
 
-              {/* Study Planner / Checklist */}
+              {/* Recent Activities */}
               <BrutalistShadow style={styles.plannerCard} offset={4}>
                 <View style={styles.plannerCardInner}>
-                  <Text style={styles.sectionTitle}>Weekly Study Plan</Text>
+                  <Text style={styles.sectionTitle}>Recent Activities</Text>
                   
-                  {[
-                    { text: 'Practice Part 2 cue cards (AI coach)', done: true },
-                    { text: 'Submit Essay on Education System', done: true },
-                    { text: 'Complete Cambridge IELTS 17 Test 2', done: false },
-                    { text: 'Review writing feedback from Mentor', done: false },
-                  ].map((item, index) => (
-                    <View key={index} style={styles.plannerItem}>
+                  {recentActivities.length > 0 ? recentActivities.map((item, index) => (
+                    <View key={item.id || index} style={styles.plannerItem}>
                       <Ionicons 
-                        name={item.done ? "checkbox" : "square-outline"} 
+                        name="checkmark-circle" 
                         size={18} 
-                        color={item.done ? "#005c42" : "#1b263b"} 
+                        color="#005c42" 
                       />
-                      <Text style={[styles.plannerItemText, item.done && styles.plannerItemTextDone]}>
-                        {item.text}
+                      <Text style={[styles.plannerItemText, { flex: 1 }]} numberOfLines={1}>
+                        Completed {item.title || `${item.type} Test`}
                       </Text>
+                      {item.bandScore > 0 && (
+                        <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 11, color: '#c92a2a' }}>
+                          Band {item.bandScore}
+                        </Text>
+                      )}
                     </View>
-                  ))}
+                  )) : (
+                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#666', textAlign: 'center', marginVertical: 10 }}>
+                      No recent activities found. Start practicing now!
+                    </Text>
+                  )}
                 </View>
               </BrutalistShadow>
 
@@ -304,6 +324,19 @@ const ProfileScreen = ({ navigation }) => {
                   ))}
                 </View>
               </BrutalistShadow>
+
+              {/* DEV ONLY BUTTON */}
+              <TouchableOpacity 
+                style={{
+                  backgroundColor: '#ffd54f', borderWidth: 2, borderColor: '#1b263b', 
+                  borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 20
+                }}
+                onPress={() => navigation.navigate('StreakTest')}
+              >
+                <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#c92a2a' }}>
+                  🧪 [DEV] TEST STREAK MODE
+                </Text>
+              </TouchableOpacity>
 
             </View>
           )}

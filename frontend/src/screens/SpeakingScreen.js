@@ -25,11 +25,13 @@ const SpeakingScreen = ({ route, navigation }) => {
   const { title = "IELTS Speaking Test", examId } = route.params || {};
   const { user } = useAuthStore();
   
-  const [isRecording, setIsRecording] = useState(false);
-  const [recording, setRecording] = useState(null);
+  // Recording state
+  const [recordingState, setRecordingState] = useState('idle'); // 'idle' | 'recording' | 'paused' | 'stopped'
+  const [recording, setRecording] = useState(null); // native only
   const [duration, setDuration] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState(null);
+  const [audioReady, setAudioReady] = useState(false); // true khi đã có file âm thanh
   
   const [sections, setSections] = useState([]);
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
@@ -37,11 +39,12 @@ const SpeakingScreen = ({ route, navigation }) => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   
-  const socketRef = useRef(null);
   const timerRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const durationRef = useRef(0);
+  const audioUriRef = useRef(null); // lưu URI file sau khi dừng
+  const streamRef = useRef(null);
 
   useEffect(() => {
     if (examId) {
@@ -77,133 +80,165 @@ const SpeakingScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     return () => {
-      if (recording) recording.stopAndUnloadAsync();
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      // Cleanup khi rời màn hình
+      if (recording) recording.stopAndUnloadAsync().catch(() => {});
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
+      streamRef.current?.getTracks().forEach(t => t.stop());
       clearInterval(timerRef.current);
     };
   }, [recording]);
 
   const formatTime = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
+  // ─── Timer helpers ────────────────────────────────────────
+  const startTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      durationRef.current += 1;
+      setDuration(durationRef.current);
+    }, 1000);
+  };
+
+  const stopTimer = () => clearInterval(timerRef.current);
+
+  // ─── Bắt đầu ghi âm ─────────────────────────────────────
   const startRecording = async () => {
+    audioChunksRef.current = [];
+    audioUriRef.current = null;
+    setAudioReady(false);
+    setResult(null);
+    durationRef.current = 0;
+    setDuration(0);
+
     try {
       if (Platform.OS === 'web') {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunksRef.current.push(e.data);
-        };
-
-        mediaRecorder.onstop = () => {
+        streamRef.current = stream;
+        const mr = new MediaRecorder(stream);
+        mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+        mr.onstop = () => {
           const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const uri = URL.createObjectURL(blob);
-          handleStopCompletion(uri);
+          audioUriRef.current = URL.createObjectURL(blob);
+          setAudioReady(true);
         };
-
-        mediaRecorder.start();
-        mediaRecorderRef.current = mediaRecorder;
+        mr.start(500);
+        mediaRecorderRef.current = mr;
       } else {
         const permission = await Audio.requestPermissionsAsync();
         if (permission.status !== 'granted') {
           Toast.show({ type: 'error', text1: 'Quyền bị từ chối', text2: 'Ứng dụng cần quyền truy cập microphone để ghi âm bài nói.' });
           return;
         }
-        
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-        });
-
-        const { recording: newRecording } = await Audio.Recording.createAsync(
-          Audio.RecordingOptionsPresets.HIGH_QUALITY
-        );
-        
-        setRecording(newRecording);
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+        const { recording: newRec } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+        setRecording(newRec);
       }
-
-      setIsRecording(true);
-      setDuration(0);
-      durationRef.current = 0;
-      setResult(null);
-
-      // We use a local variable to update state properly
-      if (timerRef.current) clearInterval(timerRef.current);
-      let currentDuration = 0;
-      timerRef.current = setInterval(() => {
-        currentDuration += 1;
-        setDuration(currentDuration);
-        durationRef.current = currentDuration;
-      }, 1000);
-
+      setRecordingState('recording');
+      startTimer();
     } catch (err) {
       console.error('Failed to start recording', err);
       setErrorMessage('Không thể bắt đầu ghi âm. Vui lòng cấp quyền Microphone.');
     }
   };
 
-  const stopRecording = async () => {
-    try {
-      setIsRecording(false);
-      clearInterval(timerRef.current);
-      
+  // ─── Tạm dừng / Tiếp tục (bấm nút giỺ chừng) ─────────
+  const togglePauseResume = async () => {
+    if (recordingState === 'recording') {
+      // Pause
       if (Platform.OS === 'web') {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          mediaRecorderRef.current.stop();
+        if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.pause();
+      } else {
+        await recording?.pauseAsync();
+      }
+      stopTimer();
+      setRecordingState('paused');
+    } else if (recordingState === 'paused') {
+      // Resume
+      if (Platform.OS === 'web') {
+        if (mediaRecorderRef.current?.state === 'paused') mediaRecorderRef.current.resume();
+      } else {
+        await recording?.startAsync();
+      }
+      startTimer();
+      setRecordingState('recording');
+    }
+  };
+
+  // ─── Dừng (kết thúc ghi, lưu file) ─────────────────────
+  const stopRecording = async () => {
+    stopTimer();
+    try {
+      if (Platform.OS === 'web') {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          mediaRecorderRef.current.stop(); // onstop sẽ set audioUriRef
         }
+        streamRef.current?.getTracks().forEach(t => t.stop());
       } else {
         if (!recording) return;
         await recording.stopAndUnloadAsync();
         const uri = recording.getURI();
         setRecording(null);
-        handleStopCompletion(uri);
+        audioUriRef.current = uri;
+        setAudioReady(true);
       }
+      setRecordingState('stopped');
     } catch (err) {
       console.error('Failed to stop recording', err);
     }
   };
 
-  const handleStopCompletion = (uri) => {
-    if (durationRef.current < 3) {
-      setErrorMessage('Bài nói của bạn quá ngắn (dưới 3 giây). Vui lòng thử lại.');
-      return;
+  // ─── Xóa và ghi lại từ đầu ─────────────────────────────
+  const resetRecording = async () => {
+    stopTimer();
+    if (Platform.OS === 'web') {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    } else {
+      if (recording) await recording.stopAndUnloadAsync().catch(() => {});
+      setRecording(null);
     }
-    submitAudio(uri);
+    audioChunksRef.current = [];
+    audioUriRef.current = null;
+    durationRef.current = 0;
+    setDuration(0);
+    setAudioReady(false);
+    setResult(null);
+    setRecordingState('idle');
   };
 
-  const submitAudio = async (uri) => {
+  // ─── Nộp bài cho AI chấm ───────────────────────────────
+  const submitAudio = async () => {
+    if (!audioUriRef.current) {
+      setErrorMessage('Chưa có file âm thanh. Vui lòng ghi âm rồi nhấn Kết thúc trước.');
+      return;
+    }
     setIsProcessing(true);
     try {
       let base64Data = '';
+      const uri = audioUriRef.current;
       if (Platform.OS === 'web') {
         const fetchRes = await fetch(uri);
         const blob = await fetchRes.blob();
         base64Data = await new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onloadend = () => {
-            const dataUrl = reader.result;
-            resolve(dataUrl.split(',')[1]);
-          };
+          reader.onloadend = () => resolve(reader.result.split(',')[1] || '');
           reader.onerror = reject;
           reader.readAsDataURL(blob);
         });
       } else {
-        base64Data = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
+        base64Data = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
       }
 
       const activeSection = sections[activeSectionIndex] || {};
-      const currentDuration = durationRef.current;
-
       const response = await client.post('/exams/evaluate-speaking', {
         testId: examId,
         prompt: activeSection.passageText || activeSection.title || 'IELTS Speaking Test',
         audioBase64: base64Data,
-        durationSeconds: currentDuration,
+        durationSeconds: durationRef.current,
         partNumber: activeSectionIndex + 1,
       });
 
@@ -214,11 +249,62 @@ const SpeakingScreen = ({ route, navigation }) => {
       }
     } catch (err) {
       console.error('Failed to read or submit audio', err);
-      const backendMessage = err.response?.data?.message || err.message;
-      setErrorMessage(`Lỗi: ${backendMessage || 'Không thể gửi âm thanh'}`);
+      const backendError = err.response?.data?.error?.message || err.response?.data?.message || err.message;
+      setErrorMessage(`Lỗi: ${backendError || 'Không thể gửi âm thanh'}`);
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // ─── Xử lý nút SUBMIT EXAM footer ──────────────────────────
+  const handleSubmitExam = async () => {
+    setShowSubmitModal(false);
+
+    // Nếu đã có kết quả rồi thì không cần submit nữa
+    if (result) return;
+
+    // Nếu đang ghi hoặc tạm dừng → dừng trước rồi chấm
+    if (recordingState === 'recording' || recordingState === 'paused') {
+      stopTimer();
+      try {
+        if (Platform.OS === 'web') {
+          await new Promise((resolve) => {
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+              mediaRecorderRef.current.onstop = () => {
+                const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                audioUriRef.current = URL.createObjectURL(blob);
+                setAudioReady(true);
+                resolve();
+              };
+              mediaRecorderRef.current.stop();
+              streamRef.current?.getTracks().forEach(t => t.stop());
+            } else {
+              resolve();
+            }
+          });
+        } else {
+          if (recording) {
+            await recording.stopAndUnloadAsync();
+            const uri = recording.getURI();
+            setRecording(null);
+            audioUriRef.current = uri;
+            setAudioReady(true);
+          }
+        }
+      } catch (e) {
+        console.error('Stop before submit error:', e);
+      }
+      setRecordingState('stopped');
+    }
+
+    // Nếu chưa có audio gì
+    if (!audioUriRef.current) {
+      setErrorMessage('Chưa có bài ghi âm. Vui lòng ghi âm trước khi nộp bài.');
+      return;
+    }
+
+    // Gọi AI chấm điểm
+    await submitAudio();
   };
 
   const getProgressWidth = (score) => {
@@ -335,9 +421,18 @@ const SpeakingScreen = ({ route, navigation }) => {
               </ScrollView>
             </View>
 
-            <View style={[S.timerBadge, isRecording && S.timerBadgeRecording]}>
-              {isRecording && <View style={S.timerDot} />}
-              <Text style={[S.timerText, isRecording && S.timerTextRecording]}>
+            {/* Timer - giống các skill khác */}
+            <View style={[S.timerBadge,
+              recordingState === 'recording' && S.timerBadgeRecording,
+              recordingState === 'paused' && S.timerBadgePaused,
+            ]}>
+              {recordingState === 'recording' && <View style={S.timerDot} />}
+              {recordingState === 'paused' && <View style={[S.timerDot, { backgroundColor: '#d97706' }]} />}
+              <Text style={[
+                S.timerText,
+                recordingState === 'recording' && S.timerTextRecording,
+                recordingState === 'paused' && { color: '#d97706' },
+              ]}>
                 {formatTime(duration)}
               </Text>
             </View>
@@ -348,22 +443,66 @@ const SpeakingScreen = ({ route, navigation }) => {
                 <Text style={S.processingText}>AI đang phân tích và chấm điểm bài nói của bạn...</Text>
               </View>
             ) : (
-              <TouchableOpacity 
-                style={[S.micButton, isRecording && S.micButtonActive]}
-                onPress={isRecording ? stopRecording : startRecording}
-              >
-                <AppIcon 
-                  name={isRecording ? 'stop' : 'mic-active'} 
-                  size={32} 
-                  color={COLORS.textInverse} 
-                />
-              </TouchableOpacity>
-            )}
+              <View style={{ alignItems: 'center', gap: 16 }}>
+                {/* Nút micro chính: bấm để Start/Pause/Resume */}
+                {recordingState !== 'stopped' && (
+                  <TouchableOpacity
+                    style={[
+                      S.micButton,
+                      recordingState === 'recording' && S.micButtonActive,
+                      recordingState === 'paused' && S.micButtonPaused,
+                    ]}
+                    onPress={recordingState === 'idle' ? startRecording : togglePauseResume}
+                  >
+                    <AppIcon
+                      name={recordingState === 'recording' ? 'stop' : 'mic-active'}
+                      size={32}
+                      color={COLORS.textInverse}
+                    />
+                  </TouchableOpacity>
+                )}
 
-            {!isProcessing && (
-              <Text style={S.micInstruction}>
-                {isRecording ? 'Bấm để kết thúc nộp bài' : 'Bấm để bắt đầu thu âm'}
-              </Text>
+                {/* Nút trạng thái */}
+                <Text style={S.micInstruction}>
+                  {recordingState === 'idle' && 'Bấm để bắt đầu thu âm'}
+                  {recordingState === 'recording' && 'Bấm để tạm dừng'}
+                  {recordingState === 'paused' && 'Bấm để tiếp tục ghi'}
+                  {recordingState === 'stopped' && `Đã ghi xong • ${formatTime(duration)}`}
+                </Text>
+
+                {/* Nút hàng 2: Kết thúc + Xóa */}
+                {(recordingState === 'recording' || recordingState === 'paused') && (
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <TouchableOpacity style={S.ctrlBtn} onPress={stopRecording}>
+                      <Ionicons name="stop-circle" size={18} color="#fff" />
+                      <Text style={S.ctrlBtnText}>Kết thúc</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[S.ctrlBtn, { backgroundColor: '#666' }]} onPress={resetRecording}>
+                      <Ionicons name="trash" size={18} color="#fff" />
+                      <Text style={S.ctrlBtnText}>Xóa</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Sau khi stopped: nút AI chấm + Xóa ghi lại */}
+                {recordingState === 'stopped' && (
+                  <View style={{ alignItems: 'center', gap: 12, width: '100%' }}>
+                    <TouchableOpacity
+                      style={[S.micButton, { backgroundColor: COLORS.primary }]}
+                      onPress={submitAudio}
+                    >
+                      <AppIcon name="mic-active" size={28} color={COLORS.textInverse} />
+                    </TouchableOpacity>
+                    <Text style={[S.micInstruction, { color: COLORS.primary }]}>
+                      Bấm nộp để AI chấm — hoặc xóa để ghi lại
+                    </Text>
+                    <TouchableOpacity style={[S.ctrlBtn, { backgroundColor: '#666' }]} onPress={resetRecording}>
+                      <Ionicons name="trash" size={18} color="#fff" />
+                      <Text style={S.ctrlBtnText}>Xóa và ghi lại</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             )}
           </View>
         ) : (
@@ -513,28 +652,41 @@ const SpeakingScreen = ({ route, navigation }) => {
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(27, 38, 59, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
           <View style={{ width: '100%', maxWidth: 400, backgroundColor: '#fcfbf7', borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 2, borderColor: '#1b263b', elevation: 6 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <Ionicons name="checkmark-circle" size={32} color="#c92a2a" />
-              <Text style={{ fontSize: 20, fontFamily: 'Outfit_900Black', color: '#1b263b', marginLeft: 10 }}>Submit Exam?</Text>
+              <Text style={{ fontSize: 20, fontFamily: 'Outfit_900Black', color: '#1b263b', marginLeft: 10 }}>Nộp bài & Chấm điểm?</Text>
             </View>
-            <Text style={{ fontSize: 14, fontFamily: 'Outfit_700Bold', color: '#333', textAlign: 'center', marginBottom: 24, lineHeight: 22 }}>
-              Bạn có chắc chắn muốn nộp bài thi Speaking không?
+            <Text style={{ fontSize: 14, fontFamily: 'Outfit_700Bold', color: '#333', textAlign: 'center', marginBottom: 8, lineHeight: 22 }}>
+              {recordingState === 'idle'
+                ? 'Bạn chưa ghi âm. Hãy ghi âm trước khi nộp bài!'
+                : recordingState === 'stopped'
+                ? 'AI sẽ chấm điểm và trả về nhận xét chi tiết ngay sau khi nộp.'
+                : 'Ghi âm sẽ được dừng và AI sẽ chấm điểm phần bài nói của bạn.'}
             </Text>
+            {recordingState !== 'idle' && (
+              <Text style={{ fontSize: 12, fontFamily: 'Outfit_700Bold', color: '#666', textAlign: 'center', marginBottom: 16 }}>
+                ⏱ Thời gian đã ghi: {formatTime(duration)}
+              </Text>
+            )}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', gap: 12 }}>
-              <TouchableOpacity 
-                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: '#e0e0e0', borderWidth: 2, borderColor: '#1b263b' }} 
+              <TouchableOpacity
+                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: '#e0e0e0', borderWidth: 2, borderColor: '#1b263b' }}
                 onPress={() => setShowSubmitModal(false)}
               >
                 <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#1b263b' }}>Hủy</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: '#c92a2a', borderWidth: 2, borderColor: '#1b263b' }} 
-                onPress={() => {
-                  setShowSubmitModal(false);
-                  navigation.goBack();
-                }}
+              <TouchableOpacity
+                style={[{ flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', borderWidth: 2, borderColor: '#1b263b' },
+                  recordingState === 'idle' ? { backgroundColor: '#aaa' } : { backgroundColor: '#c92a2a' }
+                ]}
+                onPress={recordingState === 'idle'
+                  ? () => { setShowSubmitModal(false); setErrorMessage('Chưa có bài ghi âm. Hãy bấm mic để bắt đầu ghi trước.'); }
+                  : handleSubmitExam
+                }
               >
-                <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#fff' }}>Nộp bài</Text>
+                <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#fff' }}>
+                  {recordingState === 'idle' ? 'Chưa ghi âm' : 'Nộp & Chấm điểm'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -588,7 +740,7 @@ const S = StyleSheet.create({
   
   content: { flex: 1, padding: SPACING.lg },
   
-  recordingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  recordingContainer: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 10 },
   
   promptCard: {
     backgroundColor: COLORS.surface,
@@ -597,7 +749,8 @@ const S = StyleSheet.create({
     borderColor: COLORS.border,
     width: '100%',
     maxWidth: 680,
-    height: 340,
+    flex: 1,
+    maxHeight: 340,
     marginBottom: SPACING.lg,
     ...SHADOWS.md,
     overflow: 'hidden',
@@ -714,6 +867,33 @@ const S = StyleSheet.create({
     shadowColor: COLORS.error,
     shadowOpacity: 0.4,
     shadowRadius: 12,
+  },
+  micButtonPaused: {
+    backgroundColor: '#d97706',
+    transform: [{ scale: 1.02 }],
+    shadowColor: '#d97706',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+  },
+  timerBadgePaused: {
+    borderColor: '#d97706',
+    backgroundColor: '#fffbeb',
+  },
+  ctrlBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    backgroundColor: COLORS.error,
+    borderRadius: RADIUS.full,
+    borderWidth: 2,
+    borderColor: '#1b263b',
+  },
+  ctrlBtnText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontFamily: TYPOGRAPHY.fontBold,
+    color: '#fff',
   },
   micInstruction: { marginTop: SPACING.lg, fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary },
 

@@ -29,6 +29,7 @@ import LoginScreen    from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ResetPasswordScreen  from '../screens/ResetPasswordScreen';
+import StreakTestScreen     from '../screens/StreakTestScreen';
 import HomeScreen     from '../screens/HomeScreen';
 import PracticeScreen from '../screens/PracticeScreen';
 import ProgressScreen from '../screens/ProgressScreen';
@@ -199,6 +200,9 @@ const AppNavigator = () => {
             />
             <Stack.Screen name="Mentors" component={MentorsScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen name="StreakTest" component={StreakTestScreen}
               options={{ animation: 'slide_from_right' }}
             />
           </>
