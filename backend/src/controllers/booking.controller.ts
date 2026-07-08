@@ -135,4 +135,56 @@ export class BookingController {
       next(new ApiError(error.message || 'Acceptance failed.', 400));
     }
   }
+
+  /**
+   * PATCH /api/v1/bookings/:id/rate
+   */
+  static async rate(req: any, res: Response, next: NextFunction) {
+    try {
+      const studentId = req.currentUser?.id || req.user?.userId;
+      const { id } = req.params;
+      const { rating, comment } = req.body;
+
+      if (!studentId) {
+        return next(new ApiError('Unauthorized', 401));
+      }
+      if (rating === undefined || rating === null) {
+        return next(new ApiError('rating is required.', 400));
+      }
+
+      const booking = await BookingService.rateBooking(studentId, id, Number(rating), comment || '');
+
+      res.status(200).json({
+        success: true,
+        message: 'Booking rated successfully.',
+        data: booking,
+      });
+    } catch (error: any) {
+      next(new ApiError(error.message || 'Failed to submit rating.', 400));
+    }
+  }
+
+  /**
+   * PATCH /api/v1/bookings/:id/complete
+   */
+  static async complete(req: any, res: Response, next: NextFunction) {
+    try {
+      const mentorId = req.currentUser?.id || req.user?.userId;
+      const { id } = req.params;
+
+      if (!mentorId) {
+        return next(new ApiError('Unauthorized', 401));
+      }
+
+      const booking = await BookingService.completeBooking(mentorId, id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Booking completed successfully.',
+        data: booking,
+      });
+    } catch (error: any) {
+      next(new ApiError(error.message || 'Completion failed.', 400));
+    }
+  }
 }

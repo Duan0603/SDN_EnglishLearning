@@ -150,9 +150,46 @@ export class BookingService {
       throw new Error('Unauthorized to add notes to this booking.');
     }
 
+    if (booking.status !== 'COMPLETED') {
+      throw new Error('Bạn chỉ có thể viết nhận xét sau khi đã HOÀN THÀNH (COMPLETED) buổi học.');
+    }
+
     return await prisma.booking.update({
       where: { id: bookingId },
       data: { mentorNotes },
+    });
+  }
+
+  /**
+   * Rate and comment booking by student after session.
+   */
+  static async rateBooking(studentId: string, bookingId: string, rating: number, comment: string) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking) {
+      throw new Error('Lịch học không tồn tại.');
+    }
+
+    if (booking.studentId !== studentId) {
+      throw new Error('Bạn không có quyền đánh giá lịch học này.');
+    }
+
+    if (booking.status !== 'COMPLETED') {
+      throw new Error('Bạn chỉ có thể đánh giá lịch học sau khi gia sư đã bấm HOÀN THÀNH (COMPLETED) buổi học.');
+    }
+
+    if (rating < 1 || rating > 5) {
+      throw new Error('Điểm đánh giá phải từ 1 đến 5 sao.');
+    }
+
+    return await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        rating,
+        comment,
+      },
     });
   }
 
@@ -224,6 +261,32 @@ export class BookingService {
     return await prisma.booking.update({
       where: { id: bookingId },
       data: { status: 'CONFIRMED' },
+    });
+  }
+
+  /**
+   * Complete booking (only accessible to the assigned mentor).
+   */
+  static async completeBooking(mentorId: string, bookingId: string) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking) {
+      throw new Error('Lịch học không tồn tại.');
+    }
+
+    if (booking.mentorId !== mentorId) {
+      throw new Error('Bạn không có quyền hoàn thành lịch học này.');
+    }
+
+    if (booking.status !== 'CONFIRMED') {
+      throw new Error('Chỉ lịch học ở trạng thái ĐÃ PHÊ DUYỆT mới có thể hoàn thành.');
+    }
+
+    return await prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: 'COMPLETED' },
     });
   }
 }

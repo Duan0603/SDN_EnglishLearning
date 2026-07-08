@@ -21,5 +21,11 @@ bookingRouter.patch('/:id/cancel', asyncHandler(BookingController.cancel));
 // Accept a booking (restricted to mentors only)
 bookingRouter.patch('/:id/accept', roleGuard(['MENTOR']), asyncHandler(BookingController.accept));
 
+// Complete a booking (restricted to mentors only)
+bookingRouter.patch('/:id/complete', roleGuard(['MENTOR']), asyncHandler(BookingController.complete));
+
 // Add mentor review notes (restricted to mentors only)
 bookingRouter.patch('/:id/notes', roleGuard(['MENTOR']), asyncHandler(BookingController.addNotes));
+
+// Rate a booking (restricted to students only)
+bookingRouter.patch('/:id/rate', roleGuard(['STUDENT']), asyncHandler(BookingController.rate));

@@ -17,6 +17,7 @@ enum BookingStatus {
   PENDING
   CONFIRMED
   CANCELLED
+  COMPLETED
 }
 
 enum TestType {
@@ -111,6 +112,8 @@ model Booking {
   notes          String?       // Học viên ghi chú mục tiêu buổi học
   mentorNotes    String?       // Mentor nhận xét sau buổi học
   cancelReason   String?       // Lý do hủy lịch
+  rating         Int?          // Đánh giá sao của học viên (1-5)
+  comment        String?       // Nhận xét của học viên cho mentor
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 }
