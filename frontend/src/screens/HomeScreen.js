@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Menu, Divider } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 
 import client from '../api/client';
 import useAuthStore from '../store/useAuthStore';
@@ -202,12 +203,12 @@ const HomeScreen = ({ navigation }) => {
 
   const handleCheckIn = async () => {
     if (!user) {
-      Alert.alert('Notice', 'Vui lòng đăng nhập để điểm danh!');
+      Toast.show({ type: 'info', text1: 'Thông báo', text2: 'Vui lòng đăng nhập để điểm danh!' });
       return navigate('Login');
     }
     
     if (stats?.hasCheckedInToday) {
-      Alert.alert('Thành công', `Bạn đã điểm danh hôm nay rồi!\nStreak hiện tại: ${stats.currentStreak} ngày 🔥`);
+      Toast.show({ type: 'info', text1: 'Thông báo', text2: `Bạn đã điểm danh hôm nay rồi!\nStreak hiện tại: ${stats.currentStreak} ngày 🔥` });
       return;
     }
 
@@ -215,11 +216,11 @@ const HomeScreen = ({ navigation }) => {
       const res = await client.post('/users/me/checkin');
       if (res.data?.success) {
         setShowStreakModal(false);
-        Alert.alert('Điểm danh thành công!', `Streak của bạn đã tăng lên: ${res.data.data.currentStreak} ngày 🔥`);
+        Toast.show({ type: 'success', text1: 'Thành công', text2: `Streak của bạn đã tăng lên: ${res.data.data.currentStreak} ngày 🔥` });
         fetchStats(); // refresh stats
       }
     } catch (error) {
-      Alert.alert('Lỗi', error?.response?.data?.message || 'Không thể điểm danh lúc này.');
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: error?.response?.data?.message || 'Không thể điểm danh lúc này.' });
     }
   };
 
@@ -280,21 +281,9 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
 
           {user ? (
-            <Menu
-              visible={menuVisible}
-              onDismiss={closeMenu}
-              anchor={
-                <TouchableOpacity style={styles.avatar} onPress={openMenu}>
-                  <Text style={styles.avatarText}>{initial}</Text>
-                </TouchableOpacity>
-              }
-              contentStyle={{ backgroundColor: '#fcfbf7', borderRadius: 12, borderWidth: 2, borderColor: '#1b263b' }}
-            >
-              <Menu.Item onPress={() => { closeMenu(); navigate('Profile'); }} title="Hồ sơ cá nhân" titleStyle={styles.menuItem} />
-              <Menu.Item onPress={() => { closeMenu(); navigate('Settings'); }} title="Cài đặt" titleStyle={styles.menuItem} />
-              <Divider style={{ backgroundColor: '#1b263b', height: 2 }} />
-              <Menu.Item onPress={() => { closeMenu(); logout(); }} title="Đăng xuất" titleStyle={[styles.menuItem, { color: '#c92a2a' }]} />
-            </Menu>
+            <TouchableOpacity style={styles.avatar} onPress={openMenu}>
+              <Text style={styles.avatarText}>{initial}</Text>
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity style={styles.loginBtn} onPress={() => navigate('Login')}>
               <Text style={styles.loginBtnText}>SIGN IN</Text>
@@ -403,6 +392,69 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
       </Modal>
 
+      {/* Profile Dropdown Modal */}
+      <Modal 
+        visible={menuVisible} 
+        transparent={true} 
+        animationType="fade"
+        onRequestClose={closeMenu}
+      >
+        <TouchableOpacity 
+          activeOpacity={1} 
+          onPress={closeMenu}
+          style={{ flex: 1, backgroundColor: 'transparent' }}
+        >
+          <View style={{
+            position: 'absolute',
+            top: 70,
+            right: 20,
+            width: 200,
+            backgroundColor: '#fcfbf7',
+            borderWidth: 2,
+            borderColor: '#1b263b',
+            borderRadius: 12,
+            padding: 8,
+            shadowColor: '#1b263b',
+            shadowOffset: { width: 4, height: 4 },
+            shadowOpacity: 1,
+            shadowRadius: 0,
+            elevation: 8
+          }}>
+            <TouchableOpacity 
+              onPress={() => { closeMenu(); navigate('Profile'); }}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#1b263b' }}>Hồ sơ cá nhân</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => { closeMenu(); navigate('Settings'); }}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#1b263b' }}>Cài đặt</Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 2, backgroundColor: '#1b263b', marginHorizontal: 8, marginVertical: 4 }} />
+
+            <TouchableOpacity 
+              onPress={() => { closeMenu(); logout(); }}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#c92a2a' }}>Đăng xuất</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -439,7 +491,7 @@ const HomeScreen = ({ navigation }) => {
               bg="#fcfbf7" 
               color="#c92a2a" 
               progress={stats?.speakingBand ? Math.min(100, Math.round((stats.speakingBand / 9) * 100)) : 0}
-              onPress={() => navigate(user ? 'Practice' : 'Login')} 
+              onPress={() => navigate(user ? 'Practice' : 'Login', user ? { initialTab: 'SPEAKING' } : undefined)} 
             />
             <ModuleCard 
               title="AI Writing" 
@@ -447,7 +499,7 @@ const HomeScreen = ({ navigation }) => {
               bg="#fcfbf7" 
               color="#d97706" 
               progress={stats?.writingBand ? Math.min(100, Math.round((stats.writingBand / 9) * 100)) : 0}
-              onPress={() => navigate(user ? 'Practice' : 'Login')} 
+              onPress={() => navigate(user ? 'Practice' : 'Login', user ? { initialTab: 'WRITING' } : undefined)} 
             />
             <ModuleCard 
               title="Reading Test" 
@@ -455,7 +507,7 @@ const HomeScreen = ({ navigation }) => {
               bg="#fcfbf7" 
               color="#4682b4" 
               progress={stats?.readingBand ? Math.min(100, Math.round((stats.readingBand / 9) * 100)) : 0}
-              onPress={() => navigate(user ? 'Practice' : 'Login')} 
+              onPress={() => navigate(user ? 'Practice' : 'Login', user ? { initialTab: 'READING' } : undefined)} 
             />
             <ModuleCard 
               title="Listening Test" 
@@ -463,7 +515,7 @@ const HomeScreen = ({ navigation }) => {
               bg="#fcfbf7" 
               color="#005c42" 
               progress={stats?.listeningBand ? Math.min(100, Math.round((stats.listeningBand / 9) * 100)) : 0}
-              onPress={() => navigate(user ? 'Practice' : 'Login')} 
+              onPress={() => navigate(user ? 'Practice' : 'Login', user ? { initialTab: 'LISTENING' } : undefined)} 
             />
           </View>
         </View>

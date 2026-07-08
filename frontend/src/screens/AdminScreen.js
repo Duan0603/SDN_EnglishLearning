@@ -22,6 +22,7 @@ import AppIcon from '../shared/icons/AppIcon';
 import { AppButton, AppTextInput } from '../shared/components';
 import useAuthStore from '../store/useAuthStore';
 import adminUserService from '../api/adminUser.service';
+import Toast from 'react-native-toast-message';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../theme';
 
 const AdminScreen = ({ navigation }) => {
@@ -191,7 +192,7 @@ const AdminScreen = ({ navigation }) => {
 
             <AppButton
               title="Tạo đề thi mới"
-              onPress={() => Alert.alert('Tính năng đang phát triển')}
+              onPress={() => Toast.show({ type: 'info', text1: 'Thông báo', text2: 'Tính năng đang phát triển.' })}
               style={{ marginBottom: SPACING.lg }}
               leftIconName="book"
             />

@@ -118,6 +118,23 @@ const useAuthStore = create((set) => ({
       await storage.deleteItem('userId');
       set({ user: null, token: null, isLoading: false, isBootstrapping: false, error: null });
     }
+  },
+
+  updateProfile: async (profileData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await client.patch('/auth/profile', profileData);
+      const updatedUser = response.data.metadata;
+      set((state) => ({
+        user: { ...state.user, ...updatedUser },
+        isLoading: false
+      }));
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || 'Cập nhật thông tin thất bại.';
+      set({ error: errorMessage, isLoading: false });
+      throw new Error(errorMessage);
+    }
   }
 }));
 

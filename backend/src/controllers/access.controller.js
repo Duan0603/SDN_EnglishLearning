@@ -110,7 +110,7 @@ export class AccessController {
     }
 
     static updateProfile = async (req, res, next) => {
-        const { prisma } = await import("../config/prisma.config.js").catch(() => import("../config/prisma.config.ts"));
+        const { prisma } = require("../config/prisma.config");
         const { fullName, birthday, phone, identityNumber, bio, expertise, avatar, isTwoFactorEnabled } = req.body;
         
         const updateData = {};
@@ -190,7 +190,7 @@ export class AccessController {
             const avatarUrl = response.data.secure_url;
 
             // Save to Database using prisma
-            const { prisma } = await import("../config/prisma.config.js").catch(() => import("../config/prisma.config.ts"));
+            const { prisma } = require("../config/prisma.config");
             const updatedUser = await prisma.user.update({
                 where: { id: req.user.userId },
                 data: { avatar: avatarUrl }

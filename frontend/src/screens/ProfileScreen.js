@@ -18,6 +18,8 @@ import * as z from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 
 import useAuthStore from '../store/useAuthStore';
+import Toast from 'react-native-toast-message';
+import client from '../api/client';
 
 // Brutalist shadow wrapper
 const BrutalistShadow = ({ children, style, offset = 4 }) => {
@@ -42,18 +44,19 @@ const profileSchema = z.object({
 });
 
 const ProfileScreen = ({ navigation }) => {
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateProfile } = useAuthStore();
 
   const profileName = user?.fullName || user?.name || 'Nguyễn Minh Anh';
   const profileEmail = user?.email || 'minhanh@gmail.com';
   const profilePhone = user?.phone || '0912345678';
-  const profileBirthDate = user?.dateOfBirth || user?.birthday || '15/08/2002';
+  const profileBirthDate = user?.birthday || user?.dateOfBirth || '15/08/2002';
   const profileTrack = user?.role || 'IELTS Academic';
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const { control, handleSubmit, formState: { errors } } = useForm({
+  const { control, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       fullName: profileName,
@@ -62,6 +65,15 @@ const ProfileScreen = ({ navigation }) => {
       birthDate: profileBirthDate,
     },
   });
+
+  React.useEffect(() => {
+    reset({
+      fullName: user?.fullName || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      birthDate: user?.birthday || user?.dateOfBirth || '',
+    });
+  }, [user, reset]);
 
   const initials = useMemo(() => {
     const parts = profileName.trim().split(/\s+/).filter(Boolean);
@@ -106,8 +118,18 @@ const ProfileScreen = ({ navigation }) => {
     { key: 'settings', label: 'SETTINGS' },
   ];
 
-  const onSubmit = (data) => {
-    Alert.alert('Saved', 'Your information has been updated:\n' + JSON.stringify(data, null, 2));
+  const onSubmit = async (data) => {
+    try {
+      const apiData = {
+        fullName: data.fullName,
+        phone: data.phone,
+        birthday: data.birthDate
+      };
+      await updateProfile(apiData);
+      setSuccessMessage('Thông tin cá nhân của bạn đã được cập nhật thành công!');
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: error.message || 'Cập nhật thông tin thất bại.' });
+    }
   };
 
   const confirmLogout = () => {
@@ -310,7 +332,16 @@ const ProfileScreen = ({ navigation }) => {
                   render={({ field: { onChange, value } }) => (
                     <View style={styles.inputGroup}>
                       <Text style={styles.label}>EMAIL</Text>
-                      <TextInput style={styles.input} value={value} onChangeText={onChange} keyboardType="email-address" autoCapitalize="none" placeholder="Email" placeholderTextColor="#999" />
+                      <TextInput 
+                        style={[styles.input, { backgroundColor: '#e5e7eb', color: '#6b7280' }]} 
+                        value={value} 
+                        onChangeText={onChange} 
+                        keyboardType="email-address" 
+                        autoCapitalize="none" 
+                        placeholder="Email" 
+                        placeholderTextColor="#999" 
+                        editable={false}
+                      />
                       {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
                     </View>
                   )}
@@ -372,6 +403,24 @@ const ProfileScreen = ({ navigation }) => {
                   <Text style={styles.modalBtnDangerText}>SIGN OUT</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </BrutalistShadow>
+        </View>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal visible={!!successMessage} transparent animationType="fade" onRequestClose={() => setSuccessMessage('')}>
+        <View style={styles.modalOverlay}>
+          <BrutalistShadow style={{ borderRadius: 16, width: '90%', maxWidth: 400 }} offset={6}>
+            <View style={styles.modalContainer}>
+              <View style={[styles.modalIconWrap, { backgroundColor: '#a7f3d0' }]}>
+                <Ionicons name="checkmark-circle" size={32} color="#005c42" />
+              </View>
+              <Text style={styles.modalTitle}>Thành Công</Text>
+              <Text style={styles.modalDesc}>{successMessage}</Text>
+              <TouchableOpacity style={[styles.saveBtn, { width: '100%', marginTop: 12, backgroundColor: '#a7f3d0' }]} onPress={() => setSuccessMessage('')}>
+                <Text style={[styles.saveBtnText, { color: '#005c42' }]}>TIẾP TỤC</Text>
+              </TouchableOpacity>
             </View>
           </BrutalistShadow>
         </View>

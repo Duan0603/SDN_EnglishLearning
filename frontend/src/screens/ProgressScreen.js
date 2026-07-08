@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import client from '../api/client';
 import useAuthStore from '../store/useAuthStore';
+import { useFocusEffect } from '@react-navigation/native';
 
 // Brutalist shadow wrapper
 const BrutalistShadow = ({ children, style, offset = 4 }) => (
@@ -198,9 +199,12 @@ const ProgressScreen = ({ navigation }) => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchProgress();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const silent = stats !== null || history.length > 0;
+      fetchProgress(silent);
+    }, [fetchProgress, stats, history])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -214,8 +218,12 @@ const ProgressScreen = ({ navigation }) => {
 
   // Compute overall band from stats or history
   const overall = stats?.overallBand || (history.length > 0
-    ? (history.reduce((sum, h) => sum + (h.bandScore || 0), 0) / history.length).toFixed(1)
+    ? (history.reduce((sum, h) => sum + (h.bandScore || 0), 0) / history.length)
     : null);
+
+  const overallDisplay = overall !== null && overall !== undefined
+    ? parseFloat(overall).toFixed(1)
+    : '—';
 
   const bandByType = {
     READING:   stats?.readingBand   || null,
@@ -264,7 +272,7 @@ const ProgressScreen = ({ navigation }) => {
               <Text style={styles.sectionBadge}>✎ CURRENT OVERALL</Text>
               <View style={styles.overallRow}>
                 <View>
-                  <Text style={styles.overallScore}>{overall || '—'}</Text>
+                  <Text style={styles.overallScore}>{overallDisplay}</Text>
                   <Text style={styles.overallLabel}>IELTS Band</Text>
                 </View>
                 <View style={styles.stampRing}>
@@ -290,7 +298,7 @@ const ProgressScreen = ({ navigation }) => {
           <View style={styles.statsGrid}>
             {[
               { label: 'TESTS DONE', value: totalTests || '0',            emoji: '📋', color: '#4682b4' },
-              { label: 'STUDY HOURS', value: totalHours > 0 ? `${totalHours}h` : '—', emoji: '⏱️', color: '#d97706' },
+              { label: 'STUDY HOURS', value: totalHours !== null && totalHours !== undefined ? `${totalHours.toFixed(1)}h` : '—', emoji: '⏱️', color: '#d97706' },
               { label: 'TOP SCORE',  value: topScore > 0 ? topScore.toFixed(1) : '—', emoji: '🏆', color: '#c92a2a' },
               { label: 'HISTORY',    value: history.length || '0',         emoji: '📊', color: '#005c42' },
             ].map((stat, i) => (
