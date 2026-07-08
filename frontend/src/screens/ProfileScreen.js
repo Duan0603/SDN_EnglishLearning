@@ -114,11 +114,22 @@ const ProfileScreen = ({ navigation }) => {
   const currentStreak = apiStats?.currentStreak || 0;
   const weeksActive = apiStats?.weeksActive || 0;
 
+  const getStreakColorStyles = (streak) => {
+    if (streak >= 100) return { color: '#ec4899', bg: '#fce7f3' }; // Pink
+    if (streak >= 60) return { color: '#a855f7', bg: '#f3e8ff' }; // Purple
+    if (streak >= 30) return { color: '#3b82f6', bg: '#dbeafe' }; // Blue
+    if (streak >= 14) return { color: '#eab308', bg: '#fef08a' }; // Yellow
+    if (streak >= 7) return { color: '#f97316', bg: '#ffedd5' }; // Orange
+    return { color: '#ef4444', bg: '#fee2e2' }; // Red
+  };
+
+  const streakStyles = getStreakColorStyles(currentStreak);
+
   const stats = [
-    { icon: 'flame', value: `${currentStreak} Days`, label: 'Streak', color: '#c92a2a', bg: '#fbcfe8' },
-    { icon: 'book', value: `${totalTests} Tests`, label: 'Completed', color: '#4682b4', bg: '#e0f2fe' },
-    { icon: 'time', value: `${weeksActive} Wks`, label: 'Active', color: '#005c42', bg: '#a7f3d0' },
-    { icon: 'medal', value: `${apiStats?.topScore || 0} Band`, label: 'Top Score', color: '#d97706', bg: '#ffd54f' },
+    { icon: 'flame', value: `${currentStreak} Days`, label: 'Streak', color: streakStyles.color, bg: streakStyles.bg },
+    { icon: 'book', value: `${totalTests} Tests`, label: 'Completed', color: '#4682b4', bg: '#dbeafe' },
+    { icon: 'time', value: `${weeksActive} Wks`, label: 'Active', color: '#005c42', bg: '#d1fae5' },
+    { icon: 'medal', value: `${apiStats?.topScore || 0} Band`, label: 'Top Score', color: '#d97706', bg: '#fef08a' },
   ];
 
   const tabs = [

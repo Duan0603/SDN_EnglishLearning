@@ -233,9 +233,15 @@ const HomeScreen = ({ navigation }) => {
     try {
       const res = await client.post('/users/me/checkin');
       if (res.data?.success) {
-        setShowStreakModal(false);
+        // Optimistic UI Update
+        setStats(prev => ({
+          ...prev,
+          currentStreak: res.data.data.currentStreak,
+          hasCheckedInToday: true
+        }));
+        
         Toast.show({ type: 'success', text1: 'Thành công', text2: `Streak của bạn đã tăng lên: ${res.data.data.currentStreak} ngày 🔥` });
-        fetchStats(); // refresh stats
+        fetchStats(); // Background refresh
       }
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Lỗi', text2: error?.response?.data?.message || 'Không thể điểm danh lúc này.' });
@@ -252,28 +258,166 @@ const HomeScreen = ({ navigation }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#fcfbf7" />
 
       {/* STREAK MODAL */}
-      <Modal visible={showStreakModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <BrutalistShadow style={styles.modalContent} offset={6}>
-            <View style={styles.modalInner}>
-              <View style={styles.modalHeaderBox}>
-                <Ionicons name="flame" size={50} color="#c92a2a" />
-                <Text style={styles.modalTitle}>DAILY CHECK-IN</Text>
+      <Modal visible={showStreakModal} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(251, 246, 236, 0.9)', justifyContent: 'center', alignItems: 'center' }}>
+          
+          {(() => {
+            const currentStreak = stats?.currentStreak || 0;
+            const checkedIn = stats?.hasCheckedInToday || false;
+            
+            const getStreakTier = (streak) => {
+              if (streak >= 100) return { name: 'Cầu vồng', color: '#ec4899', bg: '#fce7f3' };
+              if (streak >= 60) return { name: 'Lửa tím', color: '#a855f7', bg: '#f3e8ff' };
+              if (streak >= 30) return { name: 'Lửa xanh', color: '#3b82f6', bg: '#dbeafe' };
+              if (streak >= 14) return { name: 'Lửa vàng', color: '#eab308', bg: '#fef08a' };
+              if (streak >= 7) return { name: 'Lửa cam', color: '#f97316', bg: '#ffedd5' };
+              return { name: 'Tia lửa', color: '#ef4444', bg: '#fee2e2' };
+            };
+            
+            const getNextMilestone = (streak) => {
+              if (streak < 7) return 7;
+              if (streak < 14) return 14;
+              if (streak < 30) return 30;
+              if (streak < 60) return 60;
+              if (streak < 100) return 100;
+              return 100;
+            };
+
+            const tier = getStreakTier(currentStreak);
+            const nextMilestone = getNextMilestone(currentStreak);
+            const nextTier = getStreakTier(nextMilestone);
+            
+            // Progress Calculation
+            let progressMin = 0;
+            if (currentStreak >= 60) progressMin = 60;
+            else if (currentStreak >= 30) progressMin = 30;
+            else if (currentStreak >= 14) progressMin = 14;
+            else if (currentStreak >= 7) progressMin = 7;
+            
+            const range = nextMilestone - progressMin;
+            const progress = currentStreak - progressMin;
+            const progressPercent = range > 0 ? (progress / range) * 100 : 100;
+
+            const daysOfWeek = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+            // Mocking week logic: highlight last N days up to current day.
+            const todayIdx = (new Date().getDay() + 6) % 7; 
+
+            return (
+              <View style={{
+                backgroundColor: '#fff',
+                width: '85%',
+                maxWidth: 380,
+                borderRadius: 28,
+                padding: 24,
+                alignItems: 'center',
+                shadowColor: '#1b263b',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.1,
+                shadowRadius: 20,
+                elevation: 10,
+              }}>
+                {/* Header */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                  <Ionicons name="flame" size={16} color={tier.color} />
+                  <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 16, color: '#1b263b', marginLeft: 6 }}>Chuỗi ngày học</Text>
+                </View>
+                <Text style={{ fontFamily: 'Outfit_400Regular', fontSize: 13, color: '#666', marginBottom: 20 }}>
+                  {checkedIn ? "Quay lại vào ngày mai để giữ lửa nhé!" : "Điểm danh mỗi ngày để giữ lửa"}
+                </Text>
+
+                {/* Big Flame Area */}
+                <View style={{ alignItems: 'center', justifyContent: 'center', marginVertical: 10 }}>
+                  <View style={{
+                    position: 'absolute',
+                    width: 100, height: 100,
+                    borderRadius: 50,
+                    backgroundColor: tier.color,
+                    opacity: 0.15,
+                    transform: [{ scale: 1.2 }]
+                  }} />
+                  <Ionicons name="flame" size={80} color={tier.color} />
+                </View>
+
+                <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 48, color: '#1b263b', lineHeight: 56, marginTop: 10 }}>
+                  {currentStreak}
+                </Text>
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#666', letterSpacing: 1, marginBottom: 10 }}>
+                  NGÀY LIÊN TIẾP
+                </Text>
+
+                <View style={{ backgroundColor: tier.color, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginBottom: 30 }}>
+                  <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, color: '#fff' }}>{tier.name}</Text>
+                </View>
+
+                {/* 7 Days */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', paddingHorizontal: 10, marginBottom: 20 }}>
+                  {daysOfWeek.map((day, idx) => {
+                    // Logic: is it checked in? We mock it based on current streak.
+                    // If streak >= (todayIdx - idx + 1), it is checked.
+                    const daysAgo = todayIdx - idx;
+                    const isChecked = daysAgo >= 0 && currentStreak > daysAgo && (daysAgo > 0 || checkedIn);
+                    const isToday = idx === todayIdx;
+
+                    return (
+                      <View key={day} style={{ alignItems: 'center' }}>
+                        <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 10, color: '#999', marginBottom: 6 }}>{day}</Text>
+                        <View style={{
+                          width: 28, height: 28, borderRadius: 14,
+                          backgroundColor: isChecked ? tier.color : '#f3f4f6',
+                          borderWidth: isToday ? 2 : 0,
+                          borderColor: isToday ? tier.color : 'transparent',
+                          alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          {isChecked && <Ionicons name="flame" size={14} color="#fff" />}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* Progress */}
+                <View style={{ width: '100%', marginBottom: 20 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <Text style={{ fontFamily: 'Outfit_400Regular', fontSize: 11, color: '#666' }}>{currentStreak}/{nextMilestone} ngày</Text>
+                    {currentStreak < 100 && (
+                      <Text style={{ fontFamily: 'Outfit_400Regular', fontSize: 11, color: '#666' }}>→ {nextTier.name}</Text>
+                    )}
+                  </View>
+                  <View style={{ height: 6, backgroundColor: '#f3f4f6', borderRadius: 3, overflow: 'hidden' }}>
+                    <View style={{ height: '100%', width: `${progressPercent}%`, backgroundColor: tier.color, borderRadius: 3 }} />
+                  </View>
+                </View>
+
+                {/* CTA */}
+                <TouchableOpacity 
+                  disabled={checkedIn}
+                  onPress={async () => {
+                    await handleCheckIn();
+                    // State will update, changing UI immediately.
+                  }}
+                  style={{
+                    width: '100%',
+                    backgroundColor: checkedIn ? '#e5e7eb' : tier.color,
+                    paddingVertical: 14,
+                    borderRadius: 14,
+                    alignItems: 'center',
+                    marginBottom: 16
+                  }}
+                >
+                  <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: checkedIn ? '#9ca3af' : '#fff' }}>
+                    {checkedIn ? "✓ Đã điểm danh hôm nay" : "Điểm danh hôm nay"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={() => setShowStreakModal(false)}>
+                  <Text style={{ fontFamily: 'Outfit_400Regular', fontSize: 12, color: '#9ca3af', textDecorationLine: 'underline' }}>
+                    Đóng
+                  </Text>
+                </TouchableOpacity>
+
               </View>
-              
-              <Text style={styles.modalSubtitle}>Don't break your streak!</Text>
-              <Text style={styles.modalStreakText}>{stats?.currentStreak || 0} Days 🔥</Text>
-              <Text style={styles.modalDesc}>Check in today to keep your streak alive and track your consistency.</Text>
-              
-              <TouchableOpacity style={styles.checkInBtn} onPress={handleCheckIn}>
-                <Text style={styles.checkInBtnText}>CHECK IN NOW</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.closeModalBtn} onPress={() => setShowStreakModal(false)}>
-                <Text style={styles.closeModalText}>LATER</Text>
-              </TouchableOpacity>
-            </View>
-          </BrutalistShadow>
+            );
+          })()}
         </View>
       </Modal>
 
@@ -460,6 +604,18 @@ const HomeScreen = ({ navigation }) => {
               }}
             >
               <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#1b263b' }}>Cài đặt</Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 2, backgroundColor: '#1b263b', marginHorizontal: 8, marginVertical: 4 }} />
+
+            <TouchableOpacity 
+              onPress={() => { closeMenu(); navigate('StreakTestScreen'); }}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 14, color: '#ff9800' }}>🔥 Test Streak</Text>
             </TouchableOpacity>
 
             <View style={{ height: 2, backgroundColor: '#1b263b', marginHorizontal: 8, marginVertical: 4 }} />

@@ -11,6 +11,7 @@ import ReadingWorkspace from './features/practice/ReadingWorkspace'
 import ListeningWorkspace from './features/practice/ListeningWorkspace'
 import WritingWorkspace from './features/practice/WritingWorkspace'
 import SpeakingWorkspace from './features/practice/SpeakingWorkspace'
+import StreakModal from './features/profile/StreakModal'
 
 // Protected Route Guard
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -74,6 +75,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <StreakModal />
       <Routes>
         <Route path="/" element={<HomeNewTests />} />
         <Route path="/login" element={<LoginScreen />} />
