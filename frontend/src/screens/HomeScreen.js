@@ -224,7 +224,7 @@ const HomeScreen = ({ navigation }) => {
               bg="#fcfbf7" 
               color="#c92a2a" 
               progress={stats?.speakingBand ? Math.min(100, Math.round((stats.speakingBand / 9) * 100)) : 0}
-              onPress={() => navigate(user ? 'Practice' : 'Login')} 
+              onPress={() => navigate(user ? 'Practice' : 'Login', user ? { initialTab: 'SPEAKING' } : undefined)} 
             />
             <ModuleCard 
               title="AI Writing" 
@@ -232,7 +232,7 @@ const HomeScreen = ({ navigation }) => {
               bg="#fcfbf7" 
               color="#d97706" 
               progress={stats?.writingBand ? Math.min(100, Math.round((stats.writingBand / 9) * 100)) : 0}
-              onPress={() => navigate(user ? 'Practice' : 'Login')} 
+              onPress={() => navigate(user ? 'Practice' : 'Login', user ? { initialTab: 'WRITING' } : undefined)} 
             />
             <ModuleCard 
               title="Reading Test" 
@@ -240,7 +240,7 @@ const HomeScreen = ({ navigation }) => {
               bg="#fcfbf7" 
               color="#4682b4" 
               progress={stats?.readingBand ? Math.min(100, Math.round((stats.readingBand / 9) * 100)) : 0}
-              onPress={() => navigate(user ? 'Practice' : 'Login')} 
+              onPress={() => navigate(user ? 'Practice' : 'Login', user ? { initialTab: 'READING' } : undefined)} 
             />
             <ModuleCard 
               title="Listening Test" 
@@ -248,7 +248,7 @@ const HomeScreen = ({ navigation }) => {
               bg="#fcfbf7" 
               color="#005c42" 
               progress={stats?.listeningBand ? Math.min(100, Math.round((stats.listeningBand / 9) * 100)) : 0}
-              onPress={() => navigate(user ? 'Practice' : 'Login')} 
+              onPress={() => navigate(user ? 'Practice' : 'Login', user ? { initialTab: 'LISTENING' } : undefined)} 
             />
           </View>
         </View>

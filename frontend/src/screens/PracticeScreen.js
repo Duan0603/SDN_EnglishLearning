@@ -38,13 +38,21 @@ const getDifficultyLabel = (exam) => {
   return 'Medium';
 };
 
-const PracticeScreen = ({ navigation }) => {
-  const [activeTab, setActiveTab] = useState('READING');
+const PracticeScreen = ({ navigation, route }) => {
+  const initialTab = route?.params?.initialTab || 'READING';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [exams, setExams] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+
+  // Nếu navigate lại với initialTab khác thì cập nhật
+  useEffect(() => {
+    if (route?.params?.initialTab) {
+      setActiveTab(route.params.initialTab);
+    }
+  }, [route?.params?.initialTab]);
 
   const tabs = [
     { key: 'READING',   label: 'Reading',   icon: 'book' },
