@@ -103,14 +103,15 @@ export class AccessController {
                 phone: user.phone,
                 identityNumber: user.identityNumber,
                 bio: user.bio,
-                expertise: user.expertise
+                expertise: user.expertise,
+                isTwoFactorEnabled: user.isTwoFactorEnabled || false
             }
         }).send(res)
     }
 
     static updateProfile = async (req, res, next) => {
-        const { prisma } = await import("../config/prisma.config.js");
-        const { fullName, birthday, phone, identityNumber, bio, expertise, avatar } = req.body;
+        const { prisma } = require("../config/prisma.config");
+        const { fullName, birthday, phone, identityNumber, bio, expertise, avatar, isTwoFactorEnabled } = req.body;
         
         const updateData = {};
         if (fullName !== undefined) updateData.fullName = fullName;
@@ -120,6 +121,7 @@ export class AccessController {
         if (bio !== undefined) updateData.bio = bio;
         if (expertise !== undefined) updateData.expertise = expertise;
         if (avatar !== undefined) updateData.avatar = avatar;
+        if (isTwoFactorEnabled !== undefined) updateData.isTwoFactorEnabled = isTwoFactorEnabled;
 
         const updatedUser = await prisma.user.update({
             where: { id: req.user.userId },
@@ -139,7 +141,8 @@ export class AccessController {
                 phone: updatedUser.phone,
                 identityNumber: updatedUser.identityNumber,
                 bio: updatedUser.bio,
-                expertise: updatedUser.expertise
+                expertise: updatedUser.expertise,
+                isTwoFactorEnabled: updatedUser.isTwoFactorEnabled
             }
         }).send(res);
     }
@@ -187,7 +190,7 @@ export class AccessController {
             const avatarUrl = response.data.secure_url;
 
             // Save to Database using prisma
-            const { prisma } = await import("../config/prisma.config.js");
+            const { prisma } = require("../config/prisma.config");
             const updatedUser = await prisma.user.update({
                 where: { id: req.user.userId },
                 data: { avatar: avatarUrl }
@@ -213,5 +216,24 @@ export class AccessController {
             console.error("Error in uploadAvatar controller:", err);
             next(err);
         }
+    }
+
+    static verify2FA = async (req, res, next) => {
+        const metadata = await AccessService.verify2FA(req.body);
+
+        if (metadata.tokens) {
+            res.cookie('refreshToken', metadata.tokens.refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            });
+            delete metadata.tokens.refreshToken;
+        }
+
+        new OK({
+            message: "Verify 2FA success!",
+            metadata
+        }).send(res);
     }
 }

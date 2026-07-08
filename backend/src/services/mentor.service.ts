@@ -39,17 +39,53 @@ export class MentorService {
     });
   }
 
-  /**
-   * Get availability slots of a mentor (either all slots or only unbooked slots).
-   */
-  static async getAvailabilities(mentorId: string, unbookedOnly: boolean = false) {
+  static async getAvailabilities(mentorId: string, unbookedOnly: boolean = false, isStudentView: boolean = false) {
+    const now = new Date();
     const whereClause: any = { mentorId };
+    
     if (unbookedOnly) {
       whereClause.isBooked = false;
     }
 
+    if (isStudentView) {
+      // Students: only see future slots
+      whereClause.startTime = {
+        gte: now,
+      };
+    } else {
+      // Mentors: show future slots OR past slots that are booked (hide unbooked past slots)
+      whereClause.OR = [
+        {
+          startTime: {
+            gte: now,
+          },
+        },
+        {
+          startTime: {
+            lt: now,
+          },
+          isBooked: true,
+        },
+      ];
+    }
+
     return await prisma.availability.findMany({
       where: whereClause,
+      include: {
+        booking: {
+          include: {
+            student: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                phone: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
       orderBy: {
         startTime: 'asc',
       },

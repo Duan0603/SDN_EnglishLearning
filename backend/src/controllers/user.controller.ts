@@ -65,6 +65,31 @@ export const getUserStats = async (req, res, next) => {
     const userId = req.user?.userId || req.user?.id;
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
+    // Fetch user for streak stats
+    const userRecord = await (prisma.user as any).findUnique({
+      where: { id: userId },
+      select: { currentStreak: true, lastCheckIn: true, createdAt: true }
+    });
+
+    const checkIsToday = (date) => {
+      if (!date) return false;
+      const today = new Date();
+      const d = new Date(date);
+      return today.getFullYear() === d.getFullYear() &&
+             today.getMonth() === d.getMonth() &&
+             today.getDate() === d.getDate();
+    };
+
+    const hasCheckedInToday = checkIsToday(userRecord?.lastCheckIn);
+    const currentStreak = userRecord?.currentStreak || 0;
+
+    let weeksActive = 1;
+    if (userRecord?.createdAt) {
+      const diffTime = Math.abs(new Date().getTime() - new Date(userRecord.createdAt).getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      weeksActive = Math.ceil(diffDays / 7) || 1;
+    }
+
     // Fetch all results for this user
     const results = await prisma.testResult.findMany({
       where: { userId },
@@ -83,6 +108,9 @@ export const getUserStats = async (req, res, next) => {
           totalTests:    0,
           topScore:      null,
           studyHours:    0,
+          currentStreak,
+          hasCheckedInToday,
+          weeksActive
         },
       });
     }
@@ -125,7 +153,84 @@ export const getUserStats = async (req, res, next) => {
         totalTests:    results.length,
         topScore:      parseFloat(topScore.toFixed(1)),
         studyHours,
+        currentStreak,
+        hasCheckedInToday,
+        weeksActive
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/users/me/checkin
+ * Checks in the authenticated user and increments their streak.
+ */
+export const checkInUser = async (req, res, next) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const userRecord = await (prisma.user as any).findUnique({
+      where: { id: userId },
+      select: { currentStreak: true, lastCheckIn: true }
+    });
+
+    if (!userRecord) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const lastCheckIn = userRecord.lastCheckIn;
+    const today = new Date();
+
+    const checkIsToday = (date) => {
+      if (!date) return false;
+      const d = new Date(date);
+      return today.getFullYear() === d.getFullYear() &&
+             today.getMonth() === d.getMonth() &&
+             today.getDate() === d.getDate();
+    };
+
+    if (checkIsToday(lastCheckIn)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bạn đã điểm danh hôm nay rồi!'
+      });
+    }
+
+    const checkIsYesterday = (date) => {
+      if (!date) return false;
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+      const d = new Date(date);
+      return yesterday.getFullYear() === d.getFullYear() &&
+             yesterday.getMonth() === d.getMonth() &&
+             yesterday.getDate() === d.getDate();
+    };
+
+    let newStreak = 1;
+    if (lastCheckIn) {
+      if (checkIsYesterday(lastCheckIn)) {
+        newStreak = (userRecord.currentStreak || 0) + 1;
+      } else {
+        newStreak = 1;
+      }
+    }
+
+    await (prisma.user as any).update({
+      where: { id: userId },
+      data: {
+        currentStreak: newStreak,
+        lastCheckIn: today
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Điểm danh thành công!',
+      data: {
+        currentStreak: newStreak,
+        lastCheckIn: today
+      }
     });
   } catch (err) {
     next(err);

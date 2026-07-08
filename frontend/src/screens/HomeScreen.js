@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Menu, Divider } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 
 import client from '../api/client';
 import useAuthStore from '../store/useAuthStore';
+import { useNotificationStore } from '../store/useNotificationStore';
 
 // Brutalist shadow wrapper
 const BrutalistShadow = ({ children, style, offset = 4 }) => (
@@ -54,13 +56,135 @@ const ModuleCard = ({ title, tutor, bg, color, onPress, progress }) => (
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
+  const { readNotifIds, loadReadNotifIds, markAsRead, markAllAsRead } = useNotificationStore();
+  
   const [refreshing, setRefreshing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [stats, setStats] = useState(null);
   const [showStreakModal, setShowStreakModal] = useState(false);
 
+  // Notifications Bell dropdown states
+  const [notifications, setNotifications] = useState([]);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+
+  useEffect(() => {
+    setNotifications(prev => 
+      prev.map(n => ({
+        ...n,
+        isRead: readNotifIds.includes(n.id) || n.isRead
+      }))
+    );
+  }, [readNotifIds]);
+
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
+
+  const formatDateTime = (dateStr) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleString('vi-VN', { weekday: 'short', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  const generateBookingNotifications = (bookingsList, isUserMentor, checkinStats) => {
+    const list = [
+      {
+        id: 'welcome',
+        text: 'Chào mừng bạn đến với hệ thống đặt lịch học gia sư SDN!',
+        isRead: readNotifIds.includes('welcome') || true,
+        createdAt: new Date()
+      }
+    ];
+
+    // Add check-in status notification
+    if (checkinStats) {
+      if (checkinStats.hasCheckedInToday) {
+        list.push({
+          id: 'streak-today',
+          text: `Bạn đã điểm danh hôm nay thành công! Chuỗi streak hiện tại: ${checkinStats.currentStreak || 1} ngày 🔥`,
+          isRead: readNotifIds.includes('streak-today') || true,
+          createdAt: checkinStats.lastCheckIn || new Date()
+        });
+      } else {
+        list.push({
+          id: 'streak-missing',
+          text: `Bạn chưa điểm danh hôm nay! Bấm vào đây để điểm danh và nhận streak ngay! ⏳`,
+          isRead: readNotifIds.includes('streak-missing') || false,
+          createdAt: new Date()
+        });
+      }
+    }
+
+    bookingsList.forEach((b) => {
+      const dateStr = formatDateTime(b.availability?.startTime);
+      const partnerName = isUserMentor ? b.student?.fullName : b.mentor?.fullName;
+      
+      if (b.status === 'PENDING') {
+        const notifId = `pending-${b.id}`;
+        list.push({
+          id: notifId,
+          text: isUserMentor 
+            ? `Học viên ${partnerName || 'học viên'} đã đặt lịch hẹn ngày ${dateStr} đang chờ bạn duyệt.`
+            : `Yêu cầu đặt lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đang chờ duyệt.`,
+          isRead: readNotifIds.includes(notifId) || false,
+          createdAt: b.updatedAt || b.createdAt || new Date()
+        });
+      } else if (b.status === 'CONFIRMED') {
+        const notifId = `confirmed-${b.id}`;
+        list.push({
+          id: notifId,
+          text: isUserMentor
+            ? `Bạn đã duyệt thành công lịch dạy với học viên ${partnerName || 'học viên'} ngày ${dateStr}.`
+            : `Lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đã được PHÊ DUYỆT thành công! 🎉`,
+          isRead: readNotifIds.includes(notifId) || true,
+          createdAt: b.updatedAt || b.createdAt || new Date()
+        });
+      } else if (b.status === 'CANCELLED') {
+        const reasonText = b.cancelReason ? ` (Lý do: "${b.cancelReason}")` : '';
+        const notifId = `cancelled-${b.id}`;
+        list.push({
+          id: notifId,
+          text: isUserMentor
+            ? `Lịch dạy với học viên ${partnerName || 'học viên'} ngày ${dateStr} đã bị hủy${reasonText}.`
+            : `Lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đã bị HỦY${reasonText}. ⚠️`,
+          isRead: readNotifIds.includes(notifId) || true,
+          createdAt: b.updatedAt || b.createdAt || new Date()
+        });
+      }
+    });
+    
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  };
+
+  const fetchNotifications = async (currentStats) => {
+    if (!user) return;
+    try {
+      const statsObj = currentStats || stats;
+      const isMentor = user.role === 'MENTOR';
+      if (isMentor) {
+        const res = await client.get('/mentors/availabilities', { hideToast: true });
+        const slots = res.data?.data || [];
+        const mentorBookings = slots
+          .filter(s => s.booking)
+          .map(s => ({
+            ...s.booking,
+            availability: { startTime: s.startTime, endTime: s.endTime },
+            mentor: { fullName: user.fullName }
+          }));
+        const list = generateBookingNotifications(mentorBookings, true, statsObj);
+        setNotifications(list.map(n => ({ ...n, isRead: readNotifIds.includes(n.id) || n.isRead })));
+      } else {
+        const res = await client.get('/bookings', { hideToast: true });
+        const bookingsList = res.data?.data || [];
+        const list = generateBookingNotifications(bookingsList, false, statsObj);
+        setNotifications(list.map(n => ({ ...n, isRead: readNotifIds.includes(n.id) || n.isRead })));
+      }
+    } catch (err) {
+      console.log('Error fetching notifications:', err);
+    }
+  };
 
   const fetchStats = async () => {
     if (!user) return null;
@@ -69,6 +193,7 @@ const HomeScreen = ({ navigation }) => {
       if (res.data?.success) {
         const data = res.data.data || res.data.metadata || null;
         setStats(data);
+        fetchNotifications(data);
         return data;
       }
     } catch (err) {
@@ -78,27 +203,30 @@ const HomeScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
+    loadReadNotifIds();
     fetchStats().then(data => {
       if (data && data.hasCheckedInToday === false && user) {
         setShowStreakModal(true);
       }
     });
+    fetchNotifications();
   }, [user]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchStats();
+    await fetchNotifications();
     setRefreshing(false);
   }, [user]);
 
   const handleCheckIn = async () => {
     if (!user) {
-      Alert.alert('Notice', 'Vui lòng đăng nhập để điểm danh!');
+      Toast.show({ type: 'info', text1: 'Thông báo', text2: 'Vui lòng đăng nhập để điểm danh!' });
       return navigate('Login');
     }
     
     if (stats?.hasCheckedInToday) {
-      Alert.alert('Thành công', `Bạn đã điểm danh hôm nay rồi!\nStreak hiện tại: ${stats.currentStreak} ngày 🔥`);
+      Toast.show({ type: 'info', text1: 'Thông báo', text2: `Bạn đã điểm danh hôm nay rồi!\nStreak hiện tại: ${stats.currentStreak} ngày 🔥` });
       return;
     }
 
@@ -106,11 +234,11 @@ const HomeScreen = ({ navigation }) => {
       const res = await client.post('/users/me/checkin');
       if (res.data?.success) {
         setShowStreakModal(false);
-        Alert.alert('Điểm danh thành công!', `Streak của bạn đã tăng lên: ${res.data.data.currentStreak} ngày 🔥`);
+        Toast.show({ type: 'success', text1: 'Thành công', text2: `Streak của bạn đã tăng lên: ${res.data.data.currentStreak} ngày 🔥` });
         fetchStats(); // refresh stats
       }
     } catch (error) {
-      Alert.alert('Lỗi', error?.response?.data?.message || 'Không thể điểm danh lúc này.');
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: error?.response?.data?.message || 'Không thể điểm danh lúc này.' });
     }
   };
 
@@ -159,27 +287,25 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.appBarRight}>
-          <TouchableOpacity style={styles.iconBtn} onPress={handleCheckIn}>
+          <TouchableOpacity 
+            style={styles.iconBtn} 
+            onPress={() => {
+              fetchNotifications();
+              setShowNotificationsDropdown(!showNotificationsDropdown);
+              if (!showNotificationsDropdown) {
+                const ids = notifications.map(n => n.id);
+                markAllAsRead(ids);
+              }
+            }}
+          >
             <Ionicons name="notifications-outline" size={24} color="#1b263b" />
-            {!stats?.hasCheckedInToday && <View style={styles.notifDot} />}
+            {notifications.some(n => !n.isRead) && <View style={styles.notifDot} />}
           </TouchableOpacity>
 
           {user ? (
-            <Menu
-              visible={menuVisible}
-              onDismiss={closeMenu}
-              anchor={
-                <TouchableOpacity style={styles.avatar} onPress={openMenu}>
-                  <Text style={styles.avatarText}>{initial}</Text>
-                </TouchableOpacity>
-              }
-              contentStyle={{ backgroundColor: '#fcfbf7', borderRadius: 12, borderWidth: 2, borderColor: '#1b263b' }}
-            >
-              <Menu.Item onPress={() => { closeMenu(); navigate('Profile'); }} title="Hồ sơ cá nhân" titleStyle={styles.menuItem} />
-              <Menu.Item onPress={() => { closeMenu(); navigate('Settings'); }} title="Cài đặt" titleStyle={styles.menuItem} />
-              <Divider style={{ backgroundColor: '#1b263b', height: 2 }} />
-              <Menu.Item onPress={() => { closeMenu(); logout(); }} title="Đăng xuất" titleStyle={[styles.menuItem, { color: '#c92a2a' }]} />
-            </Menu>
+            <TouchableOpacity style={styles.avatar} onPress={openMenu}>
+              <Text style={styles.avatarText}>{initial}</Text>
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity style={styles.loginBtn} onPress={() => navigate('Login')}>
               <Text style={styles.loginBtnText}>SIGN IN</Text>
@@ -187,6 +313,169 @@ const HomeScreen = ({ navigation }) => {
           )}
         </View>
       </View>
+
+      {/* Notifications Dropdown Modal */}
+      <Modal 
+        visible={showNotificationsDropdown} 
+        transparent={true} 
+        animationType="fade"
+        onRequestClose={() => setShowNotificationsDropdown(false)}
+      >
+        <TouchableOpacity 
+          activeOpacity={1} 
+          onPress={() => setShowNotificationsDropdown(false)}
+          style={{ flex: 1, backgroundColor: 'transparent' }}
+        >
+          <View style={{
+            position: 'absolute',
+            top: 70,
+            right: 20,
+            width: 320,
+            backgroundColor: '#fcfbf7',
+            borderWidth: 2,
+            borderColor: '#1b263b',
+            borderRadius: 12,
+            padding: 16,
+            shadowColor: '#1b263b',
+            shadowOffset: { width: 4, height: 4 },
+            shadowOpacity: 1,
+            shadowRadius: 0,
+            elevation: 8
+          }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottomWidth: 2, borderBottomColor: '#1b263b', paddingBottom: 8 }}>
+              <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#1b263b' }}>
+                NOTIFICATIONS
+              </Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  const ids = notifications.map(n => n.id);
+                  markAllAsRead(ids);
+                }}
+              >
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 10, color: '#4682b4' }}>
+                  Mark all as read
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={false}>
+              {notifications.length === 0 ? (
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#999', textAlign: 'center', paddingVertical: 16 }}>
+                  Không có thông báo nào.
+                </Text>
+              ) : (
+                notifications.map(n => (
+                  <TouchableOpacity 
+                    key={n.id}
+                    onPress={() => {
+                      setShowNotificationsDropdown(false);
+                      markAsRead(n.id);
+                      if (n.id === 'streak-missing') {
+                        handleCheckIn();
+                      }
+                    }}
+                    style={{
+                      backgroundColor: n.isRead ? '#fcfbf7' : '#fffebc',
+                      padding: 10,
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: '#1b263b',
+                      marginBottom: 8,
+                    }}
+                  >
+                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#1b263b', lineHeight: 15 }}>
+                      {n.text}
+                    </Text>
+                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 8, color: '#999', marginTop: 4 }}>
+                      {new Date(n.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+            
+            <TouchableOpacity 
+              onPress={() => setShowNotificationsDropdown(false)}
+              style={{
+                backgroundColor: '#ffd54f',
+                borderWidth: 2,
+                borderColor: '#1b263b',
+                borderRadius: 8,
+                paddingVertical: 8,
+                alignItems: 'center',
+                marginTop: 8
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 10, color: '#1b263b' }}>
+                CLOSE
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Profile Dropdown Modal */}
+      <Modal 
+        visible={menuVisible} 
+        transparent={true} 
+        animationType="fade"
+        onRequestClose={closeMenu}
+      >
+        <TouchableOpacity 
+          activeOpacity={1} 
+          onPress={closeMenu}
+          style={{ flex: 1, backgroundColor: 'transparent' }}
+        >
+          <View style={{
+            position: 'absolute',
+            top: 70,
+            right: 20,
+            width: 200,
+            backgroundColor: '#fcfbf7',
+            borderWidth: 2,
+            borderColor: '#1b263b',
+            borderRadius: 12,
+            padding: 8,
+            shadowColor: '#1b263b',
+            shadowOffset: { width: 4, height: 4 },
+            shadowOpacity: 1,
+            shadowRadius: 0,
+            elevation: 8
+          }}>
+            <TouchableOpacity 
+              onPress={() => { closeMenu(); navigate('Profile'); }}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#1b263b' }}>Hồ sơ cá nhân</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => { closeMenu(); navigate('Settings'); }}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#1b263b' }}>Cài đặt</Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 2, backgroundColor: '#1b263b', marginHorizontal: 8, marginVertical: 4 }} />
+
+            <TouchableOpacity 
+              onPress={() => { closeMenu(); logout(); }}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#c92a2a' }}>Đăng xuất</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <ScrollView
         style={styles.scroll}

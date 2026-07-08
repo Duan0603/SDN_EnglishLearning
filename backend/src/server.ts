@@ -67,3 +67,4 @@ const startServer = async () => {
 };
 
 startServer();
+// Reload to apply SMTP settings (sender name)

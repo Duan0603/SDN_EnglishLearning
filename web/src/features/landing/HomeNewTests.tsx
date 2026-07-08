@@ -86,9 +86,9 @@ export default function HomeNewTests() {
           </div>
 
           <nav className="flex items-center gap-6 text-xs font-black text-[#1b263b] uppercase tracking-wider">
-            <a href="#courses" className="hover:text-[#c92a2a] transition-colors">IELTS Modules</a>
-            <a href="#planner" className="hover:text-[#c92a2a] transition-colors">Study Planner</a>
-            <a href="#palette" className="hover:text-[#c92a2a] transition-colors">Stationery</a>
+            <Link to="/practice" className="hover:text-[#c92a2a] transition-colors">IELTS Modules</Link>
+            <Link to="/profile?tab=courses" className="hover:text-[#c92a2a] transition-colors">Study Planner</Link>
+            <Link to="/profile?tab=notes" className="hover:text-[#c92a2a] transition-colors">Stationery</Link>
             
             {isAuthenticated && user ? (
               <>

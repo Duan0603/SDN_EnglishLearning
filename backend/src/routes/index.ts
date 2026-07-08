@@ -15,7 +15,7 @@ apiRouter.use('/', healthRouter);
 
 import { accessRouter } from './access/index';
 import { examRouter } from './exam.routes';
-import { adminRouter } from './admin/index.js';
+import { adminRouter } from './admin/index';
 import { mentorRouter } from './mentor.routes';
 import { bookingRouter } from './booking.routes';
 import { userRouter } from './user/index';

@@ -17,6 +17,7 @@ enum BookingStatus {
   PENDING
   CONFIRMED
   CANCELLED
+  COMPLETED
 }
 
 enum TestType {
@@ -49,8 +50,13 @@ model User {
   verify             Boolean              @default(false)
   bio                String?
   expertise          String?
+  isTwoFactorEnabled Boolean              @default(false)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
+  
+  // Streak tracking & Daily check-in
+  currentStreak      Int                  @default(0)
+  lastCheckIn        DateTime?
   
   // Quan hệ đặt lịch (Epic 4)
   studentBookings    Booking[]            @relation("StudentBookings")
@@ -105,6 +111,9 @@ model Booking {
   status         BookingStatus @default(PENDING)
   notes          String?       // Học viên ghi chú mục tiêu buổi học
   mentorNotes    String?       // Mentor nhận xét sau buổi học
+  cancelReason   String?       // Lý do hủy lịch
+  rating         Int?          // Đánh giá sao của học viên (1-5)
+  comment        String?       // Nhận xét của học viên cho mentor
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 }

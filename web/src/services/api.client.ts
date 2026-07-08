@@ -15,7 +15,25 @@ export const apiClient = axios.create({
 
 // Request interceptor — attach auth token if needed
 apiClient.interceptors.request.use(
-  (config) => config,
+  (config) => {
+    const token = localStorage.getItem('auth_token')
+    const userStr = localStorage.getItem('auth_user')
+    if (token) {
+      config.headers['authorization'] = `Bearer ${token}`
+    }
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr)
+        const userId = user.id || user._id
+        if (userId) {
+          config.headers['x-client-id'] = userId
+        }
+      } catch (e) {
+        console.error('Error parsing user from localStorage', e)
+      }
+    }
+    return config
+  },
   (error) => Promise.reject(error)
 )
 

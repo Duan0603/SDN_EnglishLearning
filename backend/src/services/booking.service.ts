@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.config';
 import { acquireLock, releaseLock } from '../utils/redis-lock';
+import { emitSlotUpdate } from '../sockets';
 
 export class BookingService {
   /**
@@ -53,7 +54,7 @@ export class BookingService {
             availabilityId,
             startTime: latestAvailability.startTime,
             endTime: latestAvailability.endTime,
-            status: 'CONFIRMED', // Set to CONFIRMED directly upon success
+            status: 'PENDING', // Set to PENDING initially (requires mentor acceptance)
             notes,
           },
           include: {
@@ -76,6 +77,9 @@ export class BookingService {
 
         return booking;
       });
+
+      // Emit real-time update that slot is now booked (unavailable)
+      emitSlotUpdate(availabilityId, bookingResult.mentorId, true);
 
       return bookingResult;
     } finally {
@@ -146,6 +150,10 @@ export class BookingService {
       throw new Error('Unauthorized to add notes to this booking.');
     }
 
+    if (booking.status !== 'COMPLETED') {
+      throw new Error('Bạn chỉ có thể viết nhận xét sau khi đã HOÀN THÀNH (COMPLETED) buổi học.');
+    }
+
     return await prisma.booking.update({
       where: { id: bookingId },
       data: { mentorNotes },
@@ -153,9 +161,42 @@ export class BookingService {
   }
 
   /**
+   * Rate and comment booking by student after session.
+   */
+  static async rateBooking(studentId: string, bookingId: string, rating: number, comment: string) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking) {
+      throw new Error('Lịch học không tồn tại.');
+    }
+
+    if (booking.studentId !== studentId) {
+      throw new Error('Bạn không có quyền đánh giá lịch học này.');
+    }
+
+    if (booking.status !== 'COMPLETED') {
+      throw new Error('Bạn chỉ có thể đánh giá lịch học sau khi gia sư đã bấm HOÀN THÀNH (COMPLETED) buổi học.');
+    }
+
+    if (rating < 1 || rating > 5) {
+      throw new Error('Điểm đánh giá phải từ 1 đến 5 sao.');
+    }
+
+    return await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        rating,
+        comment,
+      },
+    });
+  }
+
+  /**
    * Cancel booking (and release slot).
    */
-  static async cancelBooking(userId: string, role: string, bookingId: string) {
+  static async cancelBooking(userId: string, role: string, bookingId: string, cancelReason?: string) {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
     });
@@ -172,11 +213,14 @@ export class BookingService {
       throw new Error('Unauthorized.');
     }
 
-    return await prisma.$transaction(async (tx) => {
+    const cancelResult = await prisma.$transaction(async (tx) => {
       // Update booking status
       const updatedBooking = await tx.booking.update({
         where: { id: bookingId },
-        data: { status: 'CANCELLED' },
+        data: { 
+          status: 'CANCELLED',
+          cancelReason: cancelReason || null
+        } as any,
       });
 
       // Release availability slot
@@ -186,6 +230,63 @@ export class BookingService {
       });
 
       return updatedBooking;
+    });
+
+    // Emit real-time update that slot is now released (available)
+    emitSlotUpdate(booking.availabilityId, booking.mentorId, false);
+
+    return cancelResult;
+  }
+
+  /**
+   * Accept booking (only accessible to the assigned mentor).
+   */
+  static async acceptBooking(mentorId: string, bookingId: string) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking) {
+      throw new Error('Booking not found.');
+    }
+
+    if (booking.mentorId !== mentorId) {
+      throw new Error('Unauthorized.');
+    }
+
+    if (booking.status !== 'PENDING') {
+      throw new Error('Only pending bookings can be accepted.');
+    }
+
+    return await prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: 'CONFIRMED' },
+    });
+  }
+
+  /**
+   * Complete booking (only accessible to the assigned mentor).
+   */
+  static async completeBooking(mentorId: string, bookingId: string) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking) {
+      throw new Error('Lịch học không tồn tại.');
+    }
+
+    if (booking.mentorId !== mentorId) {
+      throw new Error('Bạn không có quyền hoàn thành lịch học này.');
+    }
+
+    if (booking.status !== 'CONFIRMED') {
+      throw new Error('Chỉ lịch học ở trạng thái ĐÃ PHÊ DUYỆT mới có thể hoàn thành.');
+    }
+
+    return await prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: 'COMPLETED' },
     });
   }
 }
