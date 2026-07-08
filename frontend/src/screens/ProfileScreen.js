@@ -325,18 +325,6 @@ const ProfileScreen = ({ navigation }) => {
                 </View>
               </BrutalistShadow>
 
-              {/* DEV ONLY BUTTON */}
-              <TouchableOpacity 
-                style={{
-                  backgroundColor: '#ffd54f', borderWidth: 2, borderColor: '#1b263b', 
-                  borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 20
-                }}
-                onPress={() => navigation.navigate('StreakTest')}
-              >
-                <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#c92a2a' }}>
-                  🧪 [DEV] TEST STREAK MODE
-                </Text>
-              </TouchableOpacity>
 
             </View>
           )}

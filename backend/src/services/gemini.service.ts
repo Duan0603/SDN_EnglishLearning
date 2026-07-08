@@ -1,23 +1,12 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from 'openai';
 
-const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(apiKey);
+const openRouterKey = process.env.OPENROUTER_API_KEY;
 
 export class GeminiService {
-  /**
-   * Scores a student's speaking transcript against IELTS criteria using Gemini API.
-   * 
-   * @param transcript The transcription of the student's audio
-   * @param prompt (Optional) The original question/prompt the student was responding to
-   * @returns Structured JSON containing band scores and feedback
-   */
   static async scoreSpeaking(transcript: string, prompt?: string) {
     if (!transcript || transcript.trim().length === 0) {
       throw new Error("Transcript is empty");
     }
-
-    // Using gemini-1.5-flash for <7s end-to-end performance optimization
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const systemPrompt = `You are an expert IELTS examiner. You are evaluating a student's speaking response based on the transcribed text.
 ${prompt ? `The examiner's question was: "${prompt}"` : ''}
@@ -47,18 +36,34 @@ Note: bandScore should be the average of the 4 criteria rounded to the nearest 0
 `;
 
     try {
-      const result = await model.generateContent([
-        { text: systemPrompt },
-        { text: `Student Transcript:\n${transcript}` }
-      ]);
+      if (!openRouterKey) {
+         throw new Error("No OPENROUTER_API_KEY provided");
+      }
+      
+      const openai = new OpenAI({
+        baseURL: "https://openrouter.ai/api/v1",
+        apiKey: openRouterKey,
+      });
 
-      const response = await result.response;
-      let text = response.text();
+      const response = await openai.chat.completions.create({
+        model: "openai/gpt-4o-mini",
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Student Transcript:\n${transcript}` }
+        ]
+      });
 
-      // Clean up potential markdown formatting from Gemini
+      let text = response.choices[0]?.message?.content || "";
       text = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-      const parsedData = JSON.parse(text);
+      let parsedData;
+      try {
+        parsedData = JSON.parse(text);
+      } catch (parseError) {
+        console.error("[Gemini API] Failed to parse JSON. Raw text was:", text);
+        throw parseError;
+      }
       return parsedData;
     } catch (error) {
       console.error("[Gemini API] Error scoring speaking response:", error);
@@ -66,19 +71,10 @@ Note: bandScore should be the average of the 4 criteria rounded to the nearest 0
     }
   }
 
-  /**
-   * Scores a student's writing essay against IELTS criteria using Gemini API.
-   * 
-   * @param essayText The student's essay text
-   * @param prompt The original writing prompt
-   * @returns Structured JSON containing band scores and feedback
-   */
   static async scoreWriting(essayText: string, prompt: string) {
     if (!essayText || essayText.trim().length === 0) {
       throw new Error("Essay text is empty");
     }
-
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const systemPrompt = `You are an expert IELTS Writing examiner. You are evaluating a student's essay response based on the prompt.
 The writing prompt/task was: "${prompt}"
@@ -101,24 +97,41 @@ You must return the result STRICTLY as a valid JSON object without any markdown 
     "coherenceCohesion": "detailed feedback string",
     "lexicalResource": "detailed feedback string",
     "grammarAccuracy": "detailed feedback string",
-    "general": "overall summary and suggestions for improvement"
+    "general": "overall summary feedback and tips for improvement"
   }
 }
-Note: bandScore should be the average of the 4 criteria rounded to the nearest 0.5 (e.g. 6.0, 6.5, 7.0, etc.).
+Note: bandScore should be the average of the 4 criteria rounded to the nearest 0.5.
 `;
 
     try {
-      const result = await model.generateContent([
-        { text: systemPrompt },
-        { text: `Student Essay:\n${essayText}` }
-      ]);
+      if (!openRouterKey) {
+         throw new Error("No OPENROUTER_API_KEY provided");
+      }
+      
+      const openai = new OpenAI({
+        baseURL: "https://openrouter.ai/api/v1",
+        apiKey: openRouterKey,
+      });
 
-      const response = await result.response;
-      let text = response.text();
+      const response = await openai.chat.completions.create({
+        model: "openai/gpt-4o-mini",
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Student Essay:\n${essayText}` }
+        ]
+      });
 
+      let text = response.choices[0]?.message?.content || "";
       text = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-      const parsedData = JSON.parse(text);
+      let parsedData;
+      try {
+        parsedData = JSON.parse(text);
+      } catch (parseError) {
+        console.error("[Gemini API] Failed to parse JSON. Raw text was:", text);
+        throw parseError;
+      }
       return parsedData;
     } catch (error) {
       console.error("[Gemini API] Error scoring writing response:", error);

@@ -13,7 +13,7 @@ export const getUserResults = async (req, res, next) => {
     const limit = parseInt(req.query.limit || '20', 10);
     const skip  = (page - 1) * limit;
 
-    const [results, total] = await Promise.all([
+    const [results, writingSubmissions, speakingSubmissions, totalResults, totalWriting, totalSpeaking] = await Promise.all([
       prisma.testResult.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
@@ -25,11 +25,33 @@ export const getUserResults = async (req, res, next) => {
           },
         },
       }),
+      prisma.writingSubmission.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          test: { select: { id: true, title: true, type: true, duration: true } }
+        }
+      }),
+      prisma.speakingSubmission.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          test: { select: { id: true, title: true, type: true, duration: true } }
+        }
+      }),
       prisma.testResult.count({ where: { userId } }),
+      prisma.writingSubmission.count({ where: { userId } }),
+      prisma.speakingSubmission.count({ where: { userId } }),
     ]);
 
+    const total = totalResults + totalWriting + totalSpeaking;
+
     // Normalize shape for frontend
-    const normalized = results.map(r => ({
+    const normalizedResults = results.map(r => ({
       id:          r.id,
       bandScore:   r.bandScore,
       correctCount: r.correctCount,
@@ -39,6 +61,35 @@ export const getUserResults = async (req, res, next) => {
       title:       r.test?.title  || 'IELTS Test',
       test:        r.test,
     }));
+
+    const normalizedWriting = writingSubmissions.map(w => ({
+      id:          w.id,
+      bandScore:   w.bandScore,
+      correctCount: null,
+      timeTaken:   null,
+      createdAt:   w.createdAt,
+      type:        'WRITING',
+      title:       w.test?.title || w.prompt || 'Writing Test',
+      test:        w.test,
+    }));
+
+    const normalizedSpeaking = speakingSubmissions.map(s => ({
+      id:          s.id,
+      bandScore:   s.bandScore,
+      correctCount: null,
+      timeTaken:   null,
+      createdAt:   s.createdAt,
+      type:        'SPEAKING',
+      title:       s.test?.title || s.prompt || 'Speaking Test',
+      test:        s.test,
+    }));
+
+    // Merge and sort
+    const allNormalized = [...normalizedResults, ...normalizedWriting, ...normalizedSpeaking]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit); // Apply limit after merging locally since we fetched limit for each type
+
+    const normalized = allNormalized;
 
     return res.status(200).json({
       success: true,
@@ -91,12 +142,24 @@ export const getUserStats = async (req, res, next) => {
     }
 
     // Fetch all results for this user
-    const results = await prisma.testResult.findMany({
-      where: { userId },
-      include: { test: { select: { type: true } } },
-    });
+    const [results, writingSubmissions, speakingSubmissions] = await Promise.all([
+      prisma.testResult.findMany({
+        where: { userId },
+        include: { test: { select: { type: true } } },
+      }),
+      prisma.writingSubmission.findMany({
+        where: { userId },
+        select: { bandScore: true, createdAt: true }
+      }),
+      prisma.speakingSubmission.findMany({
+        where: { userId },
+        select: { bandScore: true, createdAt: true }
+      })
+    ]);
 
-    if (results.length === 0) {
+    const totalTestsCount = results.length + writingSubmissions.length + speakingSubmissions.length;
+
+    if (totalTestsCount === 0) {
       return res.status(200).json({
         success: true,
         data: {
@@ -116,30 +179,47 @@ export const getUserStats = async (req, res, next) => {
     }
 
     // Group by test type and calculate average band score per type
-    const byType = { READING: [], LISTENING: [], WRITING: [], SPEAKING: [] };
+    const byType = { READING: [] as number[], LISTENING: [] as number[], WRITING: [] as number[], SPEAKING: [] as number[] };
+    
     results.forEach(r => {
       const type = r.test?.type;
-      if (type && byType[type] !== undefined) {
-        byType[type].push(r.bandScore || 0);
+      if (type && byType[type as keyof typeof byType] !== undefined) {
+        byType[type as keyof typeof byType].push(r.bandScore || 0);
       }
     });
 
-    const avg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+    writingSubmissions.forEach(w => {
+      byType.WRITING.push(w.bandScore || 0);
+    });
+
+    speakingSubmissions.forEach(s => {
+      byType.SPEAKING.push(s.bandScore || 0);
+    });
+
+    const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
 
     const readingBand   = avg(byType.READING);
     const listeningBand = avg(byType.LISTENING);
     const writingBand   = avg(byType.WRITING);
     const speakingBand  = avg(byType.SPEAKING);
 
-    const definedBands = [readingBand, listeningBand, writingBand, speakingBand].filter(b => b !== null);
+    const definedBands = [readingBand, listeningBand, writingBand, speakingBand].filter(b => b !== null) as number[];
     const overallBand  = definedBands.length > 0
       ? parseFloat((definedBands.reduce((a, b) => a + b, 0) / definedBands.length).toFixed(1))
       : null;
 
-    const topScore = Math.max(...results.map(r => r.bandScore || 0));
+    const allScores = [
+      ...results.map(r => r.bandScore || 0),
+      ...writingSubmissions.map(w => w.bandScore || 0),
+      ...speakingSubmissions.map(s => s.bandScore || 0)
+    ];
+    const topScore = allScores.length > 0 ? Math.max(...allScores) : 0;
 
     // Rough study hours: sum of timeTaken (in seconds) / 3600
-    const totalSeconds = results.reduce((sum, r) => sum + (r.timeTaken || 0), 0);
+    // Give 15 mins (900s) per writing/speaking submission as an estimate if timeTaken isn't tracked
+    const totalSeconds = results.reduce((sum, r) => sum + (r.timeTaken || 0), 0) 
+                       + (writingSubmissions.length * 900) 
+                       + (speakingSubmissions.length * 900);
     const studyHours   = parseFloat((totalSeconds / 3600).toFixed(1));
 
     return res.status(200).json({

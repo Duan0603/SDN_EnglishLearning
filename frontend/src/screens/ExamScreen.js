@@ -508,9 +508,15 @@ const ExamScreen = ({ route, navigation }) => {
                     <View style={styles.questionCardInner}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                         <Text style={styles.questionNum}>YOUR ESSAY RESPONSE</Text>
-                        <Text style={{ fontSize: 11, fontFamily: 'Outfit_700Bold', color: '#666' }}>
-                          Words: {(writingEssays[activeSectionIdx] || '').trim().split(/\s+/).filter(Boolean).length} / {activeSectionIdx === 0 ? 150 : 250}+
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: (writingEssays[activeSectionIdx] || '').trim().split(/\s+/).filter(Boolean).length >= (activeSectionIdx === 0 ? 150 : 250) ? '#e6f4ea' : '#fce8e6', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                          <Text style={{ 
+                            fontSize: 11, 
+                            fontFamily: 'Outfit_700Bold', 
+                            color: (writingEssays[activeSectionIdx] || '').trim().split(/\s+/).filter(Boolean).length >= (activeSectionIdx === 0 ? 150 : 250) ? '#137333' : '#c5221f' 
+                          }}>
+                            Words: {(writingEssays[activeSectionIdx] || '').trim().split(/\s+/).filter(Boolean).length} / {activeSectionIdx === 0 ? 150 : 250}+
+                          </Text>
+                        </View>
                       </View>
 
                       <TextInput

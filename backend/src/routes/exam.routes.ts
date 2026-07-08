@@ -13,6 +13,7 @@ examRouter.get('/', ExamController.getExams);
 examRouter.get('/:id', ExamController.getExamById);
 examRouter.post('/:id/submit', ExamController.submitExam);
 examRouter.post('/evaluate-writing', ExamController.evaluateWriting);
+examRouter.post('/evaluate-speaking', ExamController.evaluateSpeaking);
 
 // Write/Mutate endpoints: restricted to ADMIN only
 examRouter.post('/', roleGuard(['ADMIN']), ExamController.createExam);
