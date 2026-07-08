@@ -88,6 +88,8 @@ export default function AdminDashboard() {
   
   const [showEditUserModal, setShowEditUserModal] = useState(false)
   const [editTargetId, setEditTargetId] = useState<string | null>(null)
+  const [showUserDetailModal, setShowUserDetailModal] = useState(false)
+  const [selectedUserDetail, setSelectedUserDetail] = useState<User | null>(null)
   const [editUserForm, setEditUserForm] = useState<{
     fullName: string
     username: string
@@ -1134,6 +1136,15 @@ export default function AdminDashboard() {
                               </span>
                             </td>
                             <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
+                              <button
+                                onClick={() => {
+                                  setSelectedUserDetail(item)
+                                  setShowUserDetailModal(true)
+                                }}
+                                className="bg-[#ffd54f] hover:bg-amber-400 border-2 border-[#1b263b] text-[#1b263b] px-2.5 py-1.5 rounded-lg text-[10px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
+                              >
+                                Chi tiết
+                              </button>
                               {item.role === 'MENTOR' && item.status === 'pending' && (
                                 <button
                                   onClick={() => handleApproveMentor(item)}
@@ -1802,6 +1813,88 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* User Detail Modal */}
+      {showUserDetailModal && selectedUserDetail && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-[#fcfbf7] border-4 border-[#1b263b] rounded-2xl max-w-xl w-full p-6 shadow-[6px_6px_0px_0px_#1b263b] space-y-6 relative">
+            
+            {/* Spiral binding representation */}
+            <div className="absolute top-0 left-0 right-0 h-3 bg-[#ffd54f] border-b-2 border-[#1b263b] rounded-t-lg flex justify-around px-4 pointer-events-none">
+              {[...Array(10)].map((_, i) => (
+                <div key={i} className="w-1.5 h-4 bg-[#1b263b] rounded-t-full transform -translate-y-1.5 border border-white/20" />
+              ))}
+            </div>
+
+            <div className="flex justify-between items-center border-b-2 border-[#1b263b] pb-4 pt-3">
+              <h3 className="text-base font-serif font-black text-[#1b263b]">Thông Tin Chi Tiết Thành Viên</h3>
+              <button 
+                onClick={() => setShowUserDetailModal(false)} 
+                className="w-8 h-8 rounded-xl bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-xs font-bold text-[#1b263b]">
+              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
+                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Họ và Tên</span>
+                <span className="text-xs font-extrabold text-[#1b263b]">{selectedUserDetail.fullName}</span>
+              </div>
+              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
+                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Tên tài khoản</span>
+                <span className="text-xs font-extrabold text-[#1b263b]">@{selectedUserDetail.username}</span>
+              </div>
+              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] col-span-2">
+                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Địa chỉ Email</span>
+                <span className="text-xs font-extrabold text-[#1b263b] font-mono">{selectedUserDetail.email}</span>
+              </div>
+              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
+                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Số điện thoại</span>
+                <span className="text-xs font-mono text-[#1b263b]">{selectedUserDetail.phone || 'Chưa cung cấp'}</span>
+              </div>
+              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
+                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Ngày sinh</span>
+                <span className="text-xs font-mono text-[#1b263b]">{selectedUserDetail.birthday || 'Chưa cung cấp'}</span>
+              </div>
+              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
+                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Số CCCD / Passport</span>
+                <span className="text-xs font-mono text-[#1b263b]">{selectedUserDetail.identityNumber || 'Chưa cung cấp'}</span>
+              </div>
+              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b]">
+                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Vai trò hệ thống</span>
+                <span className={`inline-block px-2.5 py-0.5 mt-0.5 rounded-full text-[9px] font-black tracking-wider border-2 border-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b] ${
+                  selectedUserDetail.role === 'ADMIN' ? 'bg-[#ffd54f] text-[#1b263b]' :
+                  selectedUserDetail.role === 'MENTOR' ? 'bg-[#fbcfe8] text-[#9d174d]' : 'bg-[#a7f3d0] text-[#005c42]'
+                }`}>{selectedUserDetail.role}</span>
+              </div>
+              <div className="bg-white border-2 border-[#1b263b] p-3.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] col-span-2">
+                <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block mb-1">Trạng thái tài khoản</span>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 mt-0.5 rounded-full text-[9px] font-black border-2 border-[#1b263b]/40 ${
+                  selectedUserDetail.status === 'active' ? 'bg-[#a7f3d0] text-[#005c42]' :
+                  selectedUserDetail.status === 'pending' ? 'bg-yellow-500/10 text-yellow-700 animate-pulse' : 'bg-[#fbcfe8] text-[#9d174d]'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    selectedUserDetail.status === 'active' ? 'bg-[#005c42]' :
+                    selectedUserDetail.status === 'pending' ? 'bg-yellow-600' : 'bg-[#9d174d]'
+                  }`} />
+                  {selectedUserDetail.status === 'active' ? 'Hoạt động' : selectedUserDetail.status === 'pending' ? 'Chờ duyệt' : 'Đình chỉ'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t-2 border-[#1b263b]/10">
+              <button
+                type="button"
+                onClick={() => setShowUserDetailModal(false)}
+                className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs px-6 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}
