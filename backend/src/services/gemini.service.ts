@@ -11,6 +11,12 @@ export class GeminiService {
     const systemPrompt = `You are an expert IELTS examiner. You are evaluating a student's speaking response based on the transcribed text.
 ${prompt ? `The examiner's question was: "${prompt}"` : ''}
 
+CRITICAL RULES:
+1. STRICT PROMPT ALIGNMENT: You MUST check if the student's answer is relevant to the question ("${prompt}"). If the answer is completely off-topic or fails to address the core of the question, penalize Task Response / Fluency heavily (Max score 4.0).
+2. EMPTY/NOISE PENALTY: If the transcript contains ONLY hesitation markers (e.g., "um", "uh", "oh", "ah") or is under 3 words, you MUST score EXACTLY 0.0 for ALL criteria. 
+3. BAND 1.0 PENALTY: If the transcript has 3 to 10 words but forms no coherent meaning, score EXACTLY 1.0 for ALL criteria.
+4. NO HALLUCINATION: You are evaluating ONLY the provided text. Do not assume or invent content that is not in the transcript.
+
 Please evaluate the student's response strictly on the following 4 IELTS speaking criteria:
 1. Fluency and Coherence (0.0 - 9.0)
 2. Lexical Resource (0.0 - 9.0)
@@ -78,6 +84,12 @@ Note: bandScore should be the average of the 4 criteria rounded to the nearest 0
 
     const systemPrompt = `You are an expert IELTS Writing examiner. You are evaluating a student's essay response based on the prompt.
 The writing prompt/task was: "${prompt}"
+
+CRITICAL RULES:
+1. STRICT PROMPT ALIGNMENT: You MUST check if the student's essay directly answers the specific prompt. If the essay is completely off-topic or uses a memorized template that doesn't fit the prompt, score Task Achievement as 0.0 or 1.0.
+2. EMPTY/GARBAGE PENALTY: If the essay is under 15 words or just random characters, score EXACTLY 0.0 for ALL criteria.
+3. BAND 1.0 PENALTY: If the essay has 15 to 30 words but forms no coherent meaning, score EXACTLY 1.0 for ALL criteria.
+4. NO HALLUCINATION: You are evaluating ONLY the provided text. Do not invent or assume content.
 
 Please evaluate the student's response strictly on the following 4 IELTS writing criteria:
 1. Task Achievement / Task Response (0.0 - 9.0)
