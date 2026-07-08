@@ -61,7 +61,7 @@ export class ExamService {
    */
   static async getExams(type?: string, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
-    
+
     // Build query conditions
     const where: any = {};
     if (type) {
@@ -125,7 +125,7 @@ export class ExamService {
     if (test && test.sections) {
       // Sort sections by sectionOrder
       test.sections.sort((a, b) => a.sectionOrder - b.sectionOrder);
-      
+
       // Sort questions within sections by questionNumber
       for (const sec of test.sections) {
         if (sec.questions) {
@@ -343,7 +343,7 @@ export class ExamService {
    */
   static async evaluateWriting(userId: string, testId: string | null, prompt: string, essayText: string) {
     const evaluation = await GeminiService.scoreWriting(essayText, prompt);
-    
+
     const submission = await prisma.writingSubmission.create({
       data: {
         userId,

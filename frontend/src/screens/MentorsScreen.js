@@ -13,6 +13,7 @@ import {
   Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Menu, Divider } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import client from '../api/client';
@@ -85,8 +86,12 @@ const BrutalistSelect = ({ label, value, options, onValueChange }) => {
 };
 
 const MentorsScreen = ({ navigation }) => {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const isMentor = user?.role === 'MENTOR';
+  const [menuVisible, setMenuVisible] = useState(false);
+  const openMenu = () => setMenuVisible(true);
+  const closeMenu = () => setMenuVisible(false);
+  const navigate = (screen, params) => navigation.navigate(screen, params);
 
   const [mentors, setMentors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -754,24 +759,41 @@ const MentorsScreen = ({ navigation }) => {
           </TouchableOpacity>
 
           {/* User Profile Avatar */}
-          <View style={{
-            width: 32,
-            height: 32,
-            borderRadius: 16,
-            backgroundColor: '#a7f3d0',
-            borderWidth: 2,
-            borderColor: '#1b263b',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}>
-            <Text style={{
-              fontFamily: 'Outfit_900Black',
-              fontSize: 14,
-              color: '#005c42'
-            }}>
-              {user?.fullName?.charAt(0).toUpperCase() || 'U'}
-            </Text>
-          </View>
+          {user ? (
+            <TouchableOpacity 
+              onPress={openMenu}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: '#a7f3d0',
+                borderWidth: 2,
+                borderColor: '#1b263b',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}
+            >
+              <Text style={{
+                fontFamily: 'Outfit_900Black',
+                fontSize: 14,
+                color: '#005c42'
+              }}>
+                {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={{
+                backgroundColor: '#1b263b',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 8,
+              }} 
+              onPress={() => navigate('Login')}
+            >
+              <Text style={{ color: '#fff', fontFamily: 'Outfit_900Black', fontSize: 10 }}>SIGN IN</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -870,6 +892,69 @@ const MentorsScreen = ({ navigation }) => {
               <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 10, color: '#1b263b' }}>
                 CLOSE
               </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Profile Dropdown Modal */}
+      <Modal 
+        visible={menuVisible} 
+        transparent={true} 
+        animationType="fade"
+        onRequestClose={closeMenu}
+      >
+        <TouchableOpacity 
+          activeOpacity={1} 
+          onPress={closeMenu}
+          style={{ flex: 1, backgroundColor: 'transparent' }}
+        >
+          <View style={{
+            position: 'absolute',
+            top: 70,
+            right: 20,
+            width: 200,
+            backgroundColor: '#fcfbf7',
+            borderWidth: 2,
+            borderColor: '#1b263b',
+            borderRadius: 12,
+            padding: 8,
+            shadowColor: '#1b263b',
+            shadowOffset: { width: 4, height: 4 },
+            shadowOpacity: 1,
+            shadowRadius: 0,
+            elevation: 8
+          }}>
+            <TouchableOpacity 
+              onPress={() => { closeMenu(); navigate('Profile'); }}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#1b263b' }}>Hồ sơ cá nhân</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => { closeMenu(); navigate('Settings'); }}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#1b263b' }}>Cài đặt</Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 2, backgroundColor: '#1b263b', marginHorizontal: 8, marginVertical: 4 }} />
+
+            <TouchableOpacity 
+              onPress={() => { closeMenu(); logout(); }}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#c92a2a' }}>Đăng xuất</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -1656,6 +1741,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, justifyContent: 'center' },
   backBtnText: { fontFamily: 'Outfit_900Black', fontSize: 24, color: '#1b263b', lineHeight: 28 },
   appBarTitle: { fontSize: 16, fontFamily: 'Outfit_900Black', color: '#1b263b', letterSpacing: 1 },
+  menuItem: { fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#1b263b' },
   
   searchContainer: { padding: 16, backgroundColor: '#f5f3dc' },
   searchInputWrap: {

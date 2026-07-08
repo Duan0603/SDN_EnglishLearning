@@ -51,13 +51,13 @@ Note: bandScore should be the average of the 4 criteria rounded to the nearest 0
         { text: systemPrompt },
         { text: `Student Transcript:\n${transcript}` }
       ]);
-      
+
       const response = await result.response;
       let text = response.text();
-      
+
       // Clean up potential markdown formatting from Gemini
       text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      
+
       const parsedData = JSON.parse(text);
       return parsedData;
     } catch (error) {
@@ -112,12 +112,12 @@ Note: bandScore should be the average of the 4 criteria rounded to the nearest 0
         { text: systemPrompt },
         { text: `Student Essay:\n${essayText}` }
       ]);
-      
+
       const response = await result.response;
       let text = response.text();
-      
+
       text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      
+
       const parsedData = JSON.parse(text);
       return parsedData;
     } catch (error) {

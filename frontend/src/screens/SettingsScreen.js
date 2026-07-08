@@ -8,11 +8,13 @@ import {
   StyleSheet,
   StatusBar,
   Alert,
-  Linking
+  Linking,
+  Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../store/useAuthStore';
+import Toast from 'react-native-toast-message';
 
 // Brutalist shadow wrapper
 const BrutalistShadow = ({ children, style, offset = 4 }) => (
@@ -54,25 +56,32 @@ const SettingsScreen = ({ navigation }) => {
   const [soundEffects, setSoundEffects] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
+  const [confirmModal, setConfirmModal] = useState({ visible: false, title: '', message: '', onConfirm: null, confirmText: '', color: '' });
+
+  const showConfirm = (title, message, onConfirm, confirmText = 'OK', color = '#ffd54f') => {
+    setConfirmModal({ visible: true, title, message, onConfirm, confirmText, color });
+  };
+
   const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to log out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: logout }
-      ]
+    showConfirm(
+      'Sign Out?',
+      'Are you sure you want to log out of your session?',
+      logout,
+      'SIGN OUT',
+      '#ff8787'
     );
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      '⚠️ Delete Account',
+    showConfirm(
+      'Delete Account?',
       'This action is permanent and cannot be undone. All your data will be erased.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => Alert.alert('Submitted', 'Account deletion request sent.') }
-      ]
+      () => {
+        setConfirmModal(prev => ({ ...prev, visible: false }));
+        Toast.show({ type: 'success', text1: 'Submitted', text2: 'Account deletion request sent.' });
+      },
+      'DELETE',
+      '#ff8787'
     );
   };
 
@@ -184,7 +193,7 @@ const SettingsScreen = ({ navigation }) => {
               label="Language"
               sublabel="Vietnamese / Tiếng Việt"
               color="#1b263b"
-              onPress={() => Alert.alert('Language', 'Language settings coming soon.')}
+              onPress={() => Toast.show({ type: 'info', text1: 'Language', text2: 'Language settings coming soon.' })}
             />
           </View>
         </BrutalistShadow>
@@ -198,7 +207,7 @@ const SettingsScreen = ({ navigation }) => {
               label="Target Band Score"
               sublabel="Currently: 7.5"
               color="#d97706"
-              onPress={() => Alert.alert('Target Score', 'Tap to change your IELTS goal.')}
+              onPress={() => Toast.show({ type: 'info', text1: 'Target Score', text2: 'Tap to change your IELTS goal.' })}
             />
             <View style={styles.divider} />
             <SettingRow
@@ -206,7 +215,7 @@ const SettingsScreen = ({ navigation }) => {
               label="Daily Study Goal"
               sublabel="60 minutes per day"
               color="#4682b4"
-              onPress={() => Alert.alert('Study Goal', 'Daily goal settings coming soon.')}
+              onPress={() => Toast.show({ type: 'info', text1: 'Study Goal', text2: 'Daily goal settings coming soon.' })}
             />
             <View style={styles.divider} />
             <SettingRow
@@ -214,7 +223,7 @@ const SettingsScreen = ({ navigation }) => {
               label="Test Difficulty"
               sublabel="Adaptive to your level"
               color="#005c42"
-              onPress={() => Alert.alert('Difficulty', 'Difficulty settings coming soon.')}
+              onPress={() => Toast.show({ type: 'info', text1: 'Difficulty', text2: 'Difficulty settings coming soon.' })}
             />
           </View>
         </BrutalistShadow>
@@ -275,6 +284,31 @@ const SettingsScreen = ({ navigation }) => {
         </View>
 
       </ScrollView>
+
+      {/* Confirmation Modal */}
+      <Modal visible={confirmModal.visible} transparent animationType="fade" onRequestClose={() => setConfirmModal(prev => ({ ...prev, visible: false }))}>
+        <View style={styles.modalOverlay}>
+          <BrutalistShadow style={{ borderRadius: 16, width: '90%', maxWidth: 400 }} offset={6}>
+            <View style={styles.modalContainer}>
+              <View style={[styles.modalIconWrap, { backgroundColor: confirmModal.color }]}>
+                <Ionicons name={confirmModal.title.includes('Sign Out') ? 'log-out' : 'trash'} size={32} color="#1b263b" />
+              </View>
+              <Text style={styles.modalTitle}>{confirmModal.title}</Text>
+              <Text style={styles.modalDesc}>{confirmModal.message}</Text>
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setConfirmModal(prev => ({ ...prev, visible: false }))}>
+                  <Text style={styles.modalBtnCancelText}>CANCEL</Text>
+                </TouchableOpacity>
+                <View style={{ width: 12 }} />
+                <TouchableOpacity style={styles.modalBtnDanger} onPress={confirmModal.onConfirm}>
+                  <Text style={styles.modalBtnDangerText}>{confirmModal.confirmText}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </BrutalistShadow>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -344,6 +378,77 @@ const styles = StyleSheet.create({
   footer: { alignItems: 'center', paddingTop: 16 },
   footerText: { fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#666', marginBottom: 4 },
   footerSub: { fontFamily: 'Outfit_900Black', fontSize: 10, color: '#999', letterSpacing: 1 },
+
+  // Modal styles (matches ProfileScreen)
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(27,38,59,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#fcfbf7',
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#1b263b',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: 'Outfit_900Black',
+    color: '#1b263b',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalDesc: {
+    fontSize: 13,
+    fontFamily: 'Outfit_700Bold',
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 18,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    width: '100%',
+  },
+  modalBtnCancel: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    backgroundColor: '#f5f3dc',
+    alignItems: 'center',
+  },
+  modalBtnCancelText: {
+    fontSize: 12,
+    fontFamily: 'Outfit_900Black',
+    color: '#1b263b',
+  },
+  modalBtnDanger: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    backgroundColor: '#ff8787',
+    alignItems: 'center',
+  },
+  modalBtnDangerText: {
+    fontSize: 12,
+    fontFamily: 'Outfit_900Black',
+    color: '#c92a2a',
+  },
 });
 
 export default SettingsScreen;

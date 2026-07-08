@@ -13,6 +13,7 @@ import {
   Modal
 } from 'react-native';
 import { Audio } from 'expo-av';
+import Toast from 'react-native-toast-message';
 import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../store/useAuthStore';
@@ -108,7 +109,7 @@ const SpeakingScreen = ({ route, navigation }) => {
       } else {
         const permission = await Audio.requestPermissionsAsync();
         if (permission.status !== 'granted') {
-          Alert.alert('Quyền bị từ chối', 'Ứng dụng cần quyền truy cập microphone để ghi âm bài nói.');
+          Toast.show({ type: 'error', text1: 'Quyền bị từ chối', text2: 'Ứng dụng cần quyền truy cập microphone để ghi âm bài nói.' });
           return;
         }
         

@@ -38,8 +38,16 @@ const getDifficultyLabel = (exam) => {
   return 'Medium';
 };
 
-const PracticeScreen = ({ navigation }) => {
-  const [activeTab, setActiveTab] = useState('READING');
+const PracticeScreen = ({ route, navigation }) => {
+  const { initialTab = 'READING' } = route?.params || {};
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    if (route?.params?.initialTab) {
+      setActiveTab(route.params.initialTab);
+    }
+  }, [route?.params?.initialTab]);
+
   const [exams, setExams] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
