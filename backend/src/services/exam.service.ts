@@ -369,14 +369,14 @@ export class ExamService {
   /**
    * Evaluates a student's speaking response with STT and Gemini AI.
    */
-  static async evaluateSpeaking(userId: string, testId: string | null, prompt: string, audioBase64: string, durationSeconds: number) {
+  static async evaluateSpeaking(userId: string, testId: string | null, prompt: string, audioBase64: string, durationSeconds: number, mimeType: string = 'audio/m4a') {
     // 1. Write base64 to temp file
     const tempFilePath = path.join(os.tmpdir(), `speaking-${Date.now()}.m4a`);
     try {
       fs.writeFileSync(tempFilePath, Buffer.from(audioBase64, 'base64'));
 
       // 2. Transcribe audio using STTService
-      const transcription = await STTService.transcribeAudio(tempFilePath);
+      const transcription = await STTService.transcribeAudio(tempFilePath, audioBase64, mimeType);
 
       // 3. Evaluate transcription using GeminiService
       const evaluation = await GeminiService.scoreSpeaking(transcription, prompt);

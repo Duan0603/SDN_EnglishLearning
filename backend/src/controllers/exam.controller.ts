@@ -192,7 +192,7 @@ export class ExamController {
    */
   static async evaluateSpeaking(req: any, res: Response, next: NextFunction) {
     try {
-      const { testId, prompt, audioBase64, durationSeconds } = req.body;
+      const { testId, prompt, audioBase64, durationSeconds, mimeType = 'audio/m4a' } = req.body;
       const userId = req.user?.userId || req.user?.id || req.user?._id;
 
       if (!userId) {
@@ -209,7 +209,7 @@ export class ExamController {
 
       const validTestId = (typeof testId === 'string' && testId.length === 24) ? testId : null;
 
-      const result = await ExamService.evaluateSpeaking(userId, validTestId, prompt, audioBase64, durationSeconds || 0);
+      const result = await ExamService.evaluateSpeaking(userId, validTestId, prompt, audioBase64, durationSeconds || 0, mimeType);
       res.status(200).json({
         success: true,
         data: result,

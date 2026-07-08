@@ -234,10 +234,12 @@ const SpeakingScreen = ({ route, navigation }) => {
       }
 
       const activeSection = sections[activeSectionIndex] || {};
+      const mimeType = Platform.OS === 'web' ? 'audio/webm' : 'audio/m4a';
       const response = await client.post('/exams/evaluate-speaking', {
         testId: examId,
         prompt: activeSection.passageText || activeSection.title || 'IELTS Speaking Test',
         audioBase64: base64Data,
+        mimeType: mimeType,
         durationSeconds: durationRef.current,
         partNumber: activeSectionIndex + 1,
       });

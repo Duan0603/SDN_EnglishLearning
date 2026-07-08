@@ -11,7 +11,7 @@ const genAI = process.env.GEMINI_API_KEY
   : null;
 
 export class STTService {
-  static async transcribeAudio(filePath: string): Promise<string> {
+  static async transcribeAudio(filePath: string, audioBase64Data?: string, mimeType: string = 'audio/m4a'): Promise<string> {
     if (openai) {
       try {
         console.log(`[STT Service] Transcribing audio file using OpenAI Whisper...`);
@@ -28,21 +28,31 @@ export class STTService {
       }
     } else if (genAI) {
       try {
-        console.log(`[STT Service] Transcribing audio file using Gemini 2.5 Flash...`);
+        console.log(`[STT Service] Transcribing audio file using Gemini 2.5 Flash... MimeType: ${mimeType}`);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const audioBuffer = fs.readFileSync(filePath);
-        const audioBase64 = audioBuffer.toString('base64');
-        const prompt = "Please transcribe the following audio precisely in English. Do not add any extra commentary, just provide the exact transcription of the spoken words.";
         
-        const result = await model.generateContent([
-          prompt,
-          {
-            inlineData: {
-              data: audioBase64,
-              mimeType: "audio/m4a" // Expo audio default
-            }
-          }
-        ]);
+        let audioBase64 = audioBase64Data;
+        if (!audioBase64) {
+          const audioBuffer = fs.readFileSync(filePath);
+          audioBase64 = audioBuffer.toString('base64');
+        }
+        const prompt = "You are a highly accurate audio transcription AI. Transcribe the spoken English words. CRITICAL RULES:\n1. If the audio is silent, contains only background noise, or has no human speech, you MUST output EXACTLY the word '[SILENCE]'.\n2. Do NOT hallucinate or invent text (like 'Thank you' or random chants) if you cannot hear clearly.\n3. Return ONLY the raw transcribed text. No introductions.";
+        const result = await model.generateContent({
+          contents: [{ role: "user", parts: [
+            { text: prompt },
+            { inlineData: { data: audioBase64, mimeType: mimeType } }
+          ]}],
+          generationConfig: {
+            maxOutputTokens: 8192,
+            temperature: 0.1,
+          },
+          safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT" as any, threshold: "BLOCK_NONE" as any },
+            { category: "HARM_CATEGORY_HATE_SPEECH" as any, threshold: "BLOCK_NONE" as any },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT" as any, threshold: "BLOCK_NONE" as any },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT" as any, threshold: "BLOCK_NONE" as any }
+          ]
+        });
         const text = result.response.text();
         console.log('[STT Service] Gemini Transcription successful.');
         return text;
