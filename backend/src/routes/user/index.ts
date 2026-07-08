@@ -3,7 +3,7 @@ import {asyncHandler} from "../../auth/checkAuth";
 import {AccessController} from "../../controllers/access.controller";
 import {PasswordController} from "../../controllers/password.controller";
 import {authentication} from "../../auth/authUtils";
-import { getUserResults, getUserStats } from "../../controllers/user.controller";
+import { getUserResults, getUserStats, checkInUser } from "../../controllers/user.controller";
 
 export const userRouter = express.Router();
 
@@ -25,3 +25,4 @@ userRouter.post('/upload-avatar', asyncHandler(AccessController.uploadAvatar))
 // Progress & analytics endpoints (used by mobile ProgressScreen)
 userRouter.get('/me/results', asyncHandler(getUserResults))
 userRouter.get('/me/stats',   asyncHandler(getUserStats))
+userRouter.post('/me/checkin', asyncHandler(checkInUser))

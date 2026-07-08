@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.config';
 import { acquireLock, releaseLock } from '../utils/redis-lock';
+import { emitSlotUpdate } from '../sockets';
 
 export class BookingService {
   /**
@@ -53,7 +54,7 @@ export class BookingService {
             availabilityId,
             startTime: latestAvailability.startTime,
             endTime: latestAvailability.endTime,
-            status: 'CONFIRMED', // Set to CONFIRMED directly upon success
+            status: 'PENDING', // Set to PENDING initially (requires mentor acceptance)
             notes,
           },
           include: {
@@ -76,6 +77,9 @@ export class BookingService {
 
         return booking;
       });
+
+      // Emit real-time update that slot is now booked (unavailable)
+      emitSlotUpdate(availabilityId, bookingResult.mentorId, true);
 
       return bookingResult;
     } finally {
@@ -155,7 +159,7 @@ export class BookingService {
   /**
    * Cancel booking (and release slot).
    */
-  static async cancelBooking(userId: string, role: string, bookingId: string) {
+  static async cancelBooking(userId: string, role: string, bookingId: string, cancelReason?: string) {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
     });
@@ -172,11 +176,14 @@ export class BookingService {
       throw new Error('Unauthorized.');
     }
 
-    return await prisma.$transaction(async (tx) => {
+    const cancelResult = await prisma.$transaction(async (tx) => {
       // Update booking status
       const updatedBooking = await tx.booking.update({
         where: { id: bookingId },
-        data: { status: 'CANCELLED' },
+        data: { 
+          status: 'CANCELLED',
+          cancelReason: cancelReason || null
+        } as any,
       });
 
       // Release availability slot
@@ -186,6 +193,37 @@ export class BookingService {
       });
 
       return updatedBooking;
+    });
+
+    // Emit real-time update that slot is now released (available)
+    emitSlotUpdate(booking.availabilityId, booking.mentorId, false);
+
+    return cancelResult;
+  }
+
+  /**
+   * Accept booking (only accessible to the assigned mentor).
+   */
+  static async acceptBooking(mentorId: string, bookingId: string) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking) {
+      throw new Error('Booking not found.');
+    }
+
+    if (booking.mentorId !== mentorId) {
+      throw new Error('Unauthorized.');
+    }
+
+    if (booking.status !== 'PENDING') {
+      throw new Error('Only pending bookings can be accepted.');
+    }
+
+    return await prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: 'CONFIRMED' },
     });
   }
 }

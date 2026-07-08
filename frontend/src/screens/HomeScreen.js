@@ -59,8 +59,114 @@ const HomeScreen = ({ navigation }) => {
   const [stats, setStats] = useState(null);
   const [showStreakModal, setShowStreakModal] = useState(false);
 
+  // Notifications Bell dropdown states
+  const [notifications, setNotifications] = useState([]);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
+
+  const formatDateTime = (dateStr) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleString('vi-VN', { weekday: 'short', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  const generateBookingNotifications = (bookingsList, isUserMentor, checkinStats) => {
+    const list = [
+      {
+        id: 'welcome',
+        text: 'Chào mừng bạn đến với hệ thống đặt lịch học gia sư SDN!',
+        isRead: true,
+        createdAt: new Date()
+      }
+    ];
+
+    // Add check-in status notification
+    if (checkinStats) {
+      if (checkinStats.hasCheckedInToday) {
+        list.push({
+          id: 'streak-today',
+          text: `Bạn đã điểm danh hôm nay thành công! Chuỗi streak hiện tại: ${checkinStats.currentStreak || 1} ngày 🔥`,
+          isRead: true,
+          createdAt: checkinStats.lastCheckIn || new Date()
+        });
+      } else {
+        list.push({
+          id: 'streak-missing',
+          text: `Bạn chưa điểm danh hôm nay! Bấm vào đây để điểm danh và nhận streak ngay! ⏳`,
+          isRead: false,
+          createdAt: new Date()
+        });
+      }
+    }
+
+    bookingsList.forEach((b) => {
+      const dateStr = formatDateTime(b.availability?.startTime);
+      const partnerName = isUserMentor ? b.student?.fullName : b.mentor?.fullName;
+      
+      if (b.status === 'PENDING') {
+        list.push({
+          id: `pending-${b.id}`,
+          text: isUserMentor 
+            ? `Học viên ${partnerName || 'học viên'} đã đặt lịch hẹn ngày ${dateStr} đang chờ bạn duyệt.`
+            : `Yêu cầu đặt lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đang chờ duyệt.`,
+          isRead: false,
+          createdAt: b.updatedAt || b.createdAt || new Date()
+        });
+      } else if (b.status === 'CONFIRMED') {
+        list.push({
+          id: `confirmed-${b.id}`,
+          text: isUserMentor
+            ? `Bạn đã duyệt thành công lịch dạy với học viên ${partnerName || 'học viên'} ngày ${dateStr}.`
+            : `Lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đã được PHÊ DUYỆT thành công! 🎉`,
+          isRead: true,
+          createdAt: b.updatedAt || b.createdAt || new Date()
+        });
+      } else if (b.status === 'CANCELLED') {
+        const reasonText = b.cancelReason ? ` (Lý do: "${b.cancelReason}")` : '';
+        list.push({
+          id: `cancelled-${b.id}`,
+          text: isUserMentor
+            ? `Lịch dạy với học viên ${partnerName || 'học viên'} ngày ${dateStr} đã bị hủy${reasonText}.`
+            : `Lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đã bị HỦY${reasonText}. ⚠️`,
+          isRead: true,
+          createdAt: b.updatedAt || b.createdAt || new Date()
+        });
+      }
+    });
+    
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  };
+
+  const fetchNotifications = async (currentStats) => {
+    if (!user) return;
+    try {
+      const statsObj = currentStats || stats;
+      const isMentor = user.role === 'MENTOR';
+      if (isMentor) {
+        const res = await client.get('/mentors/availabilities', { hideToast: true });
+        const slots = res.data?.data || [];
+        const mentorBookings = slots
+          .filter(s => s.booking)
+          .map(s => ({
+            ...s.booking,
+            availability: { startTime: s.startTime, endTime: s.endTime },
+            mentor: { fullName: user.fullName }
+          }));
+        setNotifications(generateBookingNotifications(mentorBookings, true, statsObj));
+      } else {
+        const res = await client.get('/bookings', { hideToast: true });
+        const bookingsList = res.data?.data || [];
+        setNotifications(generateBookingNotifications(bookingsList, false, statsObj));
+      }
+    } catch (err) {
+      console.log('Error fetching notifications:', err);
+    }
+  };
 
   const fetchStats = async () => {
     if (!user) return null;
@@ -69,6 +175,7 @@ const HomeScreen = ({ navigation }) => {
       if (res.data?.success) {
         const data = res.data.data || res.data.metadata || null;
         setStats(data);
+        fetchNotifications(data);
         return data;
       }
     } catch (err) {
@@ -83,11 +190,13 @@ const HomeScreen = ({ navigation }) => {
         setShowStreakModal(true);
       }
     });
+    fetchNotifications();
   }, [user]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchStats();
+    await fetchNotifications();
     setRefreshing(false);
   }, [user]);
 
@@ -159,9 +268,15 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.appBarRight}>
-          <TouchableOpacity style={styles.iconBtn} onPress={handleCheckIn}>
+          <TouchableOpacity 
+            style={styles.iconBtn} 
+            onPress={() => {
+              fetchNotifications();
+              setShowNotificationsDropdown(!showNotificationsDropdown);
+            }}
+          >
             <Ionicons name="notifications-outline" size={24} color="#1b263b" />
-            {!stats?.hasCheckedInToday && <View style={styles.notifDot} />}
+            {notifications.some(n => !n.isRead) && <View style={styles.notifDot} />}
           </TouchableOpacity>
 
           {user ? (
@@ -187,6 +302,106 @@ const HomeScreen = ({ navigation }) => {
           )}
         </View>
       </View>
+
+      {/* Notifications Dropdown Modal */}
+      <Modal 
+        visible={showNotificationsDropdown} 
+        transparent={true} 
+        animationType="fade"
+        onRequestClose={() => setShowNotificationsDropdown(false)}
+      >
+        <TouchableOpacity 
+          activeOpacity={1} 
+          onPress={() => setShowNotificationsDropdown(false)}
+          style={{ flex: 1, backgroundColor: 'transparent' }}
+        >
+          <View style={{
+            position: 'absolute',
+            top: 70,
+            right: 20,
+            width: 320,
+            backgroundColor: '#fcfbf7',
+            borderWidth: 2,
+            borderColor: '#1b263b',
+            borderRadius: 12,
+            padding: 16,
+            shadowColor: '#1b263b',
+            shadowOffset: { width: 4, height: 4 },
+            shadowOpacity: 1,
+            shadowRadius: 0,
+            elevation: 8
+          }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottomWidth: 2, borderBottomColor: '#1b263b', paddingBottom: 8 }}>
+              <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#1b263b' }}>
+                NOTIFICATIONS
+              </Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                }}
+              >
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 10, color: '#4682b4' }}>
+                  Mark all as read
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={false}>
+              {notifications.length === 0 ? (
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#999', textAlign: 'center', paddingVertical: 16 }}>
+                  Không có thông báo nào.
+                </Text>
+              ) : (
+                notifications.map(n => (
+                  <TouchableOpacity 
+                    key={n.id}
+                    onPress={() => {
+                      if (n.id === 'streak-missing') {
+                        setShowNotificationsDropdown(false);
+                        handleCheckIn();
+                      } else {
+                        setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, isRead: true } : item));
+                      }
+                    }}
+                    style={{
+                      backgroundColor: n.isRead ? '#fcfbf7' : '#fffebc',
+                      padding: 10,
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: '#1b263b',
+                      marginBottom: 8,
+                    }}
+                  >
+                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#1b263b', lineHeight: 15 }}>
+                      {n.text}
+                    </Text>
+                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 8, color: '#999', marginTop: 4 }}>
+                      {new Date(n.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+            
+            <TouchableOpacity 
+              onPress={() => setShowNotificationsDropdown(false)}
+              style={{
+                backgroundColor: '#ffd54f',
+                borderWidth: 2,
+                borderColor: '#1b263b',
+                borderRadius: 8,
+                paddingVertical: 8,
+                alignItems: 'center',
+                marginTop: 8
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 10, color: '#1b263b' }}>
+                CLOSE
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <ScrollView
         style={styles.scroll}
