@@ -31,7 +31,15 @@ export default function ProfilePage() {
   const [formIdentityNumber, setFormIdentityNumber] = useState('');
   const [formBio, setFormBio] = useState('');
   const [formExpertise, setFormExpertise] = useState('');
+  const [form2FA, setForm2FA] = useState(false);
   const [formSaved, setFormSaved] = useState(false);
+
+  // Change Password States
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   // Fetch all profile details, stats, exam results, and mentor bookings from backend
   const loadData = async () => {
@@ -48,6 +56,7 @@ export default function ProfilePage() {
         setFormIdentityNumber(profile.identityNumber || '');
         setFormBio(profile.bio || '');
         setFormExpertise(profile.expertise || '');
+        setForm2FA(profile.isTwoFactorEnabled || false);
       }
 
       // 2. Fetch Aggregated Exam Stats
@@ -134,7 +143,7 @@ export default function ProfilePage() {
         loadData(); // Reload details
       } catch (err: any) {
         console.error("Avatar upload failed:", err);
-        alert("Lỗi khi tải ảnh đại diện lên: " + (err.response?.data?.message || err.message));
+        alert("Lỗi khi tải ảnh đại diện lên: " + (err.response?.data?.error?.message || err.response?.data?.message || err.message));
       } finally {
         setUploadingAvatar(false);
       }
@@ -159,7 +168,8 @@ export default function ProfilePage() {
         birthday: formBirthDate,
         identityNumber: formIdentityNumber,
         bio: formBio,
-        expertise: formExpertise
+        expertise: formExpertise,
+        isTwoFactorEnabled: form2FA
       });
 
       const updatedUser = res.data.metadata || res.data;
@@ -184,7 +194,35 @@ export default function ProfilePage() {
       loadData(); // reload stats and text
     } catch (err: any) {
       console.error("Save profile settings failed:", err);
-      alert("Lỗi khi lưu thông tin: " + (err.response?.data?.message || err.message));
+      alert("Lỗi khi lưu thông tin: " + (err.response?.data?.error?.message || err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'Mật khẩu mới và xác nhận mật khẩu không khớp!' });
+      return;
+    }
+    setPasswordLoading(true);
+    setPasswordMessage(null);
+    try {
+      await apiClient.post('/auth/change-password', {
+        oldPassword,
+        newPassword
+      });
+      setPasswordMessage({ type: 'success', text: 'Đổi mật khẩu thành công!' });
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      console.error("Change password failed:", err);
+      setPasswordMessage({ 
+        type: 'error', 
+        text: err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Lỗi khi đổi mật khẩu!' 
+      });
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -826,116 +864,198 @@ export default function ProfilePage() {
               )}
 
               {activeTab === 'settings' && (
-                /* EDIT PROFILE TAB */
-                <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-8 shadow-[5px_5px_0px_0px_#1b263b] text-left max-w-2xl mx-auto w-full">
-                  <h4 className="font-serif font-black text-xl text-[#1b263b] mb-1">Edit profile details</h4>
-                  <p className="text-xs font-bold text-gray-500 mb-6">Modify your profile details. They will be saved to your dashboard cloud account.</p>
+                /* EDIT PROFILE AND PASSWORD AREA */
+                <div className="space-y-8 max-w-2xl mx-auto w-full">
+                  {/* EDIT PROFILE TAB */}
+                  <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-8 shadow-[5px_5px_0px_0px_#1b263b] text-left">
+                    <h4 className="font-serif font-black text-xl text-[#1b263b] mb-1">Edit profile details</h4>
+                    <p className="text-xs font-bold text-gray-500 mb-6">Modify your profile details. They will be saved to your dashboard cloud account.</p>
 
-                  {formSaved && (
-                    <div className="mb-6 bg-emerald-100 border-2 border-emerald-800 text-emerald-800 px-4 py-3 rounded-xl text-xs font-bold shadow-[2px_2px_0px_0px_#1b263b]">
-                      ✓ Saved changes successfully!
-                    </div>
-                  )}
+                    {formSaved && (
+                      <div className="mb-6 bg-emerald-100 border-2 border-emerald-800 text-emerald-800 px-4 py-3 rounded-xl text-xs font-bold shadow-[2px_2px_0px_0px_#1b263b]">
+                        ✓ Saved changes successfully!
+                      </div>
+                    )}
 
-                  <form onSubmit={handleSaveSettings} className="space-y-5">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Họ và tên</label>
-                      <input
-                        type="text"
-                        required
-                        value={formFullName}
-                        onChange={(e) => setFormFullName(e.target.value)}
-                        className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner animate-none"
-                      />
-                    </div>
-                    
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Email liên hệ</label>
-                      <input
-                        type="email"
-                        required
-                        value={formEmail}
-                        onChange={(e) => setFormEmail(e.target.value)}
-                        className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner animate-none"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <form onSubmit={handleSaveSettings} className="space-y-5">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Số điện thoại</label>
+                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Họ và tên</label>
                         <input
                           type="text"
-                          value={formPhone}
-                          onChange={(e) => setFormPhone(e.target.value)}
-                          placeholder="0912 345 678"
+                          required
+                          value={formFullName}
+                          onChange={(e) => setFormFullName(e.target.value)}
+                          className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner animate-none"
+                        />
+                      </div>
+                      
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Email liên hệ</label>
+                        <input
+                          type="email"
+                          required
+                          value={formEmail}
+                          onChange={(e) => setFormEmail(e.target.value)}
+                          className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner animate-none"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Số điện thoại</label>
+                          <input
+                            type="text"
+                            value={formPhone}
+                            onChange={(e) => setFormPhone(e.target.value)}
+                            placeholder="0912 345 678"
+                            className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Ngày sinh</label>
+                          <input
+                            type="text"
+                            value={formBirthDate}
+                            onChange={(e) => setFormBirthDate(e.target.value)}
+                            placeholder="15/08/2002"
+                            className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Số CCCD / Hộ chiếu</label>
+                          <input
+                            type="text"
+                            value={formIdentityNumber}
+                            onChange={(e) => setFormIdentityNumber(e.target.value)}
+                            placeholder="0312xxxxxxxx"
+                            className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Chuyên môn / Target</label>
+                          <input
+                            type="text"
+                            value={formExpertise}
+                            onChange={(e) => setFormExpertise(e.target.value)}
+                            placeholder="IELTS 7.5 Target"
+                            className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Tiểu sử (Bio / Châm ngôn)</label>
+                        <textarea
+                          value={formBio}
+                          onChange={(e) => setFormBio(e.target.value)}
+                          placeholder="Learning is sharpest when the pencil is, too."
+                          rows={2}
+                          className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner resize-none"
+                        />
+                      </div>
+
+                      {/* 2FA Toggle */}
+                      <div className="bg-[#fdfaf2] border-2 border-[#1b263b] rounded-2xl p-4 shadow-[3px_3px_0px_0px_#1b263b] flex items-center justify-between mt-6">
+                        <div className="text-left">
+                          <label className="text-xs font-black uppercase text-[#1b263b] tracking-wider block">Xác thực 2 lớp (2FA)</label>
+                          <span className="text-[10px] font-bold text-gray-400 block mt-0.5">Nhận mã xác thực qua email mỗi khi đăng nhập.</span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={form2FA}
+                            onChange={(e) => setForm2FA(e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-[#eae6ca] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00CC99] border-2 border-[#1b263b]"></div>
+                        </label>
+                      </div>
+
+                      <div className="pt-4 flex gap-3">
+                        <button
+                          type="submit"
+                          className="flex-1 bg-[#a7f3d0] text-[#005c42] border-2 border-[#1b263b] py-3 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#91e8c1] transition-all shadow-[3px_3px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] text-center cursor-pointer"
+                        >
+                          Save Changes 💾
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchParams({ tab: 'courses' });
+                            setActiveTab('courses');
+                          }}
+                          className="bg-white border-2 border-[#1b263b] px-6 py-3 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-gray-50 transition-all text-center cursor-pointer text-[#1b263b]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* CHANGE PASSWORD CARD */}
+                  <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-8 shadow-[5px_5px_0px_0px_#1b263b] text-left">
+                    <h4 className="font-serif font-black text-xl text-[#1b263b] mb-1">Đổi mật khẩu</h4>
+                    <p className="text-xs font-bold text-gray-500 mb-6">Cập nhật mật khẩu mới cho tài khoản của bạn.</p>
+
+                    {passwordMessage && (
+                      <div className={`mb-6 border-2 px-4 py-3 rounded-xl text-xs font-bold shadow-[2px_2px_0px_0px_#1b263b] ${
+                        passwordMessage.type === 'success' 
+                          ? 'bg-emerald-100 border-emerald-800 text-emerald-800' 
+                          : 'bg-red-100 border-red-800 text-red-800'
+                      }`}>
+                        {passwordMessage.text}
+                      </div>
+                    )}
+
+                    <form onSubmit={handleChangePassword} className="space-y-5">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Mật khẩu hiện tại</label>
+                        <input
+                          type="password"
+                          required
+                          value={oldPassword}
+                          onChange={(e) => setOldPassword(e.target.value)}
                           className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
                         />
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Ngày sinh</label>
-                        <input
-                          type="text"
-                          value={formBirthDate}
-                          onChange={(e) => setFormBirthDate(e.target.value)}
-                          placeholder="15/08/2002"
-                          className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
-                        />
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Mật khẩu mới</label>
+                          <input
+                            type="password"
+                            required
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Xác nhận mật khẩu mới</label>
+                          <input
+                            type="password"
+                            required
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
+                          />
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Số CCCD / Hộ chiếu</label>
-                        <input
-                          type="text"
-                          value={formIdentityNumber}
-                          onChange={(e) => setFormIdentityNumber(e.target.value)}
-                          placeholder="0312xxxxxxxx"
-                          className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
-                        />
+                      <div className="pt-4 flex gap-3">
+                        <button
+                          type="submit"
+                          disabled={passwordLoading}
+                          className="flex-1 bg-[#fbcfe8] text-[#c92a2a] border-2 border-[#1b263b] py-3 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#f9a8d4] disabled:opacity-50 transition-all shadow-[3px_3px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] text-center cursor-pointer"
+                        >
+                          {passwordLoading ? 'Đang đổi...' : 'Đổi mật khẩu 🔑'}
+                        </button>
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Chuyên môn / Target</label>
-                        <input
-                          type="text"
-                          value={formExpertise}
-                          onChange={(e) => setFormExpertise(e.target.value)}
-                          placeholder="IELTS 7.5 Target"
-                          className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Tiểu sử (Bio / Châm ngôn)</label>
-                      <textarea
-                        value={formBio}
-                        onChange={(e) => setFormBio(e.target.value)}
-                        placeholder="Learning is sharpest when the pencil is, too."
-                        rows={2}
-                        className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner resize-none"
-                      />
-                    </div>
-
-                    <div className="pt-4 flex gap-3">
-                      <button
-                        type="submit"
-                        className="flex-1 bg-[#a7f3d0] text-[#005c42] border-2 border-[#1b263b] py-3 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#91e8c1] transition-all shadow-[3px_3px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] text-center cursor-pointer"
-                      >
-                        Save Changes 💾
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearchParams({ tab: 'courses' });
-                          setActiveTab('courses');
-                        }}
-                        className="bg-white border-2 border-[#1b263b] px-6 py-3 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-gray-50 transition-all text-center cursor-pointer text-[#1b263b]"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
+                    </form>
+                  </div>
                 </div>
               )}
             </>

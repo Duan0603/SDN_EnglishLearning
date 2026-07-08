@@ -13,6 +13,11 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
+  const [require2FA, setRequire2FA] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpEmail, setOtpEmail] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { loading, error } = useAppSelector((state) => state.auth);
@@ -36,7 +41,7 @@ export default function LoginScreen() {
       }
     } catch (err: any) {
       console.error('Google login failed:', err.message);
-      dispatch(loginFailure(err.response?.data?.message || 'Đăng nhập bằng Google thất bại.'));
+      dispatch(loginFailure(err.response?.data?.error?.message || err.response?.data?.message || 'Đăng nhập bằng Google thất bại.'));
     }
   };
 
@@ -104,6 +109,13 @@ export default function LoginScreen() {
       const res = await apiClient.post('/auth/login', { email: username, password });
       const metadata = res.data?.metadata || res.data;
       
+      if (metadata.require2FA || metadata.requires2FA) {
+        setRequire2FA(true);
+        setOtpEmail(metadata.email);
+        dispatch(loginFailure('')); // Clear loading error/spinner
+        return;
+      }
+
       const user = metadata.user;
       const token = metadata.tokens?.accessToken || metadata.accessToken || 'mock-token';
 
@@ -116,7 +128,37 @@ export default function LoginScreen() {
       }
     } catch (err: any) {
       console.error('Login failed:', err.message);
-      dispatch(loginFailure(err.response?.data?.message || 'Đăng nhập không thành công. Hãy kiểm tra lại thông tin.'));
+      dispatch(loginFailure(err.response?.data?.error?.message || err.response?.data?.message || 'Đăng nhập không thành công. Hãy kiểm tra lại thông tin.'));
+    }
+  };
+
+  const handleVerify2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode.trim()) {
+      alert('Vui lòng nhập mã xác thực.');
+      return;
+    }
+    setOtpLoading(true);
+    dispatch(loginStart());
+    try {
+      const res = await apiClient.post('/auth/verify-2fa', { email: otpEmail, otp: otpCode });
+      const metadata = res.data?.metadata || res.data;
+      
+      const user = metadata.user;
+      const token = metadata.tokens?.accessToken || metadata.accessToken || 'mock-token';
+
+      dispatch(loginSuccess({ user, token }));
+      
+      if (user.role === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
+    } catch (err: any) {
+      console.error('2FA verification failed:', err.message);
+      dispatch(loginFailure(err.response?.data?.error?.message || err.response?.data?.message || 'Mã xác thực không hợp lệ hoặc đã hết hạn.'));
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -143,7 +185,7 @@ export default function LoginScreen() {
       dispatch(loginFailure(''));
     } catch (err: any) {
       console.error('Signup failed:', err.message);
-      dispatch(loginFailure(err.response?.data?.message || 'Đăng ký không thành công. Vui lòng thử lại.'));
+      dispatch(loginFailure(err.response?.data?.error?.message || err.response?.data?.message || 'Đăng ký không thành công. Vui lòng thử lại.'));
     }
   };
 
@@ -233,117 +275,206 @@ export default function LoginScreen() {
               </div>
             )}
 
-            {/* Sliding Form Track Wrapper */}
-            <div className={`transition-all duration-500 ease-in-out ${!isRegisterMode ? 'max-h-[480px]' : 'max-h-[590px]'}`}>
-              <div className="flex w-[200%] transition-transform duration-500 ease-in-out" style={{ transform: isRegisterMode ? 'translateX(-50%)' : 'translateX(0%)' }}>
-                
-                {/* COLUMN 1: LOGIN FORM (50% of track width) */}
-                <div className={`w-1/2 pr-3 space-y-4 transition-opacity duration-500 ${!isRegisterMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                  
-                  {/* Title & Logo */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#c92a2a] border-2 border-[#1b263b] rounded-xl flex items-center justify-center text-white font-serif font-black text-xl shadow-[2px_2px_0px_0px_#1b263b] shrink-0">
-                      A
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-serif text-[#1b263b] font-black tracking-tight leading-tight">Open your workspace</h2>
-                      <p className="text-[9px] text-[#1b263b]/70 uppercase tracking-wider font-black">AI-Powered Exam Dashboard</p>
-                    </div>
+            {require2FA ? (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#4682b4] border-2 border-[#1b263b] rounded-xl flex items-center justify-center text-white font-serif font-black text-xl shadow-[2px_2px_0px_0px_#1b263b] shrink-0">
+                    ✉
                   </div>
-
-                  <form onSubmit={handleLoginSubmit} className="space-y-4">
-                    <div className="space-y-1 text-left">
-                      <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
-                        Tên tài khoản (Username)
-                      </label>
-                      <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="e.g. student123"
-                        className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1 text-left">
-                      <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
-                        Mật khẩu (Password)
-                      </label>
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
-                        required
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full bg-[#c92a2a] text-white font-black text-xs py-3.5 rounded-xl hover:bg-[#b01e1e] active:scale-[0.98] transition-all shadow-[3px_3px_0px_0px_#1b263b] border-2 border-[#1b263b] flex items-center justify-center gap-2 uppercase tracking-wider"
-                    >
-                      {loading ? (
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>Đăng Nhập Hệ Thống ✉</>
-                      )}
-                    </button>
-                  </form>
-
-                  <div className="relative flex py-1 items-center">
-                    <div className="flex-grow border-t-2 border-dashed border-[#1b263b]/20"></div>
-                    <span className="flex-shrink mx-3 text-[9px] font-black text-gray-400 uppercase tracking-widest">or</span>
-                    <div className="flex-grow border-t-2 border-dashed border-[#1b263b]/20"></div>
-                  </div>
-
-                  {/* Google Login Button Container */}
-                  <div className="w-full flex justify-center py-1">
-                    <div id="google-signin-btn" className="w-full" style={{ minHeight: '44px' }} />
-                  </div>
-
-                  <div className="pt-2 text-center text-xs font-bold text-gray-500">
-                    Chưa có tài khoản?{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsRegisterMode(true);
-                        dispatch(loginFailure(''));
-                      }}
-                      className="text-[#c92a2a] underline font-black hover:text-[#b01e1e] transition-colors"
-                    >
-                      Đăng ký ngay
-                    </button>
+                  <div>
+                    <h2 className="text-2xl font-serif text-[#1b263b] font-black tracking-tight leading-tight">Xác thực 2 lớp</h2>
+                    <p className="text-[9px] text-[#1b263b]/70 uppercase tracking-wider font-black">Nhập mã đã được gửi đến email của bạn</p>
                   </div>
                 </div>
 
-                {/* COLUMN 2: REGISTER FORM (50% of track width) */}
-                <div className={`w-1/2 pl-3 space-y-4 transition-opacity duration-500 ${isRegisterMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                  
-                  {/* Title & Logo */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#c92a2a] border-2 border-[#1b263b] rounded-xl flex items-center justify-center text-white font-serif font-black text-xl shadow-[2px_2px_0px_0px_#1b263b] shrink-0">
-                      A
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-serif text-[#1b263b] font-black tracking-tight leading-tight">Create your workspace</h2>
-                      <p className="text-[9px] text-[#1b263b]/70 uppercase tracking-wider font-black">Registration Form</p>
-                    </div>
+                <div className="bg-[#fdfaf2] border-2 border-[#1b263b] text-[#1b263b] text-xs rounded-xl p-3 shadow-inner">
+                  Mã xác thực đăng nhập đã được gửi tới email: <strong>{otpEmail}</strong>. Vui lòng kiểm tra hộp thư.
+                </div>
+
+                <form onSubmit={handleVerify2FA} className="space-y-4">
+                  <div className="space-y-1 text-left">
+                    <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                      Mã OTP (6 chữ số)
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="------"
+                      className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-4 py-3 text-center text-lg font-bold tracking-[0.5em] text-[#1b263b] outline-none focus:border-[#4682b4] transition-all shadow-inner"
+                      required
+                    />
                   </div>
 
-                  <form onSubmit={handleRegisterSubmit} className="space-y-2">
-                    <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="submit"
+                    disabled={otpLoading || loading}
+                    className="w-full bg-[#4682b4] text-white font-black text-xs py-3.5 rounded-xl hover:bg-sky-700 active:scale-[0.98] transition-all shadow-[3px_3px_0px_0px_#1b263b] border-2 border-[#1b263b] flex items-center justify-center gap-2 uppercase tracking-wider cursor-pointer animate-pulse"
+                  >
+                    {otpLoading || loading ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>Xác nhận mã OTP ⚡</>
+                    )}
+                  </button>
+                </form>
+
+                <div className="pt-2 text-center text-xs font-bold text-gray-500">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRequire2FA(false);
+                      setOtpCode('');
+                      dispatch(loginFailure(''));
+                    }}
+                    className="text-[#c92a2a] underline font-black hover:text-[#b01e1e] transition-colors cursor-pointer"
+                  >
+                    Quay lại đăng nhập
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Sliding Form Track Wrapper */
+              <div className={`transition-all duration-500 ease-in-out ${!isRegisterMode ? 'max-h-[480px]' : 'max-h-[590px]'}`}>
+                <div className="flex w-[200%] transition-transform duration-500 ease-in-out" style={{ transform: isRegisterMode ? 'translateX(-50%)' : 'translateX(0%)' }}>
+                  
+                  {/* COLUMN 1: LOGIN FORM (50% of track width) */}
+                  <div className={`w-1/2 pr-3 space-y-4 transition-opacity duration-500 ${!isRegisterMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                    
+                    {/* Title & Logo */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-[#c92a2a] border-2 border-[#1b263b] rounded-xl flex items-center justify-center text-white font-serif font-black text-xl shadow-[2px_2px_0px_0px_#1b263b] shrink-0">
+                        A
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-serif text-[#1b263b] font-black tracking-tight leading-tight">Open your workspace</h2>
+                        <p className="text-[9px] text-[#1b263b]/70 uppercase tracking-wider font-black">AI-Powered Exam Dashboard</p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleLoginSubmit} className="space-y-4">
                       <div className="space-y-1 text-left">
                         <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
-                          Họ và tên
+                          Tên tài khoản (Username)
                         </label>
                         <input
                           type="text"
-                          value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
-                          placeholder="Nguyễn Văn A"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="e.g. student123"
+                          className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1 text-left">
+                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                          Mật khẩu (Password)
+                        </label>
+                        <input
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
+                          required
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-[#c92a2a] text-white font-black text-xs py-3.5 rounded-xl hover:bg-[#b01e1e] active:scale-[0.98] transition-all shadow-[3px_3px_0px_0px_#1b263b] border-2 border-[#1b263b] flex items-center justify-center gap-2 uppercase tracking-wider"
+                      >
+                        {loading ? (
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>Đăng Nhập Hệ Thống ✉</>
+                        )}
+                      </button>
+                    </form>
+
+                    <div className="relative flex py-1 items-center">
+                      <div className="flex-grow border-t-2 border-dashed border-[#1b263b]/20"></div>
+                      <span className="flex-shrink mx-3 text-[9px] font-black text-gray-400 uppercase tracking-widest">or</span>
+                      <div className="flex-grow border-t-2 border-dashed border-[#1b263b]/20"></div>
+                    </div>
+
+                    {/* Google Login Button Container */}
+                    <div className="w-full flex justify-center py-1">
+                      <div id="google-signin-btn" className="w-full" style={{ minHeight: '44px' }} />
+                    </div>
+
+                    <div className="pt-2 text-center text-xs font-bold text-gray-500">
+                      Chưa có tài khoản?{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsRegisterMode(true);
+                          dispatch(loginFailure(''));
+                        }}
+                        className="text-[#c92a2a] underline font-black hover:text-[#b01e1e] transition-colors"
+                      >
+                        Đăng ký ngay
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* COLUMN 2: REGISTER FORM (50% of track width) */}
+                  <div className={`w-1/2 pl-3 space-y-4 transition-opacity duration-500 ${isRegisterMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                    
+                    {/* Title & Logo */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-[#c92a2a] border-2 border-[#1b263b] rounded-xl flex items-center justify-center text-white font-serif font-black text-xl shadow-[2px_2px_0px_0px_#1b263b] shrink-0">
+                        A
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-serif text-[#1b263b] font-black tracking-tight leading-tight">Create your workspace</h2>
+                        <p className="text-[9px] text-[#1b263b]/70 uppercase tracking-wider font-black">Registration Form</p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleRegisterSubmit} className="space-y-2">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1 text-left">
+                          <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                            Họ và tên
+                          </label>
+                          <input
+                            type="text"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            placeholder="Nguyễn Văn A"
+                            className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-1 text-left">
+                          <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                            Số điện thoại
+                          </label>
+                          <input
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="0912345678"
+                            className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 text-left">
+                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                          Địa chỉ Email
+                        </label>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="email@example.com"
                           className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
                           required
                         />
@@ -351,91 +482,63 @@ export default function LoginScreen() {
 
                       <div className="space-y-1 text-left">
                         <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
-                          Số điện thoại
+                          Tên tài khoản (Username)
                         </label>
                         <input
-                          type="tel"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="0912345678"
+                          type="text"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="Username mong muốn..."
                           className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
                           required
                         />
                       </div>
+
+                      <div className="space-y-1 text-left">
+                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                          Mật khẩu (Password)
+                        </label>
+                        <input
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Tối thiểu 6 ký tự..."
+                          className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
+                          required
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-[#c92a2a] text-white font-black text-xs py-3.5 rounded-xl hover:bg-[#b01e1e] active:scale-[0.98] transition-all shadow-[3px_3px_0px_0px_#1b263b] border-2 border-[#1b263b] flex items-center justify-center gap-2 uppercase tracking-wider"
+                      >
+                        {loading ? (
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>Tạo Tài Khoản Học Viên ✎</>
+                        )}
+                      </button>
+                    </form>
+
+                    <div className="pt-2 text-center text-xs font-bold text-gray-500">
+                      Đã có tài khoản?{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsRegisterMode(false);
+                          dispatch(loginFailure(''));
+                        }}
+                        className="text-[#c92a2a] underline font-black hover:text-[#b01e1e] transition-colors"
+                      >
+                        Đăng nhập ngay
+                      </button>
                     </div>
-
-                    <div className="space-y-1 text-left">
-                      <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
-                        Địa chỉ Email
-                      </label>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="email@example.com"
-                        className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1 text-left">
-                      <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
-                        Tên tài khoản (Username)
-                      </label>
-                      <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="Username mong muốn..."
-                        className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1 text-left">
-                      <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
-                        Mật khẩu (Password)
-                      </label>
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Tối thiểu 6 ký tự..."
-                        className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
-                        required
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full bg-[#c92a2a] text-white font-black text-xs py-3.5 rounded-xl hover:bg-[#b01e1e] active:scale-[0.98] transition-all shadow-[3px_3px_0px_0px_#1b263b] border-2 border-[#1b263b] flex items-center justify-center gap-2 uppercase tracking-wider"
-                    >
-                      {loading ? (
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>Tạo Tài Khoản Học Viên ✎</>
-                      )}
-                    </button>
-                  </form>
-
-                  <div className="pt-2 text-center text-xs font-bold text-gray-500">
-                    Đã có tài khoản?{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsRegisterMode(false);
-                        dispatch(loginFailure(''));
-                      }}
-                      className="text-[#c92a2a] underline font-black hover:text-[#b01e1e] transition-colors"
-                    >
-                      Đăng nhập ngay
-                    </button>
                   </div>
-                </div>
 
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
         </div>

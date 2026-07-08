@@ -105,4 +105,40 @@ export class PasswordController {
             return res.status(500).json({ message: "Lỗi hệ thống!" });
         }
     };
+
+    static changePassword = async (req, res, next) => {
+        try {
+            const { oldPassword, newPassword } = req.body;
+            if (!oldPassword || !newPassword) {
+                return res.status(400).json({ message: "Vui lòng cung cấp đầy đủ mật khẩu cũ và mới" });
+            }
+
+            const userId = req.user.userId;
+            const user = await userModel.findById(userId);
+            if (!user) {
+                return res.status(404).json({ message: "Không tìm thấy người dùng" });
+            }
+
+            // Verify old password
+            const isMatch = await bcrypt.compare(oldPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({ message: "Mật khẩu cũ không chính xác" });
+            }
+
+            // Hash new password
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+            // Update password
+            await userModel.updateOne({ _id: userId }, { password: hashedPassword });
+
+            new OK({
+                message: "Đổi mật khẩu thành công",
+                metadata: {}
+            }).send(res);
+        } catch (error) {
+            console.error("Lỗi tại Change Password:", error);
+            return res.status(500).json({ message: "Lỗi hệ thống!" });
+        }
+    };
 }

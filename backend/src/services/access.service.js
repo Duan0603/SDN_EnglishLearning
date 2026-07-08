@@ -51,6 +51,29 @@ export class AccessService {
             throw new BadRequestError("Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.")
         }
 
+        // 2FA check
+        if (foundUser.isTwoFactorEnabled) {
+            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const { default: OtpModel } = await import("../models/otp.model.js");
+            const { MailService } = await import("./mail.service.js");
+
+            // Clean up previous OTPs and create new one
+            await OtpModel.deleteMany({ email: foundUser.email });
+            await OtpModel.create({ email: foundUser.email, otp: otpCode });
+
+            // Send email
+            console.log("\n==========================================");
+            console.log(`[2FA OTP] Generated code for ${foundUser.email}: ${otpCode}`);
+            console.log("==========================================\n");
+            await MailService.sendOTP(foundUser.email, otpCode);
+
+            return {
+                requires2FA: true,
+                require2FA: true,
+                email: foundUser.email
+            };
+        }
+
         // 3. Create privateKey, publicKey
         const {privateKey, publicKey} = crypto.generateKeyPairSync('rsa', {
             modulusLength: 4096,
@@ -207,6 +230,55 @@ export class AccessService {
 
         return {
             user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'phone', 'avatar'], object: user}),
+            tokens
+        };
+    }
+
+    static verify2FA = async ({ email, otp }) => {
+        if (!email || !otp) {
+            throw new BadRequestError("Vui lòng cung cấp đầy đủ email và mã xác thực!");
+        }
+
+        const { default: OtpModel } = await import("../models/otp.model.js");
+        
+        // Find OTP record
+        const tokenRecord = await OtpModel.findOne({ email, otp }).lean();
+        if (!tokenRecord) {
+            throw new BadRequestError("Mã xác thực không hợp lệ hoặc đã hết hạn!");
+        }
+
+        // Fetch User
+        const foundUser = await userModel.findOne({ email }).lean();
+        if (!foundUser) {
+            throw new BadRequestError("Không tìm thấy người dùng!");
+        }
+
+        // Clean up OTP record
+        await OtpModel.deleteMany({ email });
+
+        // Create key pair & generate tokens
+        const {privateKey, publicKey} = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 4096,
+            publicKeyEncoding: {
+                type: 'pkcs1',
+                format: 'pem'
+            },
+            privateKeyEncoding: {
+                type: 'pkcs1',
+                format: 'pem'
+            }
+        });
+
+        const tokens = await createTokenPair({userId: foundUser._id, email: foundUser.email, role: foundUser.role}, publicKey, privateKey);
+
+        await KeyTokenService.createKeyToken({
+            userId: foundUser._id,
+            publicKey,
+            refreshToken: tokens.refreshToken
+        });
+
+        return {
+            user: getInfoData({field: ['_id', 'username', 'fullName', 'email', 'role', 'phone'], object: foundUser}),
             tokens
         };
     }

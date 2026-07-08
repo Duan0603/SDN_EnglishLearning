@@ -54,6 +54,10 @@ const userSchema = new mongoose.Schema({
     expertise: {
         type: String,
         default: ''
+    },
+    isTwoFactorEnabled: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true,
