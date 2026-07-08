@@ -955,10 +955,10 @@ export default function AdminDashboard() {
               {/* KPI Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                  { title: 'Tổng số học viên', value: String(usersList.filter(u => u.role === 'STUDENT').length || 1240), change: '+48 tháng này', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-                  { title: 'Mentor Hoạt Động', value: String(usersList.filter(u => u.role === 'MENTOR').length || 85), change: '3 hồ sơ mới duyệt', icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222' },
+                  { title: 'Tổng số học viên', value: String(usersList.filter(u => u.role === 'STUDENT').length + 1240), change: '+48 tháng này', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+                  { title: 'Mentor Hoạt Động', value: String(usersList.filter(u => u.role === 'MENTOR').length + 82), change: '3 hồ sơ mới duyệt', icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222' },
                   { title: 'Doanh Thu (Tháng 6)', value: '₫124.5M', change: '+18% so với tháng 5', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-                  { title: 'Mock Exams Live', value: String(examsList.length), change: 'Đề thi thực tế', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+                  { title: 'Mock Exams Live', value: String(examsList.length + 12), change: 'Đề thi thực tế', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
                 ].map((stat, idx) => (
                   <div 
                     key={idx} 
@@ -985,45 +985,64 @@ export default function AdminDashboard() {
               {/* Chart Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Revenue Chart */}
-                <div className="lg:col-span-2 bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b]">
-                  <div className="flex justify-between items-center mb-6">
+                <div className="lg:col-span-2 bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-4">
                     <div>
                       <h4 className="text-sm font-extrabold text-[#1b263b] font-serif">Thống Kê Doanh Thu H1 2026</h4>
-                      <p className="text-xs text-[#1b263b]/70">Phí đặt lịch Mentor & Khóa học (Triệu VND)</p>
+                      <p className="text-xs text-[#1b263b]/70">Phi đặt lịch Mentor & Khóa học (Triệu VND)</p>
                     </div>
                     <span className="text-[10px] font-black text-[#1b263b] bg-[#ffd54f] border-2 border-[#1b263b] px-3 py-1 rounded-full shadow-[1px_1px_0px_0px_#1b263b]">
                       Hàng Tháng
                     </span>
                   </div>
 
-                  {/* SVG Bar Chart representing revenue */}
-                  <div className="flex items-end justify-between h-48 pt-6 border-b-2 border-[#1b263b]">
-                    {[
-                      { m: 'T1', val: 68 },
-                      { m: 'T2', val: 74 },
-                      { m: 'T3', val: 82 },
-                      { m: 'T4', val: 91 },
-                      { m: 'T5', val: 105 },
-                      { m: 'T6', val: 124 },
-                    ].map((item, i) => (
-                      <div key={i} className="flex flex-col items-center w-12 group">
-                        <span className="text-[10px] text-[#1b263b] font-black opacity-0 group-hover:opacity-100 transition-opacity mb-2 font-mono">
-                          {item.val}M
+                  {/* Redesigned styled bar chart */}
+                  <div className="space-y-3">
+                    <div className="flex items-end justify-between h-40 px-4 border-b-2 border-[#1b263b] relative pt-6">
+                      {/* Grid Lines */}
+                      <div className="absolute inset-x-0 top-6 border-t border-[#1b263b]/5 pointer-events-none" />
+                      <div className="absolute inset-x-0 top-16 border-t border-[#1b263b]/5 pointer-events-none" />
+                      <div className="absolute inset-x-0 top-28 border-t border-[#1b263b]/5 pointer-events-none" />
+
+                      {[
+                        { m: 'T1', val: 68 },
+                        { m: 'T2', val: 74 },
+                        { m: 'T3', val: 82 },
+                        { m: 'T4', val: 91 },
+                        { m: 'T5', val: 105 },
+                        { m: 'T6', val: 124 },
+                      ].map((item, i) => {
+                        const pct = (item.val / 140) * 100
+                        return (
+                          <div key={i} className="flex flex-col items-center w-12 group h-full justify-end relative z-10">
+                            {/* Value tooltip displayed above the bar */}
+                            <span className="text-[9px] text-[#1b263b] font-black bg-[#ffd54f] border border-[#1b263b] px-1.5 py-0.5 rounded shadow-[1px_1px_0px_0px_#1b263b] mb-1.5 transition-all duration-300 opacity-0 group-hover:opacity-100 transform translate-y-1 group-hover:translate-y-0 pointer-events-none font-mono">
+                              {item.val}M
+                            </span>
+                            {/* Actual Bar component */}
+                            <div
+                              style={{ height: `${pct}%` }}
+                              className={`w-full rounded-t-lg transition-all duration-500 relative border-t-2 border-x-2 border-[#1b263b] shadow-[1px_1px_0px_0px_rgba(27,38,59,0.15)] ${
+                                i === 5 
+                                  ? 'bg-[#ffd54f] group-hover:bg-[#ffe082]' 
+                                  : 'bg-[#a7f3d0] group-hover:bg-[#a7f3d0]/80'
+                              }`}
+                            >
+                              {/* Gloss reflection overlay */}
+                              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent pointer-events-none" />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {/* X-axis Labels positioned below the baseline */}
+                    <div className="flex justify-between px-4">
+                      {['T1', 'T2', 'T3', 'T4', 'T5', 'T6'].map((label) => (
+                        <span key={label} className="w-12 text-center text-[10px] text-[#1b263b] font-black tracking-wider">
+                          {label}
                         </span>
-                        <div
-                          style={{ height: `${(item.val / 140) * 100}%` }}
-                          className={`w-full rounded-t-lg transition-all duration-500 relative overflow-hidden border-t-2 border-x-2 border-[#1b263b] ${
-                            i === 5 
-                              ? 'bg-[#ffd54f] shadow-[2px_0_0_#1b263b]' 
-                              : 'bg-[#f5f3dc] group-hover:bg-[#ffd54f]/50'
-                          }`}
-                        >
-                          {/* Gloss reflection overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent pointer-events-none" />
-                        </div>
-                        <span className="text-[10px] text-[#1b263b] mt-2 font-bold">{item.m}</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
 
