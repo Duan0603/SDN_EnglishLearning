@@ -53,12 +53,14 @@ export default function AdminDashboard() {
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersError, setUsersError] = useState<string | null>(null)
 
-  // Booking/Order State (Mocked demo data representing Mentor slots booked by Students)
   const [bookingsList, setBookingsList] = useState<Booking[]>([
     { id: 'BK001', studentName: 'Nguyen Minh Anh', mentorName: 'Emily Smith', dateTime: '2026-06-18 09:00', amount: 350000, status: 'Confirmed' },
     { id: 'BK002', studentName: 'Tran Huu Binh', mentorName: 'David Lee', dateTime: '2026-06-18 14:00', amount: 400000, status: 'Pending' },
     { id: 'BK003', studentName: 'Le Thi Hoa', mentorName: 'Sarah Nguyen', dateTime: '2026-06-19 10:30', amount: 350000, status: 'Confirmed' },
     { id: 'BK004', studentName: 'Nguyen Minh Anh', mentorName: 'Emily Smith', dateTime: '2026-06-20 16:00', amount: 350000, status: 'Pending' },
+    { id: 'BK005', studentName: 'Pham Minh Hoang', mentorName: 'Sarah Nguyen', dateTime: '2026-06-21 08:30', amount: 350000, status: 'Confirmed' },
+    { id: 'BK006', studentName: 'Tran Huu Binh', mentorName: 'John Doe', dateTime: '2026-06-21 15:00', amount: 400000, status: 'Completed' },
+    { id: 'BK007', studentName: 'Vu Hoang Lam', mentorName: 'Emily Smith', dateTime: '2026-06-22 10:00', amount: 350000, status: 'Cancelled' }
   ])
 
   // Exams State
@@ -186,6 +188,12 @@ export default function AdminDashboard() {
         { id: '2', fullName: 'John Doe', username: 'johndoe', email: 'john@sdn.com', role: 'MENTOR', status: 'pending', birthday: '20/10/1995', phone: '0987654321', identityNumber: '001202008765' },
         { id: '3', fullName: 'Emily Smith', username: 'emily', email: 'emily@mentor.com', role: 'MENTOR', status: 'active', birthday: '12/03/1990', phone: '0977665544', identityNumber: '001202004321' },
         { id: '4', fullName: 'Admin User', username: 'admin', email: 'admin@sdn.com', role: 'ADMIN', status: 'active', birthday: '01/01/1988', phone: '0900112233', identityNumber: '001202009999' },
+        { id: '5', fullName: 'Tran Huu Binh', username: 'huubinh', email: 'binhth@gmail.com', role: 'STUDENT', status: 'active', birthday: '05/09/2001', phone: '0944332211', identityNumber: '001202001111' },
+        { id: '6', fullName: 'Le Thi Hoa', username: 'thihoa', email: 'hoalt@gmail.com', role: 'STUDENT', status: 'active', birthday: '18/12/2000', phone: '0966554433', identityNumber: '001202002222' },
+        { id: '7', fullName: 'Sarah Nguyen', username: 'sarah', email: 'sarah@mentor.com', role: 'MENTOR', status: 'active', birthday: '22/07/1992', phone: '0933221100', identityNumber: '001202003333' },
+        { id: '8', fullName: 'Pham Minh Hoang', username: 'hoangpm', email: 'hoangpm@gmail.com', role: 'STUDENT', status: 'active', birthday: '30/04/1999', phone: '0911223344', identityNumber: '001202004444' },
+        { id: '9', fullName: 'Vu Hoang Lam', username: 'lamvh', email: 'lamvh@gmail.com', role: 'STUDENT', status: 'inactive', birthday: '14/02/2003', phone: '0988776655', identityNumber: '001202005555' },
+        { id: '10', fullName: 'David Lee', username: 'davidlee', email: 'david@mentor.com', role: 'MENTOR', status: 'pending', birthday: '10/11/1993', phone: '0922334455', identityNumber: '001202006666' }
       ])
       setUsersError('Đang dùng dữ liệu mô phỏng. Kết nối backend để tải danh sách thực tế.')
     } finally {
@@ -220,15 +228,14 @@ export default function AdminDashboard() {
               sub.type === 'SPEAKING' ? 'Speaking' : sub.type
       })))
     } catch (err: any) {
-      console.warn('Failed to fetch submissions from backend:', err.message)
-      // Fallback mockup submissions data matching the new brutalist design and DB models
+      console.warn('Failed to fetch submissions from backend, using mockup:', err.message)
       setSubmissionsList([
         {
           id: 'SUB001',
-          userId: 'usr1',
-          student: { fullName: 'Nguyen Van A', username: 'nguyenvana', email: 'a@gmail.com' },
-          testId: 'tst1',
-          test: { title: 'IELTS Cambridge 19 - Test 1', type: 'Reading' },
+          userId: '1',
+          student: { id: '1', fullName: 'Nguyen Minh Anh', username: 'minhanh', email: 'minhanh@gmail.com' },
+          testId: 'EX001',
+          test: { title: 'IELTS Cambridge 18 - Test 1', type: 'Reading' },
           type: 'Reading',
           bandScore: 7.5,
           correctCount: 33,
@@ -243,10 +250,10 @@ export default function AdminDashboard() {
         },
         {
           id: 'SUB002',
-          userId: 'usr2',
-          student: { fullName: 'Tran Thi B', username: 'tranthib', email: 'b@gmail.com' },
-          testId: 'tst2',
-          test: { title: 'IELTS Cambridge 18 - Test 1', type: 'Writing' },
+          userId: '1',
+          student: { id: '1', fullName: 'Nguyen Minh Anh', username: 'minhanh', email: 'minhanh@gmail.com' },
+          testId: 'EX005',
+          test: { title: 'IELTS General Training 15 - Writing', type: 'Writing' },
           prompt: 'Some people think that children should begin learning a foreign language as soon as they start school. Discuss both views and give your opinion.',
           type: 'Writing',
           essayText: 'Nowadays, learning a foreign language is becoming extremely popular. In my opinion, children should learn foreign languages as early as possible because it helps their brain development and makes them more flexible. However, some parents think it will confuse their children at school...',
@@ -264,13 +271,13 @@ export default function AdminDashboard() {
         },
         {
           id: 'SUB003',
-          userId: 'usr3',
-          student: { fullName: 'Le Van C', username: 'levanc', email: 'c@gmail.com' },
-          testId: 'tst3',
+          userId: '5',
+          student: { id: '5', fullName: 'Tran Huu Binh', username: 'huubinh', email: 'binhth@gmail.com' },
+          testId: 'EX006',
           test: { title: 'Speaking IELTS Practice 12', type: 'Speaking' },
           prompt: 'Describe a traditional festival in your country that you enjoy.',
           type: 'Speaking',
-          audioUrl: 'https://res.cloudinary.com/demo/video/upload/dog.mp3',
+          audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
           transcription: 'I would like to tell you about Tet holiday. Tet holiday is the most important traditional celebration in Vietnam. It usually takes place in late January or early February. Families gather together, cook Banh Chung, and visit temples to pray for luck...',
           bandScore: 7.0,
           fluencyCoherence: 7.0,
@@ -283,6 +290,35 @@ export default function AdminDashboard() {
             weaknesses: ['Slight hesitation before complex words', 'Preposition errors (e.g. "in late January" was perfect, but "at Tet holiday" is slightly non-standard)']
           },
           createdAt: new Date(Date.now() - 3600000 * 48).toISOString()
+        },
+        {
+          id: 'SUB004',
+          userId: '6',
+          student: { id: '6', fullName: 'Le Thi Hoa', username: 'thihoa', email: 'hoalt@gmail.com' },
+          testId: 'EX002',
+          test: { title: 'IELTS Cambridge 18 - Test 2', type: 'Listening' },
+          type: 'Listening',
+          bandScore: 8.5,
+          correctCount: 36,
+          timeTaken: 1800,
+          createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
+          answers: [
+            { questionNumber: 1, userAnswer: 'C', correctAnswer: 'C', isCorrect: true, explanation: 'Speaker mentions section 2 is on page 4.' },
+            { questionNumber: 2, userAnswer: 'A', correctAnswer: 'A', isCorrect: true, explanation: 'Speaker notes the library closes on Sundays.' }
+          ]
+        },
+        {
+          id: 'SUB005',
+          userId: '8',
+          student: { id: '8', fullName: 'Pham Minh Hoang', username: 'hoangpm', email: 'hoangpm@gmail.com' },
+          testId: 'EX003',
+          test: { title: 'IELTS Cambridge 17 - Test 1', type: 'Reading' },
+          type: 'Reading',
+          bandScore: 6.0,
+          correctCount: 24,
+          timeTaken: 3600,
+          createdAt: new Date(Date.now() - 3600000 * 72).toISOString(),
+          answers: []
         }
       ])
       setSubmissionsError('Đang dùng dữ liệu mô phỏng. Kết nối backend để tải kết quả thực tế.')
@@ -324,6 +360,10 @@ export default function AdminDashboard() {
         { id: 'EX001', title: 'IELTS Cambridge 18 - Test 1', type: 'Reading', duration: 60, questionsCount: 40 },
         { id: 'EX002', title: 'IELTS Cambridge 18 - Test 2', type: 'Listening', duration: 30, questionsCount: 40 },
         { id: 'EX003', title: 'IELTS Cambridge 17 - Test 1', type: 'Reading', duration: 60, questionsCount: 40 },
+        { id: 'EX004', title: 'IELTS Cambridge 17 - Test 2', type: 'Listening', duration: 30, questionsCount: 40 },
+        { id: 'EX005', title: 'IELTS General Training 15 - Writing', type: 'Writing', duration: 60, questionsCount: 2 },
+        { id: 'EX006', title: 'IELTS Speaking Practice - Leisure Activities', type: 'Speaking', duration: 15, questionsCount: 3 },
+        { id: 'EX007', title: 'IELTS Cambridge 19 - Test 1', type: 'Reading', duration: 60, questionsCount: 40 }
       ])
     }
   }
