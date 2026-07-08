@@ -181,7 +181,13 @@ export default function AdminDashboard() {
     try {
       const res = await apiClient.get('/admin/submissions')
       const raw = res.data?.metadata?.submissions || res.data || []
-      setSubmissionsList(raw)
+      setSubmissionsList(raw.map((sub: any) => ({
+        ...sub,
+        type: sub.type === 'READING' ? 'Reading' :
+              sub.type === 'LISTENING' ? 'Listening' :
+              sub.type === 'WRITING' ? 'Writing' :
+              sub.type === 'SPEAKING' ? 'Speaking' : sub.type
+      })))
     } catch (err: any) {
       console.warn('Failed to fetch submissions from backend:', err.message)
       // Fallback mockup submissions data matching the new brutalist design and DB models
