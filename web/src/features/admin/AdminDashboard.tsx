@@ -605,8 +605,8 @@ export default function AdminDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('audio/') && !file.name.endsWith('.mp3')) {
-      alert('Vui lòng chỉ tải lên các file định dạng âm thanh (.mp3, .wav, .m4a, ...)');
+    if (!file.type.startsWith('audio/') && !file.type.startsWith('video/') && !file.name.endsWith('.mp3')) {
+      alert('Vui lòng chỉ tải lên các file định dạng âm thanh/video (.mp3, .wav, .m4a, .mp4, ...)');
       return;
     }
 
@@ -1945,7 +1945,7 @@ export default function AdminDashboard() {
                               <label className="block text-[9.5px] font-black text-rose-700 uppercase tracking-wider mb-1">Hoặc tải file âm thanh từ máy:</label>
                               <input
                                 type="file"
-                                accept="audio/*"
+                                accept="audio/*,video/*"
                                 onChange={(e) => handleAudioUpload(e, selectedSectionIdx)}
                                 className="w-full text-xs text-[#1b263b] file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-2 file:border-[#1b263b] file:text-[10px] file:font-black file:bg-amber-100 file:text-[#1b263b] hover:file:bg-amber-200 cursor-pointer"
                               />
