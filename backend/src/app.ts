@@ -19,7 +19,9 @@ export const createApp = (): Application => {
   app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
   // Security middlewares
-  app.use(helmet());
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  }));
   app.use(cors({
     origin: config.nodeEnv === 'development' 
       ? (origin, callback) => {
