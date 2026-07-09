@@ -17,6 +17,9 @@ import * as Google from 'expo-auth-session/providers/google';
 import { Ionicons } from '@expo/vector-icons';
 
 import useAuthStore from '../store/useAuthStore';
+import { storage } from '../utils/storage';
+
+const REMEMBER_KEY = 'rememberMe_credentials';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -33,6 +36,8 @@ const BrutalistShadow = ({ children, style, offset = 4 }) => (
 const LoginScreen = ({ route, navigation }) => {
   const [email, setEmail] = useState(route?.params?.prefillEmail || '');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const { login, googleLogin, clearError, isLoading, error, user } = useAuthStore();
 
@@ -40,6 +45,22 @@ const LoginScreen = ({ route, navigation }) => {
     clientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
     webClientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
   });
+
+  // Load saved credentials on mount
+  useEffect(() => {
+    const loadSaved = async () => {
+      try {
+        const raw = await storage.getItem(REMEMBER_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          if (saved?.email) setEmail(saved.email);
+          if (saved?.password) setPassword(saved.password);
+          setRememberMe(true);
+        }
+      } catch (_) {}
+    };
+    loadSaved();
+  }, []);
 
   useEffect(() => {
     if (response?.type === 'success') {
@@ -59,9 +80,15 @@ const LoginScreen = ({ route, navigation }) => {
     }
   }, [user, navigation]);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     clearError?.();
     if (!email.trim() || !password.trim()) return;
+    // Save or clear credentials based on checkbox
+    if (rememberMe) {
+      await storage.setItem(REMEMBER_KEY, JSON.stringify({ email: email.trim(), password }));
+    } else {
+      await storage.deleteItem(REMEMBER_KEY);
+    }
     login(email.trim(), password);
   };
 
@@ -126,20 +153,40 @@ const LoginScreen = ({ route, navigation }) => {
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>MẬT KHẨU (PASSWORD)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="••••••••"
-                  placeholderTextColor="#999"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                />
+                <View style={styles.passwordRow}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, borderRightWidth: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
+                    placeholder="••••••••"
+                    placeholderTextColor="#999"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(v => !v)}
+                    style={styles.eyeBtn}
+                  >
+                    <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={18} color="#666" />
+                  </TouchableOpacity>
+                </View>
                 <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={{ alignSelf: 'flex-end', marginTop: 8, marginRight: 4 }}>
                   <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#4682b4', textDecorationLine: 'underline' }}>
                     Quên mật khẩu?
                   </Text>
                 </TouchableOpacity>
               </View>
+
+              {/* Remember Me */}
+              <TouchableOpacity
+                onPress={() => setRememberMe(v => !v)}
+                style={styles.rememberRow}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
+                  {rememberMe && <Ionicons name="checkmark" size={13} color="#fff" />}
+                </View>
+                <Text style={styles.rememberText}>Ghi nhớ đăng nhập</Text>
+              </TouchableOpacity>
 
               <TouchableOpacity 
                 activeOpacity={0.8} 
@@ -308,6 +355,47 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontFamily: 'Outfit_700Bold',
     fontSize: 14,
+    color: '#1b263b',
+  },
+  passwordRow: {
+    flexDirection: 'row',
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#fefefe',
+  },
+  eyeBtn: {
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fefefe',
+  },
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginTop: 4,
+    paddingHorizontal: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    borderRadius: 5,
+    marginRight: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fefefe',
+  },
+  checkboxActive: {
+    backgroundColor: '#c92a2a',
+    borderColor: '#1b263b',
+  },
+  rememberText: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 13,
     color: '#1b263b',
   },
   loginBtnContainer: {
