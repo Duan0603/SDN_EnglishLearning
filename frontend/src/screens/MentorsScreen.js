@@ -10,12 +10,16 @@ import {
   Alert,
   StyleSheet,
   StatusBar,
-  Platform
+  Platform,
+  FlatList,
+  Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Menu, Divider } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import client from '../api/client';
 import useAuthStore from '../store/useAuthStore';
 import { socket } from '../utils/socket';
@@ -151,6 +155,15 @@ const MentorsScreen = ({ navigation }) => {
   const [confirmModalMessage, setConfirmModalMessage] = useState('');
   const confirmCallbackRef = useRef(null);
 
+  // States for Chat Real-time
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [selectedBookingForChat, setSelectedBookingForChat] = useState(null);
+  const [isSendingChatMessage, setIsSendingChatMessage] = useState(false);
+  const [isLoadingChatHistory, setIsLoadingChatHistory] = useState(false);
+  const chatFlatListRef = useRef(null);
+
   // States for Notifications Bell dropdown & Streak Stats
   const { readNotifIds, loadReadNotifIds, markAsRead, markAllAsRead } = useNotificationStore();
   const [notifications, setNotifications] = useState([]);
@@ -227,6 +240,18 @@ const MentorsScreen = ({ navigation }) => {
       const dateStr = formatDateTime(b.availability?.startTime);
       const partnerName = isUserMentor ? b.student?.fullName : b.mentor?.fullName;
       
+      // Add chat unread notification
+      if (b.hasUnreadMessages) {
+        const notifId = `chat-unread-${b.id}`;
+        list.push({
+          id: notifId,
+          text: `💬 Bạn có tin nhắn mới từ ${partnerName || 'đối phương'} liên quan đến buổi học ngày ${dateStr}.`,
+          isRead: false,
+          createdAt: b.updatedAt || b.createdAt || new Date(),
+          action: () => handleOpenChat(b)
+        });
+      }
+
       if (b.status === 'PENDING') {
         const notifId = `pending-${b.id}`;
         list.push({
@@ -256,6 +281,16 @@ const MentorsScreen = ({ navigation }) => {
             ? `Lịch dạy với học viên ${partnerName || 'học viên'} ngày ${dateStr} đã bị hủy${reasonText}.`
             : `Lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đã bị HỦY${reasonText}. ⚠️`,
           isRead: readNotifIds.includes(notifId) || true,
+          createdAt: b.updatedAt || b.createdAt || new Date()
+        });
+      } else if (b.status === 'COMPLETED') {
+        const notifId = `completed-${b.id}`;
+        list.push({
+          id: notifId,
+          text: isUserMentor
+            ? `Bạn đã hoàn thành lịch dạy với học viên ${partnerName || 'học viên'} ngày ${dateStr}.`
+            : `Lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đã hoàn thành. Hãy gửi đánh giá nhé! 🌟`,
+          isRead: readNotifIds.includes(notifId) || (isUserMentor ? true : (b.rating ? true : false)),
           createdAt: b.updatedAt || b.createdAt || new Date()
         });
       }
@@ -373,10 +408,58 @@ const MentorsScreen = ({ navigation }) => {
       }
     });
 
+    const handleBookingUpdate = (data) => {
+      console.log('[Socket] Received booking:update event on MentorsScreen:', data);
+      const { studentId, mentorId } = data;
+
+      // If the update belongs to the current logged-in user (student or mentor)
+      const currentUserId = user?._id || user?.id;
+      if (user && (currentUserId === studentId || currentUserId === mentorId)) {
+        fetchStats(); // This calls fetchNotifications under the hood, updating the bell!
+        
+        if (isMentor) {
+          fetchMySlots();
+        } else {
+          fetchMyBookings();
+        }
+      }
+    };
+
+    socket.on('booking:update', handleBookingUpdate);
+
     return () => {
       socket.off('slot:update');
+      socket.off('booking:update', handleBookingUpdate);
     };
-  }, [isMentor, activeStudentTab, fetchMyBookings]);
+  }, [isMentor, activeStudentTab, fetchMyBookings, user]);
+
+  // Listen for real-time chat messages
+  useEffect(() => {
+    const handleReceiveMessage = (message) => {
+      console.log('[Socket] Received chat:receive_message event:', message);
+      if (selectedBookingForChat && message.bookingId === selectedBookingForChat.id) {
+        setChatMessages((prev) => {
+          if (prev.some((m) => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
+      }
+    };
+
+    socket.on('chat:receive_message', handleReceiveMessage);
+
+    return () => {
+      socket.off('chat:receive_message', handleReceiveMessage);
+    };
+  }, [selectedBookingForChat]);
+
+  // Scroll to bottom of chat list when messages change
+  useEffect(() => {
+    if (chatMessages.length > 0 && chatFlatListRef.current) {
+      setTimeout(() => {
+        chatFlatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [chatMessages]);
 
   // Fetch initial directory data & notifications & stats
   useEffect(() => {
@@ -790,6 +873,100 @@ const MentorsScreen = ({ navigation }) => {
     }
   };
 
+  const handleOpenChat = async (booking) => {
+    setSelectedBookingForChat(booking);
+    setChatMessages([]);
+    setChatInput('');
+    setShowChatModal(true);
+    setIsLoadingChatHistory(true);
+
+    try {
+      const res = await client.get(`/bookings/${booking.id}/messages`);
+      if (res.data?.success) {
+        setChatMessages(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching chat history:', err);
+      setErrorMessage('Không thể tải lịch sử chat.');
+    } finally {
+      setIsLoadingChatHistory(false);
+    }
+
+    socket.emit('chat:join_room', { bookingId: booking.id });
+  };
+
+  const handleSendChatMessage = () => {
+    if (!chatInput.trim() || !selectedBookingForChat) return;
+    const messageContent = chatInput.trim();
+    setChatInput('');
+
+    socket.emit('chat:send_message', {
+      bookingId: selectedBookingForChat.id,
+      senderId: user._id || user.id,
+      content: messageContent
+    });
+  };
+
+  const convertUriToBase64 = async (uri, mimeType) => {
+    if (Platform.OS === 'web') {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } else {
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      return `data:${mimeType || 'application/octet-stream'};base64,${base64}`;
+    }
+  };
+
+  const handlePickAndUploadFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      
+      if (asset.size && asset.size > 5 * 1024 * 1024) {
+        Alert.alert('Lỗi', 'Tệp tin vượt quá dung lượng giới hạn 5MB.');
+        return;
+      }
+
+      setIsSendingChatMessage(true);
+      const base64Data = await convertUriToBase64(asset.uri, asset.mimeType);
+
+      const res = await client.post(`/bookings/${selectedBookingForChat.id}/upload-file`, {
+        file: base64Data,
+        fileName: asset.name,
+        fileSize: asset.size || 0
+      });
+
+      if (res.data?.success) {
+        const newMsg = res.data.data;
+        setChatMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
+      }
+    } catch (err) {
+      console.error('File pick/upload error:', err);
+      Alert.alert('Lỗi', err.response?.data?.message || 'Không thể gửi tệp tin.');
+    } finally {
+      setIsSendingChatMessage(false);
+    }
+  };
+
   const filteredMentors = mentors.filter((m) =>
     m.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.expertise?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -944,6 +1121,8 @@ const MentorsScreen = ({ navigation }) => {
                       markAsRead(n.id);
                       if (n.id === 'streak-missing') {
                         handleCheckIn();
+                      } else if (n.action) {
+                        n.action();
                       }
                     }}
                     style={{
@@ -1141,6 +1320,11 @@ const MentorsScreen = ({ navigation }) => {
                     dotColor = '#005c42';
                     textColor = '#005c42';
                     btnBg = '#a7f3d0';
+                  } else if (slot.booking?.status === 'COMPLETED') {
+                    cardBg = '#e0e7ff'; // light indigo
+                    dotColor = '#4338ca';
+                    textColor = '#4338ca';
+                    btnBg = '#c7d2fe';
                   } else {
                     cardBg = '#fffbeb'; // warm light yellow
                     dotColor = '#d97706';
@@ -1162,6 +1346,20 @@ const MentorsScreen = ({ navigation }) => {
                             <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#1b263b', marginBottom: 4 }}>
                               {formatDateTime(slot.startTime)} - {formatDateTime(slot.endTime).split(' ').pop()}
                             </Text>
+                            {slot.isBooked && (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                                <Text style={{ fontSize: 13, fontFamily: 'Outfit_700Bold', color: '#1b263b' }}>
+                                  👤 Học viên: {slot.booking?.student?.fullName || 'Ẩn danh'}
+                                </Text>
+                                {slot.booking?.hasUnreadMessages && (
+                                  <View style={{
+                                    width: 8, height: 8, borderRadius: 4,
+                                    backgroundColor: '#c92a2a',
+                                    marginLeft: 6
+                                  }} />
+                                )}
+                              </View>
+                            )}
                             {slot.meetingLink && (
                               <Text style={{ fontSize: 12, fontFamily: 'Outfit_700Bold', color: '#4682b4', marginBottom: 4 }} numberOfLines={1}>
                                 🔗 {slot.meetingLink}
@@ -1174,7 +1372,10 @@ const MentorsScreen = ({ navigation }) => {
                                 marginRight: 6
                               }} />
                               <Text style={{ fontSize: 10, fontFamily: 'Outfit_900Black', color: textColor }}>
-                                {slot.isBooked ? `ĐÃ ĐƯỢC ĐẶT HẸN (${slot.booking?.status === 'PENDING' ? 'CHỜ DUYỆT' : 'ĐÃ DUYỆT'})` : 'ĐANG TRỐNG'}
+                                {slot.isBooked ? `ĐÃ ĐƯỢC ĐẶT HẸN (${
+                                  slot.booking?.status === 'PENDING' ? 'CHỜ DUYỆT' :
+                                  slot.booking?.status === 'COMPLETED' ? 'HOÀN THÀNH' : 'ĐÃ DUYỆT'
+                                })` : 'ĐANG TRỐNG'}
                               </Text>
                             </View>
                           </View>
@@ -1271,9 +1472,18 @@ const MentorsScreen = ({ navigation }) => {
                   <BrutalistShadow style={{ borderRadius: 12, backgroundColor: '#fff' }} offset={3}>
                     <View style={{ padding: 16 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#1b263b' }}>
-                          Gia sư: {booking.mentor?.fullName || 'Gia sư ẩn danh'}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#1b263b' }}>
+                            Gia sư: {booking.mentor?.fullName || 'Gia sư ẩn danh'}
+                          </Text>
+                          {booking.hasUnreadMessages && (
+                            <View style={{
+                              width: 8, height: 8, borderRadius: 4,
+                              backgroundColor: '#c92a2a',
+                              marginLeft: 6
+                            }} />
+                          )}
+                        </View>
                         <View style={{ 
                           paddingHorizontal: 8, 
                           paddingVertical: 4, 
@@ -1355,8 +1565,8 @@ const MentorsScreen = ({ navigation }) => {
                         </TouchableOpacity>
                       )}
 
-                      {/* If PENDING or CONFIRMED, let them cancel */}
-                      {(booking.status === 'PENDING' || booking.status === 'CONFIRMED') && (
+                      {/* Only allow student to cancel when status is PENDING */}
+                      {booking.status === 'PENDING' && (
                         <TouchableOpacity 
                           onPress={() => handleCancelBooking(booking.id)}
                           style={{
@@ -1371,6 +1581,26 @@ const MentorsScreen = ({ navigation }) => {
                         >
                           <Text style={{ fontSize: 11, fontFamily: 'Outfit_900Black', color: '#c92a2a' }}>
                             HỦY ĐẶT LỊCH
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Chat button for student */}
+                      {booking.status !== 'CANCELLED' && (
+                        <TouchableOpacity 
+                          onPress={() => handleOpenChat(booking)}
+                          style={{
+                            backgroundColor: '#e0f2fe',
+                            borderWidth: 2,
+                            borderColor: '#1b263b',
+                            borderRadius: 10,
+                            paddingVertical: 10,
+                            alignItems: 'center',
+                            marginTop: 4
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontFamily: 'Outfit_900Black', color: '#0284c7' }}>
+                            NHẮN TIN TRÒ CHUYỆN 💬
                           </Text>
                         </TouchableOpacity>
                       )}
@@ -1630,10 +1860,12 @@ const MentorsScreen = ({ navigation }) => {
                       borderColor: '#1b263b',
                       backgroundColor:
                         selectedSlotForDetail.booking.status === 'CONFIRMED' ? '#a7f3d0' :
+                        selectedSlotForDetail.booking.status === 'COMPLETED' ? '#c7d2fe' :
                         selectedSlotForDetail.booking.status === 'PENDING' ? '#ffd54f' : '#f8d7da'
                     }}>
                       <Text style={{ fontSize: 10, fontFamily: 'Outfit_900Black', color: '#1b263b' }}>
                         {selectedSlotForDetail.booking.status === 'CONFIRMED' ? 'ĐÃ PHÊ DUYỆT (CONFIRMED)' :
+                         selectedSlotForDetail.booking.status === 'COMPLETED' ? 'HOÀN THÀNH (COMPLETED)' :
                          selectedSlotForDetail.booking.status === 'PENDING' ? 'CHỜ DUYỆT (PENDING)' : 'ĐÃ HỦY (CANCELLED)'}
                       </Text>
                     </View>
@@ -1659,6 +1891,31 @@ const MentorsScreen = ({ navigation }) => {
                     <Text style={{ fontSize: 13, fontFamily: 'Outfit_700Bold', color: '#666', marginBottom: 8 }}>
                       📞 SĐT: {selectedSlotForDetail.booking.student?.phone || 'Chưa cung cấp'}
                     </Text>
+                    {selectedSlotForDetail.booking.status !== 'CANCELLED' && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          const bookingObj = {
+                            ...selectedSlotForDetail.booking,
+                            startTime: selectedSlotForDetail.startTime,
+                            endTime: selectedSlotForDetail.endTime
+                          };
+                          handleOpenChat(bookingObj);
+                        }}
+                        style={{
+                          backgroundColor: '#e0f2fe',
+                          borderWidth: 2,
+                          borderColor: '#1b263b',
+                          borderRadius: 8,
+                          paddingVertical: 8,
+                          alignItems: 'center',
+                          marginTop: 8
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, fontFamily: 'Outfit_900Black', color: '#0284c7' }}>
+                          TRÒ CHUYỆN VỚI HỌC VIÊN 💬
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
 
                   {/* Student Notes Card */}
@@ -1677,6 +1934,27 @@ const MentorsScreen = ({ navigation }) => {
                         <Text style={{ fontSize: 13, fontFamily: 'Outfit_700Bold', color: '#4682b4' }}>
                           🔗 {selectedSlotForDetail.meetingLink}
                         </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Student Rating & Comment */}
+                  {selectedSlotForDetail.booking.status === 'COMPLETED' && selectedSlotForDetail.booking.rating && (
+                    <View style={{ marginBottom: 20 }}>
+                      <Text style={styles.inputLabel}>ĐÁNH GIÁ & NHẬN XÉT CỦA HỌC VIÊN</Text>
+                      <View style={{ backgroundColor: '#fffbeb', borderWidth: 2, borderColor: '#1b263b', borderRadius: 12, padding: 16 }}>
+                        <Text style={{ fontSize: 14, fontFamily: 'Outfit_900Black', color: '#b45309', marginBottom: 6 }}>
+                          {'⭐'.repeat(selectedSlotForDetail.booking.rating)} ({selectedSlotForDetail.booking.rating}/5)
+                        </Text>
+                        {selectedSlotForDetail.booking.comment ? (
+                          <Text style={{ fontSize: 13, fontFamily: 'Outfit_700Bold', color: '#555', fontStyle: 'italic', lineHeight: 18 }}>
+                            "{selectedSlotForDetail.booking.comment}"
+                          </Text>
+                        ) : (
+                          <Text style={{ fontSize: 13, fontFamily: 'Outfit_700Bold', color: '#888', fontStyle: 'italic' }}>
+                            (Học viên không để lại bình luận)
+                          </Text>
+                        )}
                       </View>
                     </View>
                   )}
@@ -1932,6 +2210,166 @@ const MentorsScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* CHAT MODAL */}
+      {selectedBookingForChat && (
+        <Modal visible={showChatModal} transparent={true} animationType="slide" onRequestClose={() => setShowChatModal(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalSheet, { height: '80%', paddingBottom: 0 }]}>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <Text style={styles.modalTitle} numberOfLines={1}>
+                    Chat: {isMentor ? selectedBookingForChat.student?.fullName || 'Học viên' : selectedBookingForChat.mentor?.fullName || 'Gia sư'}
+                  </Text>
+                  <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 10, color: '#666', marginTop: 2 }}>
+                    Lịch: {formatDateTime(selectedBookingForChat.startTime)}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowChatModal(false)} style={styles.closeBtn}>
+                  <Ionicons name="close" size={24} color="#1b263b" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Chat Messages List */}
+              <View style={{ flex: 1, backgroundColor: '#fcfbf7', borderWidth: 2, borderColor: '#1b263b', borderRadius: 12, padding: 12, marginBottom: 16 }}>
+                {isLoadingChatHistory ? (
+                  <ActivityIndicator size="large" color="#1b263b" style={{ flex: 1, justifyContent: 'center' }} />
+                ) : chatMessages.length === 0 ? (
+                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 40, marginBottom: 8 }}>💬</Text>
+                    <Text style={{ fontFamily: 'Outfit_700Bold', color: '#888', fontSize: 12 }}>Hãy gửi lời chào đầu tiên!</Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    ref={chatFlatListRef}
+                    data={chatMessages}
+                    keyExtractor={(item) => item.id}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 10 }}
+                    renderItem={({ item }) => {
+                      const isMe = item.senderId === (user?._id || user?.id);
+                      return (
+                        <View style={{
+                          flexDirection: 'row',
+                          justifyContent: isMe ? 'flex-end' : 'flex-start',
+                          marginBottom: 12,
+                        }}>
+                          <View style={{
+                            backgroundColor: isMe ? '#a7f3d0' : '#fff',
+                            borderWidth: 2,
+                            borderColor: '#1b263b',
+                            borderRadius: 12,
+                            padding: 10,
+                            maxWidth: '80%',
+                            shadowColor: '#1b263b',
+                            shadowOffset: { width: 2, height: 2 },
+                            shadowOpacity: 1,
+                            shadowRadius: 0,
+                            elevation: 2,
+                          }}>
+                            {!isMe && (
+                              <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 9, color: '#4338ca', marginBottom: 2 }}>
+                                {item.sender?.fullName || 'Đối phương'}
+                              </Text>
+                            )}
+                            {item.fileUrl ? (
+                              <TouchableOpacity
+                                onPress={() => {
+                                  if (Platform.OS === 'web') {
+                                    window.open(item.fileUrl, '_blank');
+                                  } else {
+                                    Linking.openURL(item.fileUrl).catch(err => 
+                                      Alert.alert('Lỗi', 'Không thể mở liên kết này.')
+                                    );
+                                  }
+                                }}
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  backgroundColor: '#f3f4f6',
+                                  borderWidth: 1.5,
+                                  borderColor: '#1b263b',
+                                  borderRadius: 8,
+                                  padding: 8,
+                                  marginTop: 4,
+                                }}
+                              >
+                                <Ionicons name="document-text" size={24} color="#1b263b" style={{ marginRight: 8 }} />
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 11, color: '#1b263b' }} numberOfLines={1}>
+                                    {item.fileName || 'Tài liệu'}
+                                  </Text>
+                                  <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 9, color: '#666' }}>
+                                    {item.fileSize ? `${(item.fileSize / 1024).toFixed(1)} KB` : 'Tệp đính kèm'}
+                                  </Text>
+                                </View>
+                                <Ionicons name="download-outline" size={16} color="#1b263b" style={{ marginLeft: 8 }} />
+                              </TouchableOpacity>
+                            ) : (
+                              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#1b263b', lineHeight: 18 }}>
+                                {item.content}
+                              </Text>
+                            )}
+                            <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 8, color: '#999', alignSelf: 'flex-end', marginTop: 4 }}>
+                              {new Date(item.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    }}
+                  />
+                )}
+              </View>
+
+               {/* Chat Input Area */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+                <TouchableOpacity
+                  onPress={handlePickAndUploadFile}
+                  disabled={isSendingChatMessage}
+                  style={{
+                    backgroundColor: '#a7f3d0',
+                    borderWidth: 2,
+                    borderColor: '#1b263b',
+                    borderRadius: 12,
+                    padding: 12,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: 8,
+                  }}
+                >
+                  {isSendingChatMessage ? (
+                    <ActivityIndicator size="small" color="#1b263b" />
+                  ) : (
+                    <Ionicons name="attach" size={20} color="#1b263b" />
+                  )}
+                </TouchableOpacity>
+                <TextInput
+                  value={chatInput}
+                  onChangeText={setChatInput}
+                  placeholder="Nhập tin nhắn..."
+                  placeholderTextColor="#999"
+                  style={[styles.input, { flex: 1, marginBottom: 0, marginRight: 8 }]}
+                />
+                <TouchableOpacity
+                  onPress={handleSendChatMessage}
+                  style={{
+                    backgroundColor: '#ffd54f',
+                    borderWidth: 2,
+                    borderColor: '#1b263b',
+                    borderRadius: 12,
+                    padding: 12,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Ionicons name="send" size={20} color="#1b263b" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
 
     </SafeAreaView>
   );

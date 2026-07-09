@@ -29,3 +29,9 @@ bookingRouter.patch('/:id/notes', roleGuard(['MENTOR']), asyncHandler(BookingCon
 
 // Rate a booking (restricted to students only)
 bookingRouter.patch('/:id/rate', roleGuard(['STUDENT']), asyncHandler(BookingController.rate));
+
+// Get chat messages history (students or mentors)
+bookingRouter.get('/:id/messages', asyncHandler(BookingController.getChatMessages));
+
+// Upload a file and send it as a message in the chat room (students or mentors)
+bookingRouter.post('/:id/upload-file', asyncHandler(BookingController.uploadFile));

@@ -202,4 +202,61 @@ export class BookingController {
       next(new ApiError(error.message || 'Completion failed.', 400));
     }
   }
+
+  /**
+   * GET /api/v1/bookings/:id/messages
+   */
+  static async getChatMessages(req: any, res: Response, next: NextFunction) {
+    try {
+      const userId = req.currentUser?.id || req.user?.userId;
+      const { id } = req.params;
+
+      if (!userId) {
+        return next(new ApiError('Unauthorized', 401));
+      }
+
+      const messages = await BookingService.getChatMessages(userId, id);
+
+      res.status(200).json({
+        success: true,
+        data: messages,
+      });
+    } catch (error: any) {
+      if (error.status === 403) {
+        return res.status(403).json({
+          success: false,
+          message: error.message || 'Forbidden.',
+        });
+      }
+      next(new ApiError(error.message || 'Failed to fetch chat history.', 400));
+    }
+  }
+
+  /**
+   * POST /api/v1/bookings/:id/upload-file
+   */
+  static async uploadFile(req: any, res: Response, next: NextFunction) {
+    try {
+      const senderId = req.currentUser?.id || req.user?.userId;
+      const { id } = req.params;
+      const { file, fileName, fileSize } = req.body;
+
+      if (!senderId) {
+        return next(new ApiError('Unauthorized', 401));
+      }
+
+      if (!file || !fileName) {
+        return next(new ApiError('Missing file or fileName in request body.', 400));
+      }
+
+      const message = await BookingService.saveFileMessage(id, senderId, file, fileName, fileSize || 0);
+
+      res.status(200).json({
+        success: true,
+        data: message,
+      });
+    } catch (error: any) {
+      next(new ApiError(error.message || 'File upload failed.', 400));
+    }
+  }
 }

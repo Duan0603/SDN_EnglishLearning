@@ -62,6 +62,7 @@ model User {
   studentBookings    Booking[]            @relation("StudentBookings")
   mentorBookings     Booking[]            @relation("MentorBookings")
   availabilities     Availability[]       @relation("MentorAvailabilities")
+  messages           Message[]            @relation("UserMessages")
   
   // Quan hệ học tập & Lịch sử thi (Epic 2, 3)
   testResults        TestResult[]
@@ -114,8 +115,11 @@ model Booking {
   cancelReason   String?       // Lý do hủy lịch
   rating         Int?          // Đánh giá sao của học viên (1-5)
   comment        String?       // Nhận xét của học viên cho mentor
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  studentLastReadAt  DateTime?
+  mentorLastReadAt    DateTime?
+  messages           Message[]     @relation("BookingMessages")
 }
 
 model Test {
@@ -208,4 +212,19 @@ model SpeakingSubmission {
   pronunciation     Float    // Điểm tiêu chí 4
   aiFeedback        Json     // Nhận xét chi tiết từ OpenAI về phát âm, ngữ điệu, từ vựng
   createdAt         DateTime @default(now())
+}
+
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  bookingId String   @db.ObjectId
+  booking   Booking  @relation("BookingMessages", fields: [bookingId], references: [id], onDelete: Cascade)
+  senderId  String   @db.ObjectId
+  sender    User     @relation("UserMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  // Optional attachment fields
+  fileUrl   String?
+  fileName  String?
+  fileSize  Int?
 }

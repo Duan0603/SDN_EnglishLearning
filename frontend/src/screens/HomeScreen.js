@@ -18,6 +18,7 @@ import Toast from 'react-native-toast-message';
 import client from '../api/client';
 import useAuthStore from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
+import { socket } from '../utils/socket';
 
 // Brutalist shadow wrapper
 const BrutalistShadow = ({ children, style, offset = 4 }) => (
@@ -121,6 +122,18 @@ const HomeScreen = ({ navigation }) => {
       const dateStr = formatDateTime(b.availability?.startTime);
       const partnerName = isUserMentor ? b.student?.fullName : b.mentor?.fullName;
       
+      // Add chat unread notification
+      if (b.hasUnreadMessages) {
+        const notifId = `chat-unread-${b.id}`;
+        list.push({
+          id: notifId,
+          text: `💬 Bạn có tin nhắn mới từ ${partnerName || 'đối phương'} liên quan đến buổi học ngày ${dateStr}.`,
+          isRead: false,
+          createdAt: b.updatedAt || b.createdAt || new Date(),
+          action: () => navigation.navigate('Mentors')
+        });
+      }
+
       if (b.status === 'PENDING') {
         const notifId = `pending-${b.id}`;
         list.push({
@@ -150,6 +163,16 @@ const HomeScreen = ({ navigation }) => {
             ? `Lịch dạy với học viên ${partnerName || 'học viên'} ngày ${dateStr} đã bị hủy${reasonText}.`
             : `Lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đã bị HỦY${reasonText}. ⚠️`,
           isRead: readNotifIds.includes(notifId) || true,
+          createdAt: b.updatedAt || b.createdAt || new Date()
+        });
+      } else if (b.status === 'COMPLETED') {
+        const notifId = `completed-${b.id}`;
+        list.push({
+          id: notifId,
+          text: isUserMentor
+            ? `Bạn đã hoàn thành lịch dạy với học viên ${partnerName || 'học viên'} ngày ${dateStr}.`
+            : `Lịch học ngày ${dateStr} với gia sư ${partnerName || 'gia sư'} đã hoàn thành. Hãy gửi đánh giá nhé! 🌟`,
+          isRead: readNotifIds.includes(notifId) || (isUserMentor ? true : (b.rating ? true : false)),
           createdAt: b.updatedAt || b.createdAt || new Date()
         });
       }
@@ -210,6 +233,32 @@ const HomeScreen = ({ navigation }) => {
       }
     });
     fetchNotifications();
+  }, [user]);
+
+  // Connect socket and listen for real-time booking updates
+  useEffect(() => {
+    if (user) {
+      if (!socket.connected) {
+        socket.connect();
+      }
+
+      const handleBookingUpdate = (data) => {
+        console.log('[Socket] Received booking:update event on HomeScreen:', data);
+        const { studentId, mentorId } = data;
+
+        // If the update belongs to the current logged-in user (student or mentor)
+        const currentUserId = user?._id || user?.id;
+        if (currentUserId === studentId || currentUserId === mentorId) {
+          fetchStats(); // This calls fetchNotifications under the hood, updating the bell!
+        }
+      };
+
+      socket.on('booking:update', handleBookingUpdate);
+
+      return () => {
+        socket.off('booking:update', handleBookingUpdate);
+      };
+    }
   }, [user]);
 
   const onRefresh = useCallback(async () => {
@@ -516,6 +565,8 @@ const HomeScreen = ({ navigation }) => {
                       markAsRead(n.id);
                       if (n.id === 'streak-missing') {
                         handleCheckIn();
+                      } else if (n.action) {
+                        n.action();
                       }
                     }}
                     style={{
