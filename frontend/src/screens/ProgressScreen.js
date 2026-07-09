@@ -132,27 +132,32 @@ const PracticeCalendar = ({ history }) => {
 
 // 3. Radar Chart (Compass layout using Views)
 const RadarChart = ({ bands }) => {
-  const { READING = 0, LISTENING = 0, WRITING = 0, SPEAKING = 0 } = bands;
-  const getLen = (val) => Math.max(10, (val / 9) * 50); // max 50px
+  const r = bands?.READING || 0;
+  const l = bands?.LISTENING || 0;
+  const w = bands?.WRITING || 0;
+  const s = bands?.SPEAKING || 0;
+
+  const maxPx = 60; // Increased max size
+  const getLen = (val) => Math.max(12, (val / 9) * maxPx);
 
   return (
     <View style={styles.radarContainer}>
       <View style={styles.radarCenter}>
         {/* Top: Reading */}
-        <View style={[styles.radarBranch, styles.radarTop, { height: getLen(READING), backgroundColor: TYPE_COLORS.READING }]} />
-        <Text style={[styles.radarLabel, styles.radarLabelTop]}>R {READING}</Text>
+        <View style={[styles.radarBranch, styles.radarTop, { height: getLen(r), backgroundColor: TYPE_COLORS.READING }]} />
+        <Text style={[styles.radarLabel, styles.radarLabelTop, { bottom: getLen(r) + 5 }]}>R {r.toFixed(1)}</Text>
 
         {/* Right: Listening */}
-        <View style={[styles.radarBranch, styles.radarRight, { width: getLen(LISTENING), backgroundColor: TYPE_COLORS.LISTENING }]} />
-        <Text style={[styles.radarLabel, styles.radarLabelRight]}>L {LISTENING}</Text>
+        <View style={[styles.radarBranch, styles.radarRight, { width: getLen(l), backgroundColor: TYPE_COLORS.LISTENING }]} />
+        <Text style={[styles.radarLabel, styles.radarLabelRight, { left: getLen(l) + 5 }]}>L {l.toFixed(1)}</Text>
 
         {/* Bottom: Writing */}
-        <View style={[styles.radarBranch, styles.radarBottom, { height: getLen(WRITING), backgroundColor: TYPE_COLORS.WRITING }]} />
-        <Text style={[styles.radarLabel, styles.radarLabelBottom]}>W {WRITING}</Text>
+        <View style={[styles.radarBranch, styles.radarBottom, { height: getLen(w), backgroundColor: TYPE_COLORS.WRITING }]} />
+        <Text style={[styles.radarLabel, styles.radarLabelBottom, { top: getLen(w) + 5 }]}>W {w.toFixed(1)}</Text>
 
         {/* Left: Speaking */}
-        <View style={[styles.radarBranch, styles.radarLeft, { width: getLen(SPEAKING), backgroundColor: TYPE_COLORS.SPEAKING }]} />
-        <Text style={[styles.radarLabel, styles.radarLabelLeft]}>S {SPEAKING}</Text>
+        <View style={[styles.radarBranch, styles.radarLeft, { width: getLen(s), backgroundColor: TYPE_COLORS.SPEAKING }]} />
+        <Text style={[styles.radarLabel, styles.radarLabelLeft, { right: getLen(s) + 5 }]}>S {s.toFixed(1)}</Text>
       </View>
     </View>
   );
@@ -480,7 +485,7 @@ const styles = StyleSheet.create({
   calendarContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, width: '100%' },
   calendarBox: { width: 14, height: 14, borderRadius: 3, borderWidth: 1, borderColor: '#1b263b' },
 
-  radarContainer: { height: 110, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  radarContainer: { height: 160, width: '100%', alignItems: 'center', justifyContent: 'center' },
   radarCenter: { width: 10, height: 10, backgroundColor: '#1b263b', borderRadius: 5, position: 'relative' },
   radarBranch: { position: 'absolute', borderWidth: 1, borderColor: '#1b263b' },
   radarTop: { width: 6, bottom: '100%', left: 2, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
@@ -488,10 +493,10 @@ const styles = StyleSheet.create({
   radarLeft: { height: 6, right: '100%', top: 2, borderTopLeftRadius: 3, borderBottomLeftRadius: 3 },
   radarRight: { height: 6, left: '100%', top: 2, borderTopRightRadius: 3, borderBottomRightRadius: 3 },
   radarLabel: { position: 'absolute', fontSize: 10, fontFamily: 'Outfit_900Black', color: '#1b263b' },
-  radarLabelTop: { bottom: 55, left: -10, width: 30, textAlign: 'center' },
-  radarLabelBottom: { top: 55, left: -10, width: 30, textAlign: 'center' },
-  radarLabelLeft: { right: 55, top: -4, width: 30, textAlign: 'right' },
-  radarLabelRight: { left: 55, top: -4, width: 30 },
+  radarLabelTop: { left: -15, width: 40, textAlign: 'center' },
+  radarLabelBottom: { left: -15, width: 40, textAlign: 'center' },
+  radarLabelLeft: { top: -6, width: 40, textAlign: 'right' },
+  radarLabelRight: { top: -6, width: 40 },
 });
 
 export default ProgressScreen;

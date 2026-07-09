@@ -15,7 +15,8 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
-  StatusBar
+  StatusBar,
+  Platform
 } from 'react-native';
 
 import AppIcon from '../shared/icons/AppIcon';
@@ -81,7 +82,35 @@ const AdminScreen = ({ navigation }) => {
           <AppIcon name="back" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={S.appBarTitle}>Admin Panel</Text>
-        <View style={S.backBtn} />
+        <TouchableOpacity 
+          style={S.backBtn} 
+          onPress={() => {
+            if (Platform.OS === 'web') {
+              if (window.confirm("Bạn có chắc chắn muốn đăng xuất không?")) {
+                logout();
+                navigation.replace('Login');
+              }
+            } else {
+              Alert.alert(
+                "Đăng xuất",
+                "Bạn có chắc chắn muốn đăng xuất không?",
+                [
+                  { text: "Hủy", style: "cancel" },
+                  { 
+                    text: "Đăng xuất", 
+                    style: "destructive",
+                    onPress: () => {
+                      logout();
+                      navigation.replace('Login');
+                    }
+                  }
+                ]
+              );
+            }
+          }}
+        >
+          <AppIcon name="logout" size={24} color={COLORS.danger} />
+        </TouchableOpacity>
       </View>
 
       {/* ── Tabs ──────────────────────────────────────── */}

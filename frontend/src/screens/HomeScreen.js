@@ -55,6 +55,10 @@ const ModuleCard = ({ title, tutor, bg, color, onPress, progress }) => (
   </TouchableOpacity>
 );
 
+// Session-level guard: track which userId already had the streak modal shown.
+// Lives OUTSIDE the component so it persists even when the component re-mounts.
+const _shownStreakForUserId = { current: null };
+
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
   const { readNotifIds, loadReadNotifIds, markAsRead, markAllAsRead } = useNotificationStore();
@@ -226,13 +230,21 @@ const HomeScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
+    if (!user) return;
+    const userId = user._id || user.id;
     loadReadNotifIds();
     fetchStats().then(data => {
-      if (data && data.hasCheckedInToday === false && user) {
+      // Only show the streak modal once per unique logged-in user per session
+      if (
+        data &&
+        data.hasCheckedInToday === false &&
+        _shownStreakForUserId.current !== userId
+      ) {
+        _shownStreakForUserId.current = userId;
         setShowStreakModal(true);
       }
     });
-    fetchNotifications();
+    // fetchStats already calls fetchNotifications internally — no need to call again
   }, [user]);
 
   // Connect socket and listen for real-time booking updates
@@ -655,18 +667,6 @@ const HomeScreen = ({ navigation }) => {
               }}
             >
               <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#1b263b' }}>Cài đặt</Text>
-            </TouchableOpacity>
-
-            <View style={{ height: 2, backgroundColor: '#1b263b', marginHorizontal: 8, marginVertical: 4 }} />
-
-            <TouchableOpacity 
-              onPress={() => { closeMenu(); navigate('StreakTestScreen'); }}
-              style={{
-                paddingVertical: 12,
-                paddingHorizontal: 16,
-              }}
-            >
-              <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 14, color: '#ff9800' }}>🔥 Test Streak</Text>
             </TouchableOpacity>
 
             <View style={{ height: 2, backgroundColor: '#1b263b', marginHorizontal: 8, marginVertical: 4 }} />

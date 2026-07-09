@@ -34,7 +34,7 @@ const LoginScreen = ({ route, navigation }) => {
   const [email, setEmail] = useState(route?.params?.prefillEmail || '');
   const [password, setPassword] = useState('');
   
-  const { login, googleLogin, clearError, isLoading, error } = useAuthStore();
+  const { login, googleLogin, clearError, isLoading, error, user } = useAuthStore();
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
@@ -48,6 +48,16 @@ const LoginScreen = ({ route, navigation }) => {
       clearError?.();
     }
   }, [response]);
+
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'ADMIN') {
+        navigation.replace('Admin');
+      } else {
+        navigation.replace('Main');
+      }
+    }
+  }, [user, navigation]);
 
   const handleLogin = () => {
     clearError?.();
@@ -124,6 +134,11 @@ const LoginScreen = ({ route, navigation }) => {
                   onChangeText={setPassword}
                   secureTextEntry
                 />
+                <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={{ alignSelf: 'flex-end', marginTop: 8, marginRight: 4 }}>
+                  <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#4682b4', textDecorationLine: 'underline' }}>
+                    Quên mật khẩu?
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <TouchableOpacity 

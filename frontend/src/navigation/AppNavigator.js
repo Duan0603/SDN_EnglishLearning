@@ -18,8 +18,13 @@ const prefix = Linking.createURL('/');
 const linking = {
   prefixes: [prefix, 'ielts-app://'],
   config: {
+    initialRouteName: 'Main',
     screens: {
+      Login: 'login',
+      Register: 'register',
       ResetPassword: 'reset-password',
+      Admin: 'admin',
+      Main: 'main',
     },
   },
 };
@@ -29,7 +34,6 @@ import LoginScreen    from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ResetPasswordScreen  from '../screens/ResetPasswordScreen';
-import StreakTestScreen     from '../screens/StreakTestScreen';
 import HomeScreen     from '../screens/HomeScreen';
 import PracticeScreen from '../screens/PracticeScreen';
 import ProgressScreen from '../screens/ProgressScreen';
@@ -169,44 +173,25 @@ const AppNavigator = () => {
   return (
     <NavigationContainer linking={linking}>
       <Stack.Navigator
+        initialRouteName="Login"
         screenOptions={{
           headerShown: false,
           animation: Platform.OS === 'android' ? 'slide_from_right' : 'default',
           contentStyle: { backgroundColor: COLORS.background },
         }}
       >
-        {!user ? (
-          // ── AUTH STACK ────────────────────────────────────
-          <>
-            <Stack.Screen name="Login"    component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen}
-              options={{ animation: 'slide_from_bottom' }}
-            />
-            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ animation: 'slide_from_right' }} />
-          </>
-        ) : (
-          // ── MAIN APP ──────────────────────────────────────
-          <>
-            <Stack.Screen name="Main"  component={MainTabNavigator} />
-            <Stack.Screen name="Exam"  component={ExamScreen}
-              options={{ animation: 'slide_from_bottom', presentation: 'fullScreenModal' }}
-            />
-            <Stack.Screen name="Speaking" component={SpeakingScreen}
-              options={{ animation: 'slide_from_bottom', presentation: 'fullScreenModal' }}
-            />
-            <Stack.Screen name="Admin" component={AdminScreen}
-              options={{ animation: 'slide_from_right' }}
-            />
-            <Stack.Screen name="Mentors" component={MentorsScreen} />
-            <Stack.Screen name="Settings" component={SettingsScreen}
-              options={{ animation: 'slide_from_right' }}
-            />
-            <Stack.Screen name="StreakTest" component={StreakTestScreen}
-              options={{ animation: 'slide_from_right' }}
-            />
-          </>
-        )}
+        {/* ALL SCREENS UNIFIED FOR URL ROUTING (WEB TESTING) */}
+        <Stack.Screen name="Login"    component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ animation: 'slide_from_right' }} />
+        
+        <Stack.Screen name="Admin" component={AdminScreen} options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="Main"  component={MainTabNavigator} />
+        <Stack.Screen name="Exam"  component={ExamScreen} options={{ animation: 'slide_from_bottom', presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="Speaking" component={SpeakingScreen} options={{ animation: 'slide_from_bottom', presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="Mentors" component={MentorsScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} options={{ animation: 'slide_from_right' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

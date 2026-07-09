@@ -154,6 +154,7 @@ const ProfileScreen = ({ navigation }) => {
   const confirmLogout = () => {
     setShowLogoutModal(false);
     logout();
+    navigation.replace('Login');
   };
 
   return (
