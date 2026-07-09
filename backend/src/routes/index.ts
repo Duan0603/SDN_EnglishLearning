@@ -19,6 +19,7 @@ import { adminRouter } from './admin/index';
 import { mentorRouter } from './mentor.routes';
 import { bookingRouter } from './booking.routes';
 import { userRouter } from './user/index';
+import { uploadRouter } from './upload.routes';
 
 apiRouter.use('/api/v1/access', accessRouter);
 apiRouter.use('/api/v1/auth', accessRouter);
@@ -27,3 +28,4 @@ apiRouter.use('/api/v1/admin', adminRouter);
 apiRouter.use('/api/v1/mentors', mentorRouter);
 apiRouter.use('/api/v1/bookings', bookingRouter);
 apiRouter.use('/api/v1/users', userRouter);
+apiRouter.use('/api/v1/upload', uploadRouter);

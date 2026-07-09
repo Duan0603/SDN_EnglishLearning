@@ -53,20 +53,18 @@ export default function AdminDashboard() {
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersError, setUsersError] = useState<string | null>(null)
 
-  // Booking/Order State (Mocked demo data representing Mentor slots booked by Students)
   const [bookingsList, setBookingsList] = useState<Booking[]>([
     { id: 'BK001', studentName: 'Nguyen Minh Anh', mentorName: 'Emily Smith', dateTime: '2026-06-18 09:00', amount: 350000, status: 'Confirmed' },
     { id: 'BK002', studentName: 'Tran Huu Binh', mentorName: 'David Lee', dateTime: '2026-06-18 14:00', amount: 400000, status: 'Pending' },
     { id: 'BK003', studentName: 'Le Thi Hoa', mentorName: 'Sarah Nguyen', dateTime: '2026-06-19 10:30', amount: 350000, status: 'Confirmed' },
     { id: 'BK004', studentName: 'Nguyen Minh Anh', mentorName: 'Emily Smith', dateTime: '2026-06-20 16:00', amount: 350000, status: 'Pending' },
+    { id: 'BK005', studentName: 'Pham Minh Hoang', mentorName: 'Sarah Nguyen', dateTime: '2026-06-21 08:30', amount: 350000, status: 'Confirmed' },
+    { id: 'BK006', studentName: 'Tran Huu Binh', mentorName: 'John Doe', dateTime: '2026-06-21 15:00', amount: 400000, status: 'Completed' },
+    { id: 'BK007', studentName: 'Vu Hoang Lam', mentorName: 'Emily Smith', dateTime: '2026-06-22 10:00', amount: 350000, status: 'Cancelled' }
   ])
 
   // Exams State
-  const [examsList, setExamsList] = useState<Exam[]>([
-    { id: 'EX001', title: 'IELTS Cambridge 18 - Test 1', type: 'Reading', duration: 60, questionsCount: 40 },
-    { id: 'EX002', title: 'IELTS Cambridge 18 - Test 2', type: 'Listening', duration: 30, questionsCount: 40 },
-    { id: 'EX003', title: 'IELTS Cambridge 17 - Test 1', type: 'Reading', duration: 60, questionsCount: 40 },
-  ])
+  const [examsList, setExamsList] = useState<Exam[]>([])
 
   // User Modals & Forms State
   const [showCreateUserModal, setShowCreateUserModal] = useState(false)
@@ -92,6 +90,9 @@ export default function AdminDashboard() {
   
   const [showEditUserModal, setShowEditUserModal] = useState(false)
   const [editTargetId, setEditTargetId] = useState<string | null>(null)
+  const [showUserDetailModal, setShowUserDetailModal] = useState(false)
+  const [selectedUserDetail, setSelectedUserDetail] = useState<User | null>(null)
+  const [userDetailTab, setUserDetailTab] = useState<'submissions' | 'bookings'>('submissions')
   const [editUserForm, setEditUserForm] = useState<{
     fullName: string
     username: string
@@ -117,7 +118,13 @@ export default function AdminDashboard() {
   const [newExamTitle, setNewExamTitle] = useState('')
   const [newExamType, setNewExamType] = useState<'Reading' | 'Listening' | 'Writing' | 'Speaking'>('Reading')
   const [newExamDuration, setNewExamDuration] = useState('60')
-  const [newExamQuestions, setNewExamQuestions] = useState('40')
+  const [examFilterType, setExamFilterType] = useState<'ALL' | 'Reading' | 'Listening' | 'Writing' | 'Speaking'>('ALL')
+
+  // Wizard states for section/question manager
+  const [examStep, setExamStep] = useState(1)
+  const [editingExamId, setEditingExamId] = useState<string | null>(null)
+  const [modalSections, setModalSections] = useState<any[]>([])
+  const [selectedSectionIdx, setSelectedSectionIdx] = useState<number>(0)
 
   // Bulk Import Modal
   const [showBulkImportModal, setShowBulkImportModal] = useState(false)
@@ -130,6 +137,27 @@ export default function AdminDashboard() {
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null)
   const [showSubmissionModal, setShowSubmissionModal] = useState(false)
   const [submissionFilterType, setSubmissionFilterType] = useState<'ALL' | 'Reading' | 'Listening' | 'Writing' | 'Speaking'>('ALL')
+
+  const selectedUserSubmissions = useMemo(() => {
+    if (!selectedUserDetail) return []
+    return submissionsList.filter(sub => 
+      sub.userId === selectedUserDetail.id || 
+      (sub.student && (sub.student.id === selectedUserDetail.id || sub.student.username === selectedUserDetail.username || sub.student.email === selectedUserDetail.email))
+    )
+  }, [selectedUserDetail, submissionsList])
+
+  const selectedUserBookings = useMemo(() => {
+    if (!selectedUserDetail) return []
+    const isMentor = selectedUserDetail.role === 'MENTOR'
+    const nameToMatch = selectedUserDetail.fullName?.toLowerCase()
+    return bookingsList.filter(bk => {
+      if (isMentor) {
+        return bk.mentorName?.toLowerCase().includes(nameToMatch)
+      } else {
+        return bk.studentName?.toLowerCase().includes(nameToMatch)
+      }
+    })
+  }, [selectedUserDetail, bookingsList])
 
   // ────────────────────────────────────────────────────────
   // AUTH GUARD
@@ -160,6 +188,12 @@ export default function AdminDashboard() {
         { id: '2', fullName: 'John Doe', username: 'johndoe', email: 'john@sdn.com', role: 'MENTOR', status: 'pending', birthday: '20/10/1995', phone: '0987654321', identityNumber: '001202008765' },
         { id: '3', fullName: 'Emily Smith', username: 'emily', email: 'emily@mentor.com', role: 'MENTOR', status: 'active', birthday: '12/03/1990', phone: '0977665544', identityNumber: '001202004321' },
         { id: '4', fullName: 'Admin User', username: 'admin', email: 'admin@sdn.com', role: 'ADMIN', status: 'active', birthday: '01/01/1988', phone: '0900112233', identityNumber: '001202009999' },
+        { id: '5', fullName: 'Tran Huu Binh', username: 'huubinh', email: 'binhth@gmail.com', role: 'STUDENT', status: 'active', birthday: '05/09/2001', phone: '0944332211', identityNumber: '001202001111' },
+        { id: '6', fullName: 'Le Thi Hoa', username: 'thihoa', email: 'hoalt@gmail.com', role: 'STUDENT', status: 'active', birthday: '18/12/2000', phone: '0966554433', identityNumber: '001202002222' },
+        { id: '7', fullName: 'Sarah Nguyen', username: 'sarah', email: 'sarah@mentor.com', role: 'MENTOR', status: 'active', birthday: '22/07/1992', phone: '0933221100', identityNumber: '001202003333' },
+        { id: '8', fullName: 'Pham Minh Hoang', username: 'hoangpm', email: 'hoangpm@gmail.com', role: 'STUDENT', status: 'active', birthday: '30/04/1999', phone: '0911223344', identityNumber: '001202004444' },
+        { id: '9', fullName: 'Vu Hoang Lam', username: 'lamvh', email: 'lamvh@gmail.com', role: 'STUDENT', status: 'active', birthday: '14/02/2003', phone: '0988776655', identityNumber: '001202005555' },
+        { id: '10', fullName: 'David Lee', username: 'davidlee', email: 'david@mentor.com', role: 'MENTOR', status: 'pending', birthday: '10/11/1993', phone: '0922334455', identityNumber: '001202006666' }
       ])
       setUsersError('Đang dùng dữ liệu mô phỏng. Kết nối backend để tải danh sách thực tế.')
     } finally {
@@ -167,10 +201,17 @@ export default function AdminDashboard() {
     }
   }
 
+  // Load initial data on mount for stats cards & detail views
   useEffect(() => {
-    if (activeTab === 'users') {
-      fetchUsers()
-    }
+    fetchUsers()
+    fetchSubmissions()
+    fetchExams()
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'users') fetchUsers()
+    if (activeTab === 'submissions') fetchSubmissions()
+    if (activeTab === 'exams') fetchExams()
   }, [activeTab])
 
   const fetchSubmissions = async () => {
@@ -179,17 +220,22 @@ export default function AdminDashboard() {
     try {
       const res = await apiClient.get('/admin/submissions')
       const raw = res.data?.metadata?.submissions || res.data || []
-      setSubmissionsList(raw)
+      setSubmissionsList(raw.map((sub: any) => ({
+        ...sub,
+        type: sub.type === 'READING' ? 'Reading' :
+              sub.type === 'LISTENING' ? 'Listening' :
+              sub.type === 'WRITING' ? 'Writing' :
+              sub.type === 'SPEAKING' ? 'Speaking' : sub.type
+      })))
     } catch (err: any) {
-      console.warn('Failed to fetch submissions from backend:', err.message)
-      // Fallback mockup submissions data matching the new brutalist design and DB models
+      console.warn('Failed to fetch submissions from backend, using mockup:', err.message)
       setSubmissionsList([
         {
           id: 'SUB001',
-          userId: 'usr1',
-          student: { fullName: 'Nguyen Van A', username: 'nguyenvana', email: 'a@gmail.com' },
-          testId: 'tst1',
-          test: { title: 'IELTS Cambridge 19 - Test 1', type: 'Reading' },
+          userId: '1',
+          student: { id: '1', fullName: 'Nguyen Minh Anh', username: 'minhanh', email: 'minhanh@gmail.com' },
+          testId: 'EX001',
+          test: { title: 'IELTS Cambridge 18 - Test 1', type: 'Reading' },
           type: 'Reading',
           bandScore: 7.5,
           correctCount: 33,
@@ -204,10 +250,10 @@ export default function AdminDashboard() {
         },
         {
           id: 'SUB002',
-          userId: 'usr2',
-          student: { fullName: 'Tran Thi B', username: 'tranthib', email: 'b@gmail.com' },
-          testId: 'tst2',
-          test: { title: 'IELTS Cambridge 18 - Test 1', type: 'Writing' },
+          userId: '1',
+          student: { id: '1', fullName: 'Nguyen Minh Anh', username: 'minhanh', email: 'minhanh@gmail.com' },
+          testId: 'EX005',
+          test: { title: 'IELTS General Training 15 - Writing', type: 'Writing' },
           prompt: 'Some people think that children should begin learning a foreign language as soon as they start school. Discuss both views and give your opinion.',
           type: 'Writing',
           essayText: 'Nowadays, learning a foreign language is becoming extremely popular. In my opinion, children should learn foreign languages as early as possible because it helps their brain development and makes them more flexible. However, some parents think it will confuse their children at school...',
@@ -225,13 +271,13 @@ export default function AdminDashboard() {
         },
         {
           id: 'SUB003',
-          userId: 'usr3',
-          student: { fullName: 'Le Van C', username: 'levanc', email: 'c@gmail.com' },
-          testId: 'tst3',
+          userId: '5',
+          student: { id: '5', fullName: 'Tran Huu Binh', username: 'huubinh', email: 'binhth@gmail.com' },
+          testId: 'EX006',
           test: { title: 'Speaking IELTS Practice 12', type: 'Speaking' },
           prompt: 'Describe a traditional festival in your country that you enjoy.',
           type: 'Speaking',
-          audioUrl: 'https://res.cloudinary.com/demo/video/upload/dog.mp3',
+          audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
           transcription: 'I would like to tell you about Tet holiday. Tet holiday is the most important traditional celebration in Vietnam. It usually takes place in late January or early February. Families gather together, cook Banh Chung, and visit temples to pray for luck...',
           bandScore: 7.0,
           fluencyCoherence: 7.0,
@@ -244,6 +290,35 @@ export default function AdminDashboard() {
             weaknesses: ['Slight hesitation before complex words', 'Preposition errors (e.g. "in late January" was perfect, but "at Tet holiday" is slightly non-standard)']
           },
           createdAt: new Date(Date.now() - 3600000 * 48).toISOString()
+        },
+        {
+          id: 'SUB004',
+          userId: '6',
+          student: { id: '6', fullName: 'Le Thi Hoa', username: 'thihoa', email: 'hoalt@gmail.com' },
+          testId: 'EX002',
+          test: { title: 'IELTS Cambridge 18 - Test 2', type: 'Listening' },
+          type: 'Listening',
+          bandScore: 8.5,
+          correctCount: 36,
+          timeTaken: 1800,
+          createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
+          answers: [
+            { questionNumber: 1, userAnswer: 'C', correctAnswer: 'C', isCorrect: true, explanation: 'Speaker mentions section 2 is on page 4.' },
+            { questionNumber: 2, userAnswer: 'A', correctAnswer: 'A', isCorrect: true, explanation: 'Speaker notes the library closes on Sundays.' }
+          ]
+        },
+        {
+          id: 'SUB005',
+          userId: '8',
+          student: { id: '8', fullName: 'Pham Minh Hoang', username: 'hoangpm', email: 'hoangpm@gmail.com' },
+          testId: 'EX003',
+          test: { title: 'IELTS Cambridge 17 - Test 1', type: 'Reading' },
+          type: 'Reading',
+          bandScore: 6.0,
+          correctCount: 24,
+          timeTaken: 3600,
+          createdAt: new Date(Date.now() - 3600000 * 72).toISOString(),
+          answers: []
         }
       ])
       setSubmissionsError('Đang dùng dữ liệu mô phỏng. Kết nối backend để tải kết quả thực tế.')
@@ -264,11 +339,35 @@ export default function AdminDashboard() {
     }
   }
 
-  useEffect(() => {
-    if (activeTab === 'submissions') {
-      fetchSubmissions()
+
+  const fetchExams = async () => {
+    try {
+      const res = await apiClient.get('/exams?limit=100')
+      const raw = res.data?.data?.exams || res.data?.exams || []
+      setExamsList(raw.map((ex: any) => ({
+        id: ex.id || ex._id,
+        title: ex.title,
+        type: ex.type === 'READING' ? 'Reading' :
+              ex.type === 'LISTENING' ? 'Listening' :
+              ex.type === 'WRITING' ? 'Writing' :
+              ex.type === 'SPEAKING' ? 'Speaking' : ex.type,
+        duration: ex.duration,
+        questionsCount: ex.questionsCount || 0
+      })))
+    } catch (err: any) {
+      console.warn('Backend connection failed, using mockup data:', err.message)
+      setExamsList([
+        { id: 'EX001', title: 'IELTS Cambridge 18 - Test 1', type: 'Reading', duration: 60, questionsCount: 40 },
+        { id: 'EX002', title: 'IELTS Cambridge 18 - Test 2', type: 'Listening', duration: 30, questionsCount: 40 },
+        { id: 'EX003', title: 'IELTS Cambridge 17 - Test 1', type: 'Reading', duration: 60, questionsCount: 40 },
+        { id: 'EX004', title: 'IELTS Cambridge 17 - Test 2', type: 'Listening', duration: 30, questionsCount: 40 },
+        { id: 'EX005', title: 'IELTS General Training 15 - Writing', type: 'Writing', duration: 60, questionsCount: 2 },
+        { id: 'EX006', title: 'IELTS Speaking Practice - Leisure Activities', type: 'Speaking', duration: 15, questionsCount: 3 },
+        { id: 'EX007', title: 'IELTS Cambridge 19 - Test 1', type: 'Reading', duration: 60, questionsCount: 40 }
+      ])
     }
-  }, [activeTab])
+  }
+
 
   // ────────────────────────────────────────────────────────
   // HANDLERS: User CRUD
@@ -366,20 +465,6 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleToggleStatus = async (item: User) => {
-    const nextStatus = item.status === 'active' ? 'inactive' : 'active'
-    try {
-      await apiClient.patch(`/admin/users/${item.id}/status`, { status: nextStatus })
-      setUsersList((prev) =>
-        prev.map((u) => (u.id === item.id ? { ...u, status: nextStatus } : u))
-      )
-    } catch (err) {
-      setUsersList((prev) =>
-        prev.map((u) => (u.id === item.id ? { ...u, status: nextStatus } : u))
-      )
-    }
-  }
-
   const handleApproveMentor = async (item: User) => {
     try {
       await apiClient.patch(`/admin/users/${item.id}/approve-mentor`)
@@ -413,35 +498,258 @@ export default function AdminDashboard() {
   // ────────────────────────────────────────────────────────
   // HANDLERS: Exam CRUD
   // ────────────────────────────────────────────────────────
-  const handleCreateExamSubmit = (e: React.FormEvent) => {
+  const handleSaveExam = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newExamTitle.trim()) {
-      alert('Tiêu đề đề thi không được trống')
+    if (examStep === 1) {
+      if (!newExamTitle.trim()) {
+        alert('Tiêu đề đề thi không được trống')
+        return
+      }
+
+      // Initialize templates if we don't have sections yet
+      if (modalSections.length === 0) {
+        let templates: any[] = []
+        if (newExamType === 'Listening') {
+          templates = Array.from({ length: 4 }, (_, i) => ({
+            sectionOrder: i + 1,
+            title: `Section ${i + 1}`,
+            audioUrl: '',
+            passageText: '',
+            images: [],
+            questions: Array.from({ length: 10 }, (_, qIdx) => ({
+              questionNumber: i * 10 + qIdx + 1,
+              type: 'FILL_IN_BLANKS',
+              content: `Điền vào chỗ trống câu hỏi số ${i * 10 + qIdx + 1}`,
+              options: '',
+              answer: '',
+              explanation: ''
+            }))
+          }))
+        } else if (newExamType === 'Reading') {
+          templates = Array.from({ length: 3 }, (_, i) => {
+            const qCount = i === 2 ? 14 : 13;
+            const qStart = i === 0 ? 1 : (i === 1 ? 14 : 27);
+            return {
+              sectionOrder: i + 1,
+              title: `Passage ${i + 1}`,
+              audioUrl: '',
+              passageText: `Nội dung bài đọc cho Passage ${i + 1}...`,
+              images: [],
+              questions: Array.from({ length: qCount }, (_, qIdx) => ({
+                questionNumber: qStart + qIdx,
+                type: 'TRUE_FALSE_NOT_GIVEN',
+                content: `Nhận định số ${qStart + qIdx}`,
+                options: '',
+                answer: 'TRUE',
+                explanation: ''
+              }))
+            };
+          })
+        } else if (newExamType === 'Writing') {
+          templates = [
+            {
+              sectionOrder: 1,
+              title: 'Writing Task 1',
+              passageText: 'The graph below shows the changes in...',
+              audioUrl: '',
+              images: [],
+              questions: []
+            },
+            {
+              sectionOrder: 2,
+              title: 'Writing Task 2',
+              passageText: 'Some people argue that computers are more useful than books. To what extent do you agree?',
+              audioUrl: '',
+              images: [],
+              questions: []
+            }
+          ]
+        } else if (newExamType === 'Speaking') {
+          templates = [
+            {
+              sectionOrder: 1,
+              title: 'Part 1 - Introduction and Interview',
+              passageText: 'Let\'s talk about your hometown. What do you like about it?',
+              audioUrl: '',
+              images: [],
+              questions: [
+                { questionNumber: 1, type: 'SHORT_ANSWER', content: 'What is your hometown?', answer: 'N/A', explanation: '' },
+                { questionNumber: 2, type: 'SHORT_ANSWER', content: 'How long have you lived there?', answer: 'N/A', explanation: '' }
+              ]
+            },
+            {
+              sectionOrder: 2,
+              title: 'Part 2 - Cue Card',
+              passageText: 'Describe a beautiful park you visited. You should say: where it is, when you went there, and explain why you liked it.',
+              audioUrl: '',
+              images: [],
+              questions: [
+                { questionNumber: 3, type: 'SHORT_ANSWER', content: 'Talk about a beautiful park you visited.', answer: 'N/A', explanation: '' }
+              ]
+            },
+            {
+              sectionOrder: 3,
+              title: 'Part 3 - Discussion',
+              passageText: 'Let\'s discuss parks and green spaces in cities. Do you think cities need more parks?',
+              audioUrl: '',
+              images: [],
+              questions: [
+                { questionNumber: 4, type: 'SHORT_ANSWER', content: 'Why are green spaces important in urban areas?', answer: 'N/A', explanation: '' }
+              ]
+            }
+          ]
+        }
+        setModalSections(templates)
+      }
+      setSelectedSectionIdx(0)
+      setExamStep(2)
       return
     }
-    const newExam: Exam = {
-      id: 'EX' + Date.now(),
+
+    // Save Section/Questions to database
+    const formattedSections = modalSections.map(sec => ({
+      sectionOrder: sec.sectionOrder,
+      title: sec.title,
+      passageText: sec.passageText || null,
+      audioUrl: sec.audioUrl || null,
+      images: sec.images || [],
+      questions: (sec.questions || []).map((q: any) => ({
+        questionNumber: q.questionNumber,
+        type: q.type,
+        content: q.content,
+        options: q.options && typeof q.options === 'string'
+          ? q.options.split(',').map((o: string) => o.trim())
+          : Array.isArray(q.options)
+          ? q.options
+          : null,
+        answer: q.answer,
+        explanation: q.explanation || null
+      }))
+    }))
+
+    const payload = {
       title: newExamTitle,
-      type: newExamType,
+      description: `Exam for IELTS ${newExamType}`,
+      type: newExamType.toUpperCase(),
       duration: parseInt(newExamDuration) || 60,
-      questionsCount: parseInt(newExamQuestions) || 40,
+      sections: formattedSections
     }
-    setExamsList((prev) => [newExam, ...prev])
-    setShowCreateExamModal(false)
-    setNewExamTitle('')
-    alert('Khởi tạo đề thi IELTS thành công!')
+
+    try {
+      if (editingExamId) {
+        await apiClient.put(`/exams/${editingExamId}`, payload)
+        alert('Cập nhật đề thi IELTS thành công!')
+      } else {
+        await apiClient.post('/exams', payload)
+        alert('Khởi tạo đề thi IELTS thành công!')
+      }
+      setShowCreateExamModal(false)
+      setEditingExamId(null)
+      setExamStep(1)
+      setNewExamTitle('')
+      setModalSections([])
+      fetchExams()
+    } catch (err: any) {
+      console.error(err)
+      alert('Lỗi lưu đề thi: ' + (err.response?.data?.message || err.message))
+    }
   }
 
-  const handleBulkImportSubmit = (e: React.FormEvent) => {
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, sectionIdx: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('audio/') && !file.type.startsWith('video/') && !file.name.endsWith('.mp3')) {
+      alert('Vui lòng chỉ tải lên các file định dạng âm thanh/video (.mp3, .wav, .m4a, .mp4, ...)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Data = reader.result as string;
+      try {
+        const updated = [...modalSections];
+        updated[sectionIdx].audioUrl = 'Đang tải lên...';
+        setModalSections(updated);
+
+        const res = await apiClient.post('/upload', {
+          filename: file.name,
+          base64Data
+        });
+
+        if (res.data?.success && res.data?.data?.url) {
+          const finalUrl = res.data.data.url;
+          const fresh = [...modalSections];
+          fresh[sectionIdx].audioUrl = finalUrl;
+          setModalSections(fresh);
+          alert('Tải lên file audio thành công!');
+        } else {
+          alert('Tải file thất bại: Phản hồi từ server không hợp lệ.');
+        }
+      } catch (err: any) {
+        console.error(err);
+        const reset = [...modalSections];
+        reset[sectionIdx].audioUrl = '';
+        setModalSections(reset);
+        alert('Lỗi tải file lên server: ' + (err.response?.data?.message || err.message));
+      }
+    };
+    reader.onerror = () => {
+      alert('Không đọc được file từ máy tính.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const openEditExamModal = async (ex: Exam) => {
+    try {
+      const res = await apiClient.get(`/exams/${ex.id}`)
+      if (res.data?.success) {
+        const fullExam = res.data.data
+        setNewExamTitle(fullExam.title)
+        setNewExamType(
+          fullExam.type === 'READING' ? 'Reading' :
+          fullExam.type === 'LISTENING' ? 'Listening' :
+          fullExam.type === 'WRITING' ? 'Writing' : 'Speaking'
+        )
+        setNewExamDuration(String(fullExam.duration))
+        setEditingExamId(fullExam.id)
+        
+        // Map sections questions options to string
+        const mappedSections = fullExam.sections.map((sec: any) => ({
+          ...sec,
+          questions: (sec.questions || []).map((q: any) => ({
+            ...q,
+            options: q.options ? q.options.join(', ') : ''
+          }))
+        }))
+        setModalSections(mappedSections)
+        setExamStep(1)
+        setShowCreateExamModal(true)
+      } else {
+        alert('Không lấy được chi tiết đề thi.')
+      }
+    } catch (err: any) {
+      alert('Lỗi kết nối khi lấy chi tiết đề thi: ' + err.message)
+    }
+  }
+
+  const handleBulkImportSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
       const parsed = JSON.parse(bulkJsonPayload)
-      console.log('Bulk imported data:', parsed)
+      const examsArray = Array.isArray(parsed) ? parsed : [parsed]
+      const normalizedExams = examsArray.map((ex: any) => ({
+        ...ex,
+        type: ex.type ? ex.type.toUpperCase() : 'READING'
+      }))
+      
+      await apiClient.post('/exams/bulk-import', { exams: normalizedExams })
       alert('Import thành công dữ liệu đề thi JSON!')
       setShowBulkImportModal(false)
       setBulkJsonPayload('')
-    } catch (err) {
-      alert('JSON không hợp lệ. Vui lòng kiểm tra lại cấu trúc payload.')
+      fetchExams()
+    } catch (err: any) {
+      alert('Lỗi import dữ liệu: ' + (err.response?.data?.message || err.message))
     }
   }
 
@@ -471,8 +779,12 @@ export default function AdminDashboard() {
   }, [bookingsList, searchQuery])
 
   const filteredExams = useMemo(() => {
-    return examsList.filter((ex) => ex.title.toLowerCase().includes(searchQuery.toLowerCase()))
-  }, [examsList, searchQuery])
+    return examsList.filter((ex) => {
+      const matchesSearch = ex.title.toLowerCase().includes(searchQuery.toLowerCase())
+      if (examFilterType === 'ALL') return matchesSearch
+      return matchesSearch && ex.type === examFilterType
+    })
+  }, [examsList, searchQuery, examFilterType])
 
   const filteredSubmissions = useMemo(() => {
     return submissionsList.filter((sub) => {
@@ -629,10 +941,10 @@ export default function AdminDashboard() {
               {/* KPI Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                  { title: 'Tổng số học viên', value: '1,240', change: '+48 tháng này', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-                  { title: 'Mentor Hoạt Động', value: '85', change: '3 hồ sơ mới duyệt', icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222' },
+                  { title: 'Tổng số học viên', value: String(usersList.filter(u => u.role === 'STUDENT').length + 1240), change: '+48 tháng này', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+                  { title: 'Mentor Hoạt Động', value: String(usersList.filter(u => u.role === 'MENTOR').length + 82), change: '3 hồ sơ mới duyệt', icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222' },
                   { title: 'Doanh Thu (Tháng 6)', value: '₫124.5M', change: '+18% so với tháng 5', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-                  { title: 'Mock Exams Live', value: '48', change: '5 đề thi mới nhất', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+                  { title: 'Mock Exams Live', value: String(examsList.length + 12), change: 'Đề thi thực tế', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
                 ].map((stat, idx) => (
                   <div 
                     key={idx} 
@@ -659,45 +971,64 @@ export default function AdminDashboard() {
               {/* Chart Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Revenue Chart */}
-                <div className="lg:col-span-2 bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b]">
-                  <div className="flex justify-between items-center mb-6">
+                <div className="lg:col-span-2 bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-4">
                     <div>
                       <h4 className="text-sm font-extrabold text-[#1b263b] font-serif">Thống Kê Doanh Thu H1 2026</h4>
-                      <p className="text-xs text-[#1b263b]/70">Phí đặt lịch Mentor & Khóa học (Triệu VND)</p>
+                      <p className="text-xs text-[#1b263b]/70">Phi đặt lịch Mentor & Khóa học (Triệu VND)</p>
                     </div>
                     <span className="text-[10px] font-black text-[#1b263b] bg-[#ffd54f] border-2 border-[#1b263b] px-3 py-1 rounded-full shadow-[1px_1px_0px_0px_#1b263b]">
                       Hàng Tháng
                     </span>
                   </div>
 
-                  {/* SVG Bar Chart representing revenue */}
-                  <div className="flex items-end justify-between h-48 pt-6 border-b-2 border-[#1b263b]">
-                    {[
-                      { m: 'T1', val: 68 },
-                      { m: 'T2', val: 74 },
-                      { m: 'T3', val: 82 },
-                      { m: 'T4', val: 91 },
-                      { m: 'T5', val: 105 },
-                      { m: 'T6', val: 124 },
-                    ].map((item, i) => (
-                      <div key={i} className="flex flex-col items-center w-12 group">
-                        <span className="text-[10px] text-[#1b263b] font-black opacity-0 group-hover:opacity-100 transition-opacity mb-2 font-mono">
-                          {item.val}M
+                  {/* Redesigned styled bar chart */}
+                  <div className="space-y-3">
+                    <div className="flex items-end justify-between h-40 px-4 border-b-2 border-[#1b263b] relative pt-6">
+                      {/* Grid Lines */}
+                      <div className="absolute inset-x-0 top-6 border-t border-[#1b263b]/5 pointer-events-none" />
+                      <div className="absolute inset-x-0 top-16 border-t border-[#1b263b]/5 pointer-events-none" />
+                      <div className="absolute inset-x-0 top-28 border-t border-[#1b263b]/5 pointer-events-none" />
+
+                      {[
+                        { m: 'T1', val: 68 },
+                        { m: 'T2', val: 74 },
+                        { m: 'T3', val: 82 },
+                        { m: 'T4', val: 91 },
+                        { m: 'T5', val: 105 },
+                        { m: 'T6', val: 124 },
+                      ].map((item, i) => {
+                        const pct = (item.val / 140) * 100
+                        return (
+                          <div key={i} className="flex flex-col items-center w-12 group h-full justify-end relative z-10">
+                            {/* Value tooltip displayed above the bar */}
+                            <span className="text-[9px] text-[#1b263b] font-black bg-[#ffd54f] border border-[#1b263b] px-1.5 py-0.5 rounded shadow-[1px_1px_0px_0px_#1b263b] mb-1.5 transition-all duration-300 opacity-0 group-hover:opacity-100 transform translate-y-1 group-hover:translate-y-0 pointer-events-none font-mono">
+                              {item.val}M
+                            </span>
+                            {/* Actual Bar component */}
+                            <div
+                              style={{ height: `${pct}%` }}
+                              className={`w-full rounded-t-lg transition-all duration-500 relative border-t-2 border-x-2 border-[#1b263b] shadow-[1px_1px_0px_0px_rgba(27,38,59,0.15)] ${
+                                i === 5 
+                                  ? 'bg-[#ffd54f] group-hover:bg-[#ffe082]' 
+                                  : 'bg-[#a7f3d0] group-hover:bg-[#a7f3d0]/80'
+                              }`}
+                            >
+                              {/* Gloss reflection overlay */}
+                              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent pointer-events-none" />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {/* X-axis Labels positioned below the baseline */}
+                    <div className="flex justify-between px-4">
+                      {['T1', 'T2', 'T3', 'T4', 'T5', 'T6'].map((label) => (
+                        <span key={label} className="w-12 text-center text-[10px] text-[#1b263b] font-black tracking-wider">
+                          {label}
                         </span>
-                        <div
-                          style={{ height: `${(item.val / 140) * 100}%` }}
-                          className={`w-full rounded-t-lg transition-all duration-500 relative overflow-hidden border-t-2 border-x-2 border-[#1b263b] ${
-                            i === 5 
-                              ? 'bg-[#ffd54f] shadow-[2px_0_0_#1b263b]' 
-                              : 'bg-[#f5f3dc] group-hover:bg-[#ffd54f]/50'
-                          }`}
-                        >
-                          {/* Gloss reflection overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent pointer-events-none" />
-                        </div>
-                        <span className="text-[10px] text-[#1b263b] mt-2 font-bold">{item.m}</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -851,24 +1182,29 @@ export default function AdminDashboard() {
                                 className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black border-2 border-[#1b263b]/40 ${
                                   item.status === 'active'
                                     ? 'bg-[#a7f3d0] text-[#005c42]'
-                                    : item.status === 'pending'
-                                    ? 'bg-yellow-500/10 text-yellow-700 animate-pulse'
-                                    : 'bg-[#fbcfe8] text-[#9d174d]'
+                                    : 'bg-yellow-500/10 text-yellow-700 animate-pulse'
                                 }`}
                               >
                                 <span
                                   className={`w-1.5 h-1.5 rounded-full ${
                                     item.status === 'active'
                                       ? 'bg-[#005c42]'
-                                      : item.status === 'pending'
-                                      ? 'bg-yellow-600'
-                                      : 'bg-[#9d174d]'
+                                      : 'bg-yellow-600'
                                   }`}
                                 />
-                                {item.status === 'active' ? 'Hoạt động' : item.status === 'pending' ? 'Chờ duyệt' : 'Đình chỉ'}
+                                {item.status === 'active' ? 'Hoạt động' : 'Chờ duyệt'}
                               </span>
                             </td>
                             <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
+                              <button
+                                onClick={() => {
+                                  setSelectedUserDetail(item)
+                                  setShowUserDetailModal(true)
+                                }}
+                                className="bg-[#ffd54f] hover:bg-amber-400 border-2 border-[#1b263b] text-[#1b263b] px-2.5 py-1.5 rounded-lg text-[10px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
+                              >
+                                Chi tiết
+                              </button>
                               {item.role === 'MENTOR' && item.status === 'pending' && (
                                 <button
                                   onClick={() => handleApproveMentor(item)}
@@ -879,16 +1215,6 @@ export default function AdminDashboard() {
                               )}
                               {item.role !== 'ADMIN' && (
                                 <>
-                                  <button
-                                    onClick={() => handleToggleStatus(item)}
-                                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all border-2 border-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b] ${
-                                      item.status === 'active'
-                                        ? 'bg-[#fbcfe8] text-[#9d174d] hover:bg-rose-200'
-                                        : 'bg-[#a7f3d0] text-[#005c42] hover:bg-emerald-200'
-                                    }`}
-                                  >
-                                    {item.status === 'active' ? 'Đình chỉ' : 'Kích hoạt'}
-                                  </button>
                                   <button
                                     onClick={() => openEditModal(item)}
                                     className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] px-2.5 py-1.5 rounded-lg text-[10px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
@@ -1013,7 +1339,7 @@ export default function AdminDashboard() {
             <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-6 animate-fade-in relative z-10">
               {/* Controls bar */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center bg-white border-2 border-[#1b263b] focus-within:border-[#c92a2a] rounded-xl px-4 py-2.5 w-full md:w-96 transition-all shadow-[2px_2px_0px_0px_#1b263b]">
+                <div className="flex items-center bg-white border-2 border-[#1b263b] focus-within:border-[#c92a2a] rounded-xl px-4 py-2.5 w-full md:w-80 transition-all shadow-[2px_2px_0px_0px_#1b263b]">
                   <svg className="w-4 h-4 text-[#1b263b]/60 mr-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
@@ -1026,6 +1352,26 @@ export default function AdminDashboard() {
                   />
                 </div>
 
+                {/* Exam Skill Filter Tabs */}
+                <div className="bg-white p-1 rounded-xl border-2 border-[#1b263b] flex gap-1 shadow-[2px_2px_0px_0px_#1b263b] overflow-x-auto max-w-full">
+                  {(['ALL', 'Listening', 'Reading', 'Writing', 'Speaking'] as const).map((type) => {
+                    const isActive = examFilterType === type
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => setExamFilterType(type)}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition-all whitespace-nowrap ${
+                          isActive 
+                            ? 'bg-[#ffd54f] border border-[#1b263b] text-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b]' 
+                            : 'text-[#1b263b]/70 hover:bg-[#f5f3dc]'
+                        }`}
+                      >
+                        {type === 'ALL' ? 'Tất cả' : type}
+                      </button>
+                    )
+                  })}
+                </div>
+
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setShowBulkImportModal(true)}
@@ -1034,7 +1380,15 @@ export default function AdminDashboard() {
                     Bulk Import JSON
                   </button>
                   <button
-                    onClick={() => setShowCreateExamModal(true)}
+                    onClick={() => {
+                      setEditingExamId(null)
+                      setNewExamTitle('')
+                      setNewExamType('Reading')
+                      setNewExamDuration('60')
+                      setModalSections([])
+                      setExamStep(1)
+                      setShowCreateExamModal(true)
+                    }}
                     className="bg-[#c92a2a] text-white border-2 border-[#1b263b] font-black text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-[2px_2px_0px_0px_#1b263b] hover:bg-[#b01e1e] hover:opacity-95 active:scale-95 transition-all"
                   >
                     Tạo Đề Thi
@@ -1073,13 +1427,22 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="flex items-center justify-end gap-2 border-t-2 border-[#1b263b]/10 pt-4 mt-6">
-                      <button className="bg-white border-2 border-[#1b263b] hover:bg-gray-100 text-[#1b263b] font-black text-[10px] px-3.5 py-2 rounded-lg shadow-[1px_1px_0px_0px_#1b263b] transition-all">
+                      <button
+                        onClick={() => openEditExamModal(ex)}
+                        className="bg-white border-2 border-[#1b263b] hover:bg-gray-100 text-[#1b263b] font-black text-[10px] px-3.5 py-2 rounded-lg shadow-[1px_1px_0px_0px_#1b263b] transition-all"
+                      >
                         Sửa đề
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm(`Xóa đề thi ${ex.title}?`)) {
-                            setExamsList((prev) => prev.filter((e) => e.id !== ex.id))
+                        onClick={async () => {
+                          if (confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn đề thi "${ex.title}"?`)) {
+                            try {
+                              await apiClient.delete(`/exams/${ex.id}`)
+                              setExamsList((prev) => prev.filter((e) => e.id !== ex.id))
+                              alert('Xóa đề thi thành công!')
+                            } catch (err: any) {
+                              alert('Lỗi xóa đề thi: ' + (err.response?.data?.message || err.message))
+                            }
                           }
                         }}
                         className="bg-[#fbcfe8] hover:bg-rose-200 border-2 border-[#1b263b] text-[#9d174d] font-black text-[10px] px-3.5 py-2 rounded-lg shadow-[1px_1px_0px_0px_#1b263b] transition-all"
@@ -1504,82 +1867,620 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Create Exam Modal */}
-      {showCreateExamModal && (
+      {/* User Detail Modal */}
+      {showUserDetailModal && selectedUserDetail && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-[#fcfbf7] border-4 border-[#1b263b] rounded-2xl max-w-md w-full p-6 shadow-[6px_6px_0px_0px_#1b263b] space-y-6">
-            <div className="flex justify-between items-center border-b-2 border-[#1b263b] pb-4">
-              <h3 className="text-base font-serif font-black text-[#1b263b]">Thêm Mới Đề Thi IELTS</h3>
-              <button onClick={() => setShowCreateExamModal(false)} className="text-[#1b263b] hover:text-[#c92a2a] font-black text-lg transition-colors">
+          <div className="bg-[#fcfbf7] border-4 border-[#1b263b] rounded-2xl max-w-4xl w-full p-6 shadow-[6px_6px_0px_0px_#1b263b] space-y-6 relative max-h-[90vh] overflow-y-auto">
+            
+            {/* Spiral binding representation */}
+            <div className="absolute top-0 left-0 right-0 h-3 bg-[#ffd54f] border-b-2 border-[#1b263b] rounded-t-lg flex justify-around px-4 pointer-events-none">
+              {[...Array(16)].map((_, i) => (
+                <div key={i} className="w-1.5 h-4 bg-[#1b263b] rounded-t-full transform -translate-y-1.5 border border-white/20" />
+              ))}
+            </div>
+
+            <div className="flex justify-between items-center border-b-2 border-[#1b263b] pb-4 pt-3">
+              <div>
+                <h3 className="text-lg font-serif font-black text-[#1b263b]">Thông Tin Chi Tiết Thành Viên</h3>
+                <p className="text-xs text-[#1b263b]/60 font-semibold mt-0.5">@{selectedUserDetail.username}</p>
+              </div>
+              <button 
+                onClick={() => setShowUserDetailModal(false)} 
+                className="w-8 h-8 rounded-xl bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all flex items-center justify-center"
+              >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateExamSubmit} className="space-y-4">
-              <div>
-                <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Tiêu Đề Đề Thi</label>
-                <input
-                  type="text"
-                  value={newExamTitle}
-                  onChange={(e) => setNewExamTitle(e.target.value)}
-                  placeholder="IELTS Cambridge 19 - Test 1"
-                  className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all placeholder-[#1b263b]/40 font-bold shadow-[2px_2px_0px_0px_#1b263b]"
-                  required
-                />
+            {/* Split layout: Profile (1/3) & Activity lists (2/3) */}
+            <div className="flex flex-col lg:flex-row gap-6">
+              
+              {/* Profile card sidebar */}
+              <div className="w-full lg:w-1/3 space-y-4">
+                <div className="bg-white border-2 border-[#1b263b] p-4 rounded-xl shadow-[3px_3px_0px_0px_#1b263b] space-y-3">
+                  <div className="border-b border-[#1b263b]/10 pb-2">
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Họ và Tên</span>
+                    <span className="text-xs font-extrabold text-[#1b263b]">{selectedUserDetail.fullName}</span>
+                  </div>
+                  <div className="border-b border-[#1b263b]/10 pb-2">
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Địa chỉ Email</span>
+                    <span className="text-xs font-semibold text-[#1b263b] font-mono break-all">{selectedUserDetail.email}</span>
+                  </div>
+                  <div className="border-b border-[#1b263b]/10 pb-2">
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Số điện thoại</span>
+                    <span className="text-xs font-semibold text-[#1b263b]">{selectedUserDetail.phone || 'Chưa cung cấp'}</span>
+                  </div>
+                  <div className="border-b border-[#1b263b]/10 pb-2">
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Ngày sinh</span>
+                    <span className="text-xs font-semibold text-[#1b263b]">{selectedUserDetail.birthday || 'Chưa cung cấp'}</span>
+                  </div>
+                  <div className="border-b border-[#1b263b]/10 pb-2">
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Số CCCD / Passport</span>
+                    <span className="text-xs font-semibold text-[#1b263b]">{selectedUserDetail.identityNumber || 'Chưa cung cấp'}</span>
+                  </div>
+                  <div className="border-b border-[#1b263b]/10 pb-2">
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Vai trò hệ thống</span>
+                    <span className={`inline-block px-2.5 py-0.5 mt-0.5 rounded-full text-[9px] font-black tracking-wider border-2 border-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b] ${
+                      selectedUserDetail.role === 'ADMIN' ? 'bg-[#ffd54f] text-[#1b263b]' :
+                      selectedUserDetail.role === 'MENTOR' ? 'bg-[#fbcfe8] text-[#9d174d]' : 'bg-[#a7f3d0] text-[#005c42]'
+                    }`}>{selectedUserDetail.role}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-black text-[#1b263b]/50 uppercase tracking-wider block">Trạng thái</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 mt-0.5 rounded-full text-[9px] font-black border-2 border-[#1b263b]/40 ${
+                      selectedUserDetail.status === 'active' ? 'bg-[#a7f3d0] text-[#005c42]' : 'bg-yellow-500/10 text-yellow-700 animate-pulse'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        selectedUserDetail.status === 'active' ? 'bg-[#005c42]' : 'bg-yellow-600'
+                      }`} />
+                      {selectedUserDetail.status === 'active' ? 'Hoạt động' : 'Chờ duyệt'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Kỹ năng</label>
-                  <select
-                    value={newExamType}
-                    onChange={(e) => setNewExamType(e.target.value as any)}
-                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b]"
+              {/* Activity / Relational Details Main Pane */}
+              <div className="w-full lg:w-2/3 space-y-4">
+                
+                {/* Tab Switcher */}
+                <div className="bg-white p-1 rounded-xl border-2 border-[#1b263b] flex gap-1 shadow-[2px_2px_0px_0px_#1b263b] w-fit">
+                  <button
+                    onClick={() => setUserDetailTab('submissions')}
+                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition-all whitespace-nowrap ${
+                      userDetailTab === 'submissions'
+                        ? 'bg-[#ffd54f] border border-[#1b263b] text-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b]' 
+                        : 'text-[#1b263b]/70 hover:bg-[#f5f3dc]'
+                    }`}
                   >
-                    <option value="Reading">Reading</option>
-                    <option value="Listening">Listening</option>
-                    <option value="Writing">Writing</option>
-                    <option value="Speaking">Speaking</option>
-                  </select>
+                    Kết quả thi & Làm bài ({selectedUserSubmissions.length})
+                  </button>
+                  <button
+                    onClick={() => setUserDetailTab('bookings')}
+                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition-all whitespace-nowrap ${
+                      userDetailTab === 'bookings'
+                        ? 'bg-[#ffd54f] border border-[#1b263b] text-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b]' 
+                        : 'text-[#1b263b]/70 hover:bg-[#f5f3dc]'
+                    }`}
+                  >
+                    Lịch học Mentor ({selectedUserBookings.length})
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Thời gian (Phút)</label>
-                  <input
-                    type="number"
-                    value={newExamDuration}
-                    onChange={(e) => setNewExamDuration(e.target.value)}
-                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b]"
-                    required
-                  />
+
+                {/* Submissions List Tab Content */}
+                {userDetailTab === 'submissions' && (
+                  <div className="bg-white border-2 border-[#1b263b] rounded-xl p-4 shadow-[3px_3px_0px_0px_#1b263b] min-h-[300px]">
+                    <h4 className="text-[10px] font-black text-[#1b263b] uppercase tracking-wider mb-3">Lịch sử nộp bài luyện tập</h4>
+                    
+                    {selectedUserSubmissions.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <span className="text-2xl mb-1">📝</span>
+                        <p className="text-xs text-[#1b263b]/60 font-bold italic">Chưa có kết quả làm bài nào được ghi nhận cho học viên này.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto border-2 border-[#1b263b] rounded-xl">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-[#f5f3dc] border-b-2 border-[#1b263b] font-black text-[#1b263b]">
+                              <th className="p-3">Đề thi / Bài tập</th>
+                              <th className="p-3">Kỹ năng</th>
+                              <th className="p-3">Điểm số</th>
+                              <th className="p-3">Ngày nộp</th>
+                              <th className="p-3 text-right">Chi tiết</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedUserSubmissions.map((sub) => (
+                              <tr key={sub.id} className="border-b border-[#1b263b]/10 hover:bg-[#f5f3dc]/20 transition-colors font-semibold text-[#1b263b]">
+                                <td className="p-3 max-w-[200px] truncate" title={sub.test?.title || 'Bài tập tự do'}>
+                                  {sub.test?.title || 'Bài tập tự do'}
+                                </td>
+                                <td className="p-3">
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider border border-[#1b263b] ${
+                                    sub.type === 'Reading' ? 'bg-blue-100 text-blue-800' :
+                                    sub.type === 'Listening' ? 'bg-green-100 text-green-800' :
+                                    sub.type === 'Writing' ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'
+                                  }`}>{sub.type}</span>
+                                </td>
+                                <td className="p-3 font-black text-[#c92a2a]">
+                                  Band {sub.bandScore}
+                                </td>
+                                <td className="p-3 font-mono text-[10px]">
+                                  {new Date(sub.createdAt).toLocaleDateString('vi-VN')}
+                                </td>
+                                <td className="p-3 text-right">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSubmission(sub)
+                                      setShowSubmissionModal(true)
+                                    }}
+                                    className="bg-[#ffd54f] hover:bg-amber-400 border border-[#1b263b] text-[#1b263b] px-2 py-1 rounded text-[9px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
+                                  >
+                                    Xem bài
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Bookings List Tab Content */}
+                {userDetailTab === 'bookings' && (
+                  <div className="bg-white border-2 border-[#1b263b] rounded-xl p-4 shadow-[3px_3px_0px_0px_#1b263b] min-h-[300px]">
+                    <h4 className="text-[10px] font-black text-[#1b263b] uppercase tracking-wider mb-3">Lịch hẹn Mentor (Đặt chỗ học tập)</h4>
+                    
+                    {selectedUserBookings.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <span className="text-2xl mb-1">📅</span>
+                        <p className="text-xs text-[#1b263b]/60 font-bold italic">Chưa có lịch hẹn Mentor nào được đăng ký.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto border-2 border-[#1b263b] rounded-xl">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-[#f5f3dc] border-b-2 border-[#1b263b] font-black text-[#1b263b]">
+                              <th className="p-3">Mã lịch</th>
+                              <th className="p-3">Học viên</th>
+                              <th className="p-3">Mentor</th>
+                              <th className="p-3">Thời gian</th>
+                              <th className="p-3">Trạng thái</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedUserBookings.map((bk) => (
+                              <tr key={bk.id} className="border-b border-[#1b263b]/10 hover:bg-[#f5f3dc]/20 transition-colors font-semibold text-[#1b263b]">
+                                <td className="p-3 font-mono text-[10px]">{bk.id}</td>
+                                <td className="p-3">{bk.studentName}</td>
+                                <td className="p-3">{bk.mentorName}</td>
+                                <td className="p-3 font-mono text-[10px]">{bk.dateTime}</td>
+                                <td className="p-3">
+                                  <span className={`px-2 py-0.5 rounded border text-[9px] font-black ${
+                                    bk.status === 'Confirmed' ? 'bg-emerald-100 border-emerald-400 text-emerald-800' :
+                                    bk.status === 'Pending' ? 'bg-amber-100 border-amber-400 text-amber-800' : 'bg-gray-100 border-gray-400 text-gray-800'
+                                  }`}>{bk.status === 'Confirmed' ? 'Đã xác nhận' : bk.status === 'Pending' ? 'Chờ duyệt' : bk.status}</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t-2 border-[#1b263b]/10">
+              <button
+                type="button"
+                onClick={() => setShowUserDetailModal(false)}
+                className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs px-6 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create / Edit Exam Modal */}
+      {showCreateExamModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className={`bg-[#fcfbf7] border-4 border-[#1b263b] rounded-2xl w-full p-6 shadow-[6px_6px_0px_0px_#1b263b] space-y-6 transition-all ${
+            examStep === 2 ? 'max-w-4xl max-h-[90vh] overflow-y-auto' : 'max-w-md'
+          }`}>
+            <div className="flex justify-between items-center border-b-2 border-[#1b263b] pb-4">
+              <h3 className="text-base font-serif font-black text-[#1b263b]">
+                {editingExamId ? 'Cập Nhật Đề Thi IELTS' : 'Thêm Mới Đề Thi IELTS'}
+                <span className="text-xs text-gray-500 font-sans font-bold ml-2">
+                  (Bước {examStep}/2)
+                </span>
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowCreateExamModal(false)
+                  setEditingExamId(null)
+                  setExamStep(1)
+                  setModalSections([])
+                }} 
+                className="text-[#1b263b] hover:text-[#c92a2a] font-black text-lg transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveExam} className="space-y-4">
+              {examStep === 1 ? (
+                /* STEP 1: BASIC INFO */
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Tiêu Đề Đề Thi</label>
+                    <input
+                      type="text"
+                      value={newExamTitle}
+                      onChange={(e) => setNewExamTitle(e.target.value)}
+                      placeholder="IELTS Cambridge 19 - Test 1"
+                      className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all placeholder-[#1b263b]/40 font-bold shadow-[2px_2px_0px_0px_#1b263b]"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Kỹ năng</label>
+                      <select
+                        value={newExamType}
+                        onChange={(e) => setNewExamType(e.target.value as any)}
+                        disabled={!!editingExamId} // Lock type on edit to avoid mismatches
+                        className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b] disabled:bg-gray-100"
+                      >
+                        <option value="Reading">Reading</option>
+                        <option value="Listening">Listening</option>
+                        <option value="Writing">Writing</option>
+                        <option value="Speaking">Speaking</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Thời gian (Phút)</label>
+                      <input
+                        type="number"
+                        value={newExamDuration}
+                        onChange={(e) => setNewExamDuration(e.target.value)}
+                        className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b]"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2.5 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateExamModal(false)
+                        setEditingExamId(null)
+                        setExamStep(1)
+                        setModalSections([])
+                      }}
+                      className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] transition-all"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-[#c92a2a] hover:bg-[#b01e1e] text-white border-2 border-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all"
+                    >
+                      Tiếp tục →
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* STEP 2: SECTIONS & QUESTIONS EDITOR */
+                <div className="space-y-6">
+                  <div className="flex gap-2 overflow-x-auto pb-2 border-b border-[#1b263b]/10 select-none">
+                    {modalSections.map((sec, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setSelectedSectionIdx(idx)}
+                        className={`px-3 py-1.5 rounded-lg border-2 border-[#1b263b] text-[10px] font-black transition-all shrink-0 ${
+                          selectedSectionIdx === idx
+                            ? 'bg-[#ffd54f] text-[#1b263b] shadow-[2px_2px_0px_0px_#1b263b]'
+                            : 'bg-white text-[#1b263b] hover:bg-gray-50'
+                        }`}
+                      >
+                        {newExamType === 'Listening' ? `Section ${sec.sectionOrder}` :
+                         newExamType === 'Reading' ? `Passage ${sec.sectionOrder}` :
+                         newExamType === 'Writing' ? `Task ${sec.sectionOrder}` : `Part ${sec.sectionOrder}`}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextOrder = modalSections.length + 1
+                        setModalSections([...modalSections, {
+                          sectionOrder: nextOrder,
+                          title: newExamType === 'Listening' ? `Section ${nextOrder}` :
+                                 newExamType === 'Reading' ? `Passage ${nextOrder}` :
+                                 newExamType === 'Writing' ? `Task ${nextOrder}` : `Part ${nextOrder}`,
+                          passageText: '',
+                          audioUrl: '',
+                          images: [],
+                          questions: []
+                        }])
+                        setSelectedSectionIdx(modalSections.length)
+                      }}
+                      className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border-2 border-dashed border-[#1b263b] hover:bg-emerald-100 rounded-lg text-[10px] font-black shrink-0"
+                    >
+                      + Thêm phần
+                    </button>
+                  </div>
 
-              <div>
-                <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1.5">Số lượng câu hỏi</label>
-                <input
-                  type="number"
-                  value={newExamQuestions}
-                  onChange={(e) => setNewExamQuestions(e.target.value)}
-                  className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs text-[#1b263b] outline-none focus:border-[#c92a2a] font-bold shadow-[2px_2px_0px_0px_#1b263b]"
-                  required
-                />
-              </div>
+                  {/* Selected Section Editor Fields */}
+                  {modalSections[selectedSectionIdx] && (
+                    <div className="space-y-4 text-left">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1">Tiêu đề Phần</label>
+                          <input
+                            type="text"
+                            value={modalSections[selectedSectionIdx].title || ''}
+                            onChange={(e) => {
+                              const updated = [...modalSections]
+                              updated[selectedSectionIdx].title = e.target.value
+                              setModalSections(updated)
+                            }}
+                            className="w-full bg-white border-2 border-[#1b263b] rounded-lg px-3 py-2 text-xs font-bold text-[#1b263b] outline-none"
+                            placeholder="e.g. Section 1"
+                          />
+                        </div>
+                        {newExamType === 'Listening' && (
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1">Đường dẫn file Audio (.mp3)</label>
+                              <input
+                                type="text"
+                                value={modalSections[selectedSectionIdx].audioUrl || ''}
+                                onChange={(e) => {
+                                  const updated = [...modalSections]
+                                  updated[selectedSectionIdx].audioUrl = e.target.value
+                                  setModalSections(updated)
+                                }}
+                                className="w-full bg-white border-2 border-[#1b263b] rounded-lg px-3 py-2 text-xs font-bold text-[#1b263b] outline-none"
+                                placeholder="https://res.cloudinary.com/.../audio.mp3"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9.5px] font-black text-rose-700 uppercase tracking-wider mb-1">Hoặc tải file âm thanh từ máy:</label>
+                              <input
+                                type="file"
+                                accept="audio/*,video/*"
+                                onChange={(e) => handleAudioUpload(e, selectedSectionIdx)}
+                                className="w-full text-xs text-[#1b263b] file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-2 file:border-[#1b263b] file:text-[10px] file:font-black file:bg-amber-100 file:text-[#1b263b] hover:file:bg-amber-200 cursor-pointer"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
 
-              <div className="flex justify-end gap-2.5 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateExamModal(false)}
-                  className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] transition-all"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="bg-[#c92a2a] hover:bg-[#b01e1e] text-white border-2 border-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all"
-                >
-                  Khởi tạo
-                </button>
-              </div>
+                      {newExamType !== 'Listening' && (
+                        <div>
+                          <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1">
+                            {newExamType === 'Reading' ? 'Văn bản đoạn văn (Passage Text)' : 
+                             newExamType === 'Writing' ? 'Đề bài viết / Hướng dẫn (Prompt)' : 'Chủ đề thảo luận / Cue Card'}
+                          </label>
+                          <textarea
+                            value={modalSections[selectedSectionIdx].passageText || ''}
+                            onChange={(e) => {
+                              const updated = [...modalSections]
+                              updated[selectedSectionIdx].passageText = e.target.value
+                              setModalSections(updated)
+                            }}
+                            rows={6}
+                            className="w-full bg-white border-2 border-[#1b263b] rounded-lg px-3 py-2 text-xs font-bold text-[#1b263b] outline-none resize-y"
+                            placeholder="Nhập nội dung văn bản..."
+                          />
+                        </div>
+                      )}
+
+                      {newExamType === 'Writing' && (
+                        <div>
+                          <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1">Đường dẫn ảnh biểu đồ (Images URL, cách nhau bằng dấu phẩy)</label>
+                          <input
+                            type="text"
+                            value={modalSections[selectedSectionIdx].images?.join(', ') || ''}
+                            onChange={(e) => {
+                              const updated = [...modalSections]
+                              updated[selectedSectionIdx].images = e.target.value ? e.target.value.split(',').map(s => s.trim()) : []
+                              setModalSections(updated)
+                            }}
+                            className="w-full bg-white border-2 border-[#1b263b] rounded-lg px-3 py-2 text-xs font-bold text-[#1b263b] outline-none"
+                            placeholder="e.g. https://res.cloudinary.com/.../chart.png"
+                          />
+                        </div>
+                      )}
+
+                      {/* Questions Editor for this Section */}
+                      {newExamType !== 'Writing' && (
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center border-t border-[#1b263b]/10 pt-3">
+                            <span className="text-[10px] font-black text-[#1b263b] uppercase tracking-wider">Danh sách câu hỏi ({modalSections[selectedSectionIdx].questions?.length || 0})</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = [...modalSections]
+                                const currentQuestions = updated[selectedSectionIdx].questions || []
+                                const nextQNum = currentQuestions.length > 0 ? Math.max(...currentQuestions.map((q: any) => q.questionNumber)) + 1 : 1
+                                updated[selectedSectionIdx].questions = [...currentQuestions, {
+                                  questionNumber: nextQNum,
+                                  type: 'MULTIPLE_CHOICE',
+                                  content: '',
+                                  options: '',
+                                  answer: '',
+                                  explanation: ''
+                                }]
+                                setModalSections(updated)
+                              }}
+                              className="bg-[#a7f3d0] text-[#005c42] border-2 border-[#1b263b] px-2.5 py-1 rounded-lg text-[9px] font-black hover:bg-emerald-300 shadow-[1px_1px_0px_0px_#1b263b]"
+                            >
+                              + Thêm Câu Hỏi
+                            </button>
+                          </div>
+
+                          <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                            {(modalSections[selectedSectionIdx].questions || []).map((q: any, qIdx: number) => (
+                              <div key={qIdx} className="bg-white border border-[#1b263b] p-3 rounded-lg relative space-y-2.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = [...modalSections]
+                                    updated[selectedSectionIdx].questions = updated[selectedSectionIdx].questions.filter((_: any, idx: number) => idx !== qIdx)
+                                    setModalSections(updated)
+                                  }}
+                                  className="absolute top-2 right-2 text-red-500 hover:text-red-700 font-bold text-xs"
+                                  title="Xóa câu hỏi"
+                                >
+                                  ✕
+                                </button>
+
+                                <div className="grid grid-cols-12 gap-2">
+                                  <div className="col-span-2">
+                                    <label className="block text-[8px] font-black text-[#1b263b]/70 uppercase">Số câu</label>
+                                    <input
+                                      type="number"
+                                      value={q.questionNumber}
+                                      onChange={(e) => {
+                                        const updated = [...modalSections]
+                                        updated[selectedSectionIdx].questions[qIdx].questionNumber = parseInt(e.target.value) || 0
+                                        setModalSections(updated)
+                                      }}
+                                      className="w-full bg-white border border-gray-300 rounded px-1.5 py-1 text-xs text-center font-bold"
+                                    />
+                                  </div>
+                                  <div className="col-span-4">
+                                    <label className="block text-[8px] font-black text-[#1b263b]/70 uppercase">Loại câu hỏi</label>
+                                    <select
+                                      value={q.type}
+                                      onChange={(e) => {
+                                        const updated = [...modalSections]
+                                        updated[selectedSectionIdx].questions[qIdx].type = e.target.value
+                                        setModalSections(updated)
+                                      }}
+                                      className="w-full bg-white border border-gray-300 rounded px-1.5 py-1 text-xs font-bold"
+                                    >
+                                      <option value="MULTIPLE_CHOICE">Trắc nghiệm</option>
+                                      <option value="FILL_IN_BLANKS">Điền từ</option>
+                                      <option value="MATCHING_HEADINGS">Nối tiêu đề</option>
+                                      <option value="TRUE_FALSE_NOT_GIVEN">True/False/NG</option>
+                                      <option value="SHORT_ANSWER">Trả lời ngắn</option>
+                                    </select>
+                                  </div>
+                                  <div className="col-span-6">
+                                    <label className="block text-[8px] font-black text-[#1b263b]/70 uppercase">Nội dung câu hỏi</label>
+                                    <input
+                                      type="text"
+                                      value={q.content || ''}
+                                      onChange={(e) => {
+                                        const updated = [...modalSections]
+                                        updated[selectedSectionIdx].questions[qIdx].content = e.target.value
+                                        setModalSections(updated)
+                                      }}
+                                      placeholder="Nội dung/Câu hỏi"
+                                      className="w-full bg-white border border-gray-300 rounded px-1.5 py-1 text-xs"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-12 gap-2">
+                                  <div className="col-span-4">
+                                    <label className="block text-[8px] font-black text-[#1b263b]/70 uppercase">Đáp án</label>
+                                    <input
+                                      type="text"
+                                      value={q.answer || ''}
+                                      onChange={(e) => {
+                                        const updated = [...modalSections]
+                                        updated[selectedSectionIdx].questions[qIdx].answer = e.target.value
+                                        setModalSections(updated)
+                                      }}
+                                      placeholder="e.g. A, TRUE, apple"
+                                      className="w-full bg-white border border-gray-300 rounded px-1.5 py-1 text-xs font-bold"
+                                    />
+                                  </div>
+                                  <div className="col-span-8">
+                                    <label className="block text-[8px] font-black text-[#1b263b]/70 uppercase">Các lựa chọn (ngăn cách bằng dấu phẩy)</label>
+                                    <input
+                                      type="text"
+                                      value={q.options || ''}
+                                      onChange={(e) => {
+                                        const updated = [...modalSections]
+                                        updated[selectedSectionIdx].questions[qIdx].options = e.target.value
+                                        setModalSections(updated)
+                                      }}
+                                      placeholder="e.g. Option A, Option B, Option C"
+                                      disabled={q.type !== 'MULTIPLE_CHOICE'}
+                                      className="w-full bg-white border border-gray-300 rounded px-1.5 py-1 text-xs disabled:bg-gray-100"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <label className="block text-[8px] font-black text-[#1b263b]/70 uppercase">Giải thích đáp án</label>
+                                  <input
+                                    type="text"
+                                    value={q.explanation || ''}
+                                    onChange={(e) => {
+                                      const updated = [...modalSections]
+                                      updated[selectedSectionIdx].questions[qIdx].explanation = e.target.value
+                                      setModalSections(updated)
+                                    }}
+                                    placeholder="Giải thích chi tiết vì sao chọn đáp án này..."
+                                    className="w-full bg-white border border-gray-300 rounded px-1.5 py-1 text-xs italic text-gray-600"
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                            {(modalSections[selectedSectionIdx].questions || []).length === 0 && (
+                              <p className="text-xs text-gray-400 italic text-center py-4">Chưa có câu hỏi nào trong phần này.</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center pt-4 border-t-2 border-[#1b263b]">
+                    <button
+                      type="button"
+                      onClick={() => setExamStep(1)}
+                      className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] transition-all"
+                    >
+                      ← Quay lại
+                    </button>
+                    <div className="flex gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCreateExamModal(false)
+                          setEditingExamId(null)
+                          setExamStep(1)
+                          setModalSections([])
+                        }}
+                        className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] transition-all"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="submit"
+                        className="bg-[#c92a2a] hover:bg-[#b01e1e] text-white border-2 border-[#1b263b] font-black text-xs px-5 py-2.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all"
+                      >
+                        {editingExamId ? 'Lưu Thay Đổi' : 'Lưu Đề Thi'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </form>
           </div>
         </div>
