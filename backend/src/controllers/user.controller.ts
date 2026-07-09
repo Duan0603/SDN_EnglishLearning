@@ -131,9 +131,24 @@ export const getUserStats = async (req, res, next) => {
              today.getDate() === d.getDate();
     };
 
-    const hasCheckedInToday = checkIsToday(userRecord?.lastCheckIn);
-    const currentStreak = userRecord?.currentStreak || 0;
+    const checkIsYesterday = (date) => {
+      if (!date) return false;
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      const d = new Date(date);
+      return yesterday.getFullYear() === d.getFullYear() &&
+             yesterday.getMonth() === d.getMonth() &&
+             yesterday.getDate() === d.getDate();
+    };
 
+    const hasCheckedInToday = checkIsToday(userRecord?.lastCheckIn);
+    const hasCheckedInYesterday = checkIsYesterday(userRecord?.lastCheckIn);
+    
+    let currentStreak = userRecord?.currentStreak || 0;
+    if (!hasCheckedInToday && !hasCheckedInYesterday && currentStreak > 0) {
+      currentStreak = 0;
+    }
     let weeksActive = 1;
     if (userRecord?.createdAt) {
       const diffTime = Math.abs(new Date().getTime() - new Date(userRecord.createdAt).getTime());

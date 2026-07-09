@@ -32,8 +32,8 @@ const startServer = async () => {
   try {
     await getRedisClient();
     console.log('[Redis] Connected successfully');
-  } catch (redisErr) {
-    console.warn('[Redis] Could not connect — booking locking will be unavailable:', redisErr);
+  } catch (redisErr: any) {
+    console.warn('[Redis] Could not connect — booking locking will be unavailable:', redisErr?.message || redisErr);
   }
 
   const app = createApp();

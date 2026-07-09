@@ -21,8 +21,13 @@ export const getRedisClient = async () => {
       }
     });
 
-    redisClient.on('error', (err) => {
-      console.error('[Redis] Client error:', err);
+    redisClient.on('error', (err: any) => {
+      // Suppress huge stack traces for simple connection refused errors
+      if (err?.message?.includes('ECONNREFUSED')) {
+        console.warn('[Redis] Connection refused. Is Redis running on ' + config.redisUrl + '?');
+      } else {
+        console.error('[Redis] Client error:', err.message || err);
+      }
     });
 
     redisClient.on('connect', () => {
