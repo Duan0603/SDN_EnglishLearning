@@ -13,6 +13,12 @@ enum Role {
   ADMIN
 }
 
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum BookingStatus {
   PENDING
   CONFIRMED
@@ -71,6 +77,9 @@ model User {
   
   // Tokens xác thực
   keyTokens          KeyToken[]
+
+  // Yêu cầu nâng cấp Mentor
+  mentorRequests     MentorRequest[]
 }
 
 model KeyToken {
@@ -227,4 +236,17 @@ model Message {
   fileUrl   String?
   fileName  String?
   fileSize  Int?
+}
+
+model MentorRequest {
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String        @db.ObjectId
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  certificates String[]      // URL list from Cloudinary
+  bio          String?
+  expertise    String?
+  status       RequestStatus @default(PENDING)
+  adminComment String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
