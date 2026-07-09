@@ -24,6 +24,15 @@ const adminUserService = {
 
   // PATCH /admin/users/:id/approve-mentor — approve a mentor
   approveMentor: (id) => client.patch(`${ADMIN_USERS}/${id}/approve-mentor`),
+
+  // GET /admin/mentor-requests — list all mentor requests
+  getMentorRequests: (status) => client.get('/admin/mentor-requests', { params: { status } }),
+
+  // PATCH /admin/mentor-requests/:id/approve — approve a mentor request
+  approveMentorRequest: (id) => client.patch(`/admin/mentor-requests/${id}/approve`),
+
+  // PATCH /admin/mentor-requests/:id/reject — reject a mentor request
+  rejectMentorRequest: (id, reason) => client.patch(`/admin/mentor-requests/${id}/reject`, { reason }),
 };
 
 export default adminUserService;
