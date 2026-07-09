@@ -9,7 +9,8 @@ import {
   StatusBar,
   Modal,
   TextInput,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
@@ -20,6 +21,9 @@ import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../store/useAuthStore';
 import Toast from 'react-native-toast-message';
 import client from '../api/client';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import mentorRequestService from '../api/mentorRequest.service';
 
 // Brutalist shadow wrapper
 const BrutalistShadow = ({ children, style, offset = 4 }) => {
@@ -55,6 +59,119 @@ const ProfileScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Mentor Upgrade request state
+  const [mentorRequest, setMentorRequest] = useState(null);
+  const [fetchingRequest, setFetchingRequest] = useState(false);
+  const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [bioInput, setBioInput] = useState('');
+  const [expertiseInput, setExpertiseInput] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  const fetchMentorRequest = async () => {
+    if (user?.role !== 'STUDENT') return;
+    setFetchingRequest(true);
+    try {
+      const res = await mentorRequestService.getMyRequest();
+      if (res.data?.success) {
+        setMentorRequest(res.data.data);
+        if (res.data.data) {
+          setBioInput(res.data.data.bio || '');
+          setExpertiseInput(res.data.data.expertise || '');
+        }
+      }
+    } catch (err) {
+      console.log('Error fetching mentor request:', err);
+    } finally {
+      setFetchingRequest(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchMentorRequest();
+  }, [user]);
+
+  const handlePickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        setSelectedFile({
+          uri: file.uri,
+          name: file.name,
+          mimeType: file.mimeType || 'image/jpeg',
+          size: file.size,
+        });
+      }
+    } catch (err) {
+      console.log('Error picking document:', err);
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể chọn tệp.' });
+    }
+  };
+  const handleSubmittingUpgrade = async () => {
+    if (!selectedFile) {
+      Alert.alert('Lỗi', 'Vui lòng chọn ít nhất một chứng chỉ tiếng Anh!');
+      return;
+    }
+    if (!bioInput.trim() || !expertiseInput.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ giới thiệu bản thân và chuyên môn!');
+      return;
+    }
+
+    setSubmittingRequest(true);
+    try {
+      let base64Data = '';
+      if (Platform.OS === 'web') {
+        const response = await fetch(selectedFile.uri);
+        const blob = await response.blob();
+        base64Data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = reader.result;
+            const base64 = result.split(',')[1] || '';
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } else {
+        base64Data = await FileSystem.readAsStringAsync(selectedFile.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+      }
+
+      const payload = {
+        bio: bioInput,
+        expertise: expertiseInput,
+        certificates: [
+          {
+            filename: selectedFile.name,
+            base64Data: base64Data,
+          }
+        ]
+      };
+
+      const res = await mentorRequestService.submitRequest(payload);
+      if (res.data?.success) {
+        Toast.show({ type: 'success', text1: 'Thành công', text2: 'Gửi yêu cầu nâng cấp Mentor thành công!' });
+        setMentorRequest(res.data.data);
+        setSelectedFile(null);
+      }
+    } catch (err) {
+      console.log('Error submitting mentor request:', err);
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi gửi yêu cầu',
+        text2: err.response?.data?.error?.message || err.message || 'Gửi yêu cầu thất bại.'
+      });
+    } finally {
+      setSubmittingRequest(false);
+    }
+  };
 
   const { control, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(profileSchema),
@@ -132,10 +249,16 @@ const ProfileScreen = ({ navigation }) => {
     { icon: 'medal', value: `${apiStats?.topScore || 0} Band`, label: 'Top Score', color: '#d97706', bg: '#fef08a' },
   ];
 
-  const tabs = [
-    { key: 'overview', label: 'OVERVIEW' },
-    { key: 'settings', label: 'SETTINGS' },
-  ];
+  const tabs = useMemo(() => {
+    const list = [
+      { key: 'overview', label: 'OVERVIEW' },
+      { key: 'settings', label: 'SETTINGS' },
+    ];
+    if (user?.role === 'STUDENT') {
+      list.push({ key: 'become_mentor', label: 'BECOME MENTOR' });
+    }
+    return list;
+  }, [user]);
 
   const onSubmit = async (data) => {
     try {
@@ -411,6 +534,138 @@ const ProfileScreen = ({ navigation }) => {
                 <TouchableOpacity style={styles.logoutBtn} onPress={() => setShowLogoutModal(true)}>
                   <Text style={styles.logoutBtnText}>LOG OUT</Text>
                 </TouchableOpacity>
+              </View>
+            </BrutalistShadow>
+          )}
+
+          {/* Become Mentor Tab */}
+          {activeTab === 'become_mentor' && (
+            <BrutalistShadow style={styles.settingsCard} offset={4}>
+              <View style={styles.settingsCardInner}>
+                <Text style={styles.sectionTitle}>Become a Mentor</Text>
+                
+                {fetchingRequest ? (
+                  <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color="#1b263b" />
+                  </View>
+                ) : mentorRequest?.status === 'PENDING' ? (
+                  <View style={{ gap: 16 }}>
+                    <View style={[styles.stickyNote, { backgroundColor: '#ffe082', rotate: '0deg', transform: [] }]}>
+                      <Text style={[styles.stickyTitle, { color: '#b58100' }]}>Hồ Sơ Đang Chờ Duyệt ⏳</Text>
+                      <Text style={styles.stickyContent}>
+                        Yêu cầu nâng cấp của bạn đã được gửi thành công và đang trong quá trình thẩm định. 
+                        Chúng tôi sẽ kiểm tra chứng chỉ và phản hồi sớm nhất có thể.
+                      </Text>
+                    </View>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>CHUYÊN MÔN ĐÃ ĐĂNG KÝ</Text>
+                      <TextInput style={[styles.input, { backgroundColor: '#e5e7eb', color: '#6b7280' }]} value={expertiseInput} editable={false} />
+                    </View>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>GIỚI THIỆU BẢN THÂN</Text>
+                      <TextInput style={[styles.input, { backgroundColor: '#e5e7eb', color: '#6b7280' }]} value={bioInput} multiline numberOfLines={3} editable={false} />
+                    </View>
+                    {mentorRequest.certificates?.map((url, idx) => (
+                      <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                        <Ionicons name="document-text" size={16} color="#005c42" />
+                        <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, color: '#005c42', textDecorationLine: 'underline' }} numberOfLines={1}>
+                          Chứng chỉ {idx + 1}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : mentorRequest?.status === 'REJECTED' ? (
+                  <View style={{ gap: 16 }}>
+                    <View style={[styles.stickyNote, { backgroundColor: '#ffcdd2', rotate: '0deg', transform: [] }]}>
+                      <Text style={[styles.stickyTitle, { color: '#c62828' }]}>Yêu Cầu Bị Từ Chối ❌</Text>
+                      <Text style={[styles.stickyContent, { color: '#c62828' }]}>
+                        Rất tiếc, yêu cầu nâng cấp tài khoản của bạn đã bị từ chối.
+                      </Text>
+                      <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#1b263b', marginTop: 8 }}>
+                        Lý do từ Admin:
+                      </Text>
+                      <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#333', marginTop: 4, fontStyle: 'italic' }}>
+                        "{mentorRequest.adminComment || 'Không có lý do chi tiết.'}"
+                      </Text>
+                    </View>
+                    
+                    <TouchableOpacity style={styles.saveBtn} onPress={() => setMentorRequest(null)}>
+                      <Text style={styles.saveBtnText}>TẠO YÊU CẦU MỚI</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View>
+                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#666', marginBottom: 20 }}>
+                      Gửi chứng chỉ tiếng Anh (IELTS, TOEFL...) và thông tin giới thiệu của bạn. Admin sẽ xét duyệt và nâng cấp tài khoản của bạn lên Mentor.
+                    </Text>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>CHUYÊN MÔN DẠY HỌC</Text>
+                      <TextInput 
+                        style={styles.input} 
+                        value={expertiseInput} 
+                        onChangeText={setExpertiseInput} 
+                        placeholder="Ví dụ: IELTS 8.0, Chuyên IELTS Speaking" 
+                        placeholderTextColor="#999" 
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>GIỚI THIỆU BẢN THÂN / KINH NGHIỆM</Text>
+                      <TextInput 
+                        style={[styles.input, { height: 100, textAlignVertical: 'top' }]} 
+                        value={bioInput} 
+                        onChangeText={setBioInput} 
+                        placeholder="Hãy giới thiệu ngắn gọn về bản thân và kinh nghiệm giảng dạy của bạn..." 
+                        placeholderTextColor="#999" 
+                        multiline
+                        numberOfLines={4}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>CHỨNG CHỈ TIẾNG ANH (ẢNH HOẶC PDF)</Text>
+                      
+                      {selectedFile ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 2, borderColor: '#1b263b', borderRadius: 12, padding: 12, backgroundColor: '#fcfbf7' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                            <Ionicons name="document-attach" size={20} color="#1b263b" />
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#1b263b' }} numberOfLines={1}>
+                                {selectedFile.name}
+                              </Text>
+                              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#666' }}>
+                                {selectedFile.size ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB` : ''}
+                              </Text>
+                            </View>
+                          </View>
+                          <TouchableOpacity onPress={() => setSelectedFile(null)}>
+                            <Ionicons name="trash-outline" size={20} color="#c92a2a" />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <TouchableOpacity style={[styles.logoutBtn, { borderStyle: 'dashed', backgroundColor: '#fff' }]} onPress={handlePickDocument}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Ionicons name="cloud-upload-outline" size={18} color="#1b263b" />
+                            <Text style={[styles.logoutBtnText, { color: '#1b263b' }]}>CHỌN FILE CHỨNG CHỈ</Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    <TouchableOpacity 
+                      style={[styles.saveBtn, { marginTop: 12, opacity: submittingRequest ? 0.7 : 1 }]} 
+                      onPress={handleSubmittingUpgrade}
+                      disabled={submittingRequest}
+                    >
+                      {submittingRequest ? (
+                        <ActivityIndicator size="small" color="#005c42" />
+                      ) : (
+                        <Text style={styles.saveBtnText}>GỬI YÊU CẦU DUYỆT</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             </BrutalistShadow>
           )}

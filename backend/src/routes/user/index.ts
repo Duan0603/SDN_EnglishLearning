@@ -4,6 +4,7 @@ import {AccessController} from "../../controllers/access.controller";
 import {PasswordController} from "../../controllers/password.controller";
 import {authentication} from "../../auth/authUtils";
 import { getUserResults, getUserStats, checkInUser } from "../../controllers/user.controller";
+import { getMyMentorRequest, createMentorRequest } from "../../controllers/mentorRequest.controller";
 
 export const userRouter = express.Router();
 
@@ -21,6 +22,8 @@ userRouter.post('/reset-password', asyncHandler(PasswordController.resetPassword
 userRouter.use(authentication)
 userRouter.get('/profile', asyncHandler(AccessController.getProfile))
 userRouter.patch('/profile', asyncHandler(AccessController.updateProfile))
+userRouter.get('/me/mentor-request', asyncHandler(getMyMentorRequest))
+userRouter.post('/me/mentor-request', asyncHandler(createMentorRequest))
 userRouter.post('/upload-avatar', asyncHandler(AccessController.uploadAvatar))
 userRouter.post('/change-password', asyncHandler(PasswordController.changePassword))
 
