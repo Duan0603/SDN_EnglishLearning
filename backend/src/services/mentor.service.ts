@@ -69,7 +69,7 @@ export class MentorService {
       ];
     }
 
-    return await prisma.availability.findMany({
+    const availabilities = await prisma.availability.findMany({
       where: whereClause,
       include: {
         booking: {
@@ -90,6 +90,45 @@ export class MentorService {
         startTime: 'asc',
       },
     });
+
+    if (isStudentView) {
+      return availabilities;
+    }
+
+    return await Promise.all(
+      availabilities.map(async (a) => {
+        if (!a.booking) return a;
+
+        const lastReadAt = a.booking.mentorLastReadAt;
+        let hasUnreadMessages = false;
+        if (lastReadAt) {
+          const count = await prisma.message.count({
+            where: {
+              bookingId: a.booking.id,
+              senderId: { not: mentorId },
+              createdAt: { gt: lastReadAt },
+            },
+          });
+          hasUnreadMessages = count > 0;
+        } else {
+          const count = await prisma.message.count({
+            where: {
+              bookingId: a.booking.id,
+              senderId: { not: mentorId },
+            },
+          });
+          hasUnreadMessages = count > 0;
+        }
+
+        return {
+          ...a,
+          booking: {
+            ...a.booking,
+            hasUnreadMessages,
+          },
+        };
+      })
+    );
   }
 
   /**

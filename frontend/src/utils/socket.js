@@ -1,10 +1,23 @@
 import { io } from 'socket.io-client';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL || 
-  (__DEV__ ? 'http://192.168.1.9:5000' : 'https://api.apex-ielts.com');
+const getSocketURL = () => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  if (__DEV__) {
+    if (Platform.OS === 'web') {
+      return 'http://localhost:5000';
+    }
+    const hostUri = Constants.expoConfig?.hostUri;
+    const hostIP = hostUri ? hostUri.split(':')[0] : '192.168.1.9';
+    return `http://${hostIP}:5000`;
+  }
+  return 'https://api.apex-ielts.com';
+};
 
-export const socket = io(SOCKET_URL, {
+export const socket = io(getSocketURL(), {
   autoConnect: false,
   transports: ['websocket'], // Prefer websocket over polling
 });

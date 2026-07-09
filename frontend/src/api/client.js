@@ -1,18 +1,20 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import Toast from 'react-native-toast-message';
+import Constants from 'expo-constants';
 import { storage } from '../utils/storage';
 
 const getBaseURL = () => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
-  // Hardcoded for current LAN testing to bypass .env cache issues
   if (__DEV__) {
     if (Platform.OS === 'web') {
       return 'http://localhost:5000/api/v1';
     }
-    return 'http://192.168.1.9:5000/api/v1';
+    const hostUri = Constants.expoConfig?.hostUri;
+    const hostIP = hostUri ? hostUri.split(':')[0] : '192.168.1.9';
+    return `http://${hostIP}:5000/api/v1`;
   }
   return 'https://api.apex-ielts.com/api/v1';
 };
