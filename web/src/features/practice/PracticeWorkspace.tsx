@@ -302,7 +302,7 @@ export default function PracticeWorkspace() {
       const handleBookingUpdate = (data: any) => {
         console.log('[Socket] Received booking:update event:', data);
         const { studentId, mentorId } = data;
-        const currentUserId = user?.id;
+        const currentUserId = user?.id || user?._id;
         if (currentUserId && (currentUserId === studentId || currentUserId === mentorId)) {
           if (isMentor) {
             fetchMySlots();
@@ -596,7 +596,7 @@ export default function PracticeWorkspace() {
 
     socket.emit('chat:send_message', {
       bookingId: selectedBookingForChat.id,
-      senderId: user?.id,
+      senderId: user?.id || user?._id,
       content: messageContent
     });
   };
@@ -1184,9 +1184,15 @@ export default function PracticeWorkspace() {
                                     {booking.status !== 'CANCELLED' && (
                                       <button
                                         onClick={() => handleOpenChat(booking)}
-                                        className="w-full text-center border-2 border-[#1b263b] bg-sky-100 text-sky-800 hover:bg-sky-200 font-black py-2 rounded-xl text-xs uppercase tracking-wider shadow-[2px_2px_0px_0px_#1b263b] transition-all"
+                                        className="w-full text-center border-2 border-[#1b263b] bg-sky-100 text-sky-800 hover:bg-sky-200 font-black py-2 rounded-xl text-xs uppercase tracking-wider shadow-[2px_2px_0px_0px_#1b263b] transition-all relative"
                                       >
                                         Nhắn Tin Trò Chuyện 💬
+                                        {booking.hasUnreadMessages && (
+                                          <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3 animate-pulse">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                                          </span>
+                                        )}
                                       </button>
                                     )}
                                     {booking.status === 'COMPLETED' && !booking.rating && (
@@ -1289,9 +1295,15 @@ export default function PracticeWorkspace() {
                                   {slot.isBooked ? (
                                     <button
                                       onClick={() => handleOpenSlotDetail(slot)}
-                                      className="flex-1 text-center border-2 border-[#1b263b] bg-white hover:bg-gray-50 font-black py-2 rounded-xl text-xs uppercase tracking-wider shadow-[2px_2px_0px_0px_#1b263b] transition-all"
+                                      className="flex-1 text-center border-2 border-[#1b263b] bg-white hover:bg-gray-50 font-black py-2 rounded-xl text-xs uppercase tracking-wider shadow-[2px_2px_0px_0px_#1b263b] transition-all relative"
                                     >
                                       Chi Tiết Lịch 👁️
+                                      {slot.booking?.hasUnreadMessages && (
+                                        <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3">
+                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                          <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                                        </span>
+                                      )}
                                     </button>
                                   ) : (
                                     <button
@@ -1557,9 +1569,15 @@ export default function PracticeWorkspace() {
                             };
                             handleOpenChat(bookingObj);
                           }}
-                          className="w-full text-center border-2 border-[#1b263b] bg-sky-100 text-sky-800 font-black py-2 rounded-xl text-xs uppercase tracking-wider hover:bg-sky-200 transition-all mt-2"
+                          className="w-full text-center border-2 border-[#1b263b] bg-sky-100 text-sky-800 font-black py-2 rounded-xl text-xs uppercase tracking-wider hover:bg-sky-200 transition-all mt-2 relative"
                         >
                           Trò chuyện với học viên 💬
+                          {selectedSlotForDetail.booking?.hasUnreadMessages && (
+                            <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                            </span>
+                          )}
                         </button>
                       )}
                     </div>
@@ -1766,7 +1784,7 @@ export default function PracticeWorkspace() {
                       </div>
                     ) : (
                       chatMessages.map((msg) => {
-                        const isMe = msg.senderId === user?.id;
+                        const isMe = msg.senderId === (user?.id || user?._id);
                         return (
                           <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[80%] border-2 border-[#1b263b] rounded-2xl p-3 shadow-[2px_2px_0px_0px_#1b263b] text-left ${

@@ -8,8 +8,14 @@ let ioInstance: Server | null = null;
 export const initSockets = (httpServer: HttpServer) => {
   const io = new Server(httpServer, {
     cors: {
-      origin: '*', // Adjust for production
+      origin: [
+        'http://localhost:8081',
+        'http://localhost:3000',
+        'http://127.0.0.1:8081',
+        'http://127.0.0.1:3000'
+      ],
       methods: ['GET', 'POST'],
+      credentials: true,
     },
   });
 
