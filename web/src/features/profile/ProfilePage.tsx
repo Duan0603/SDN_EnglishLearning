@@ -10,14 +10,14 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Get active tab from URL or default to 'courses' (Your Shelf)
-  const [activeTab, setActiveTab] = useState<'courses' | 'results' | 'bookings' | 'notes' | 'settings'>('courses');
+  // Active tab state matching real IELTS learning features: 'overview' | 'profile' | 'history' | 'achievements'
+  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'history' | 'achievements'>('overview');
+  const [isEditing, setIsEditing] = useState(false);
+  const [results, setResults] = useState<any[]>([]);
 
   // Loaders & Data States
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
-  const [results, setResults] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
 
   // Avatar Upload States
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -40,6 +40,33 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Interactive Tasks list inside the Checklist Card
+  const [tasks, setTasks] = useState([
+    { id: 1, text: 'Luyện tập Reading hoặc Listening', progress: '1/1 bài', done: true },
+    { id: 2, text: 'Stream âm thanh bài nói Speaking AI', progress: '0/1 bài', done: false },
+    { id: 3, text: 'Luyện viết IELTS Writing Task 2', progress: '0/1 bài', done: false },
+    { id: 4, text: 'Kiểm tra lịch sử & phản hồi từ Mentor', progress: '1/1', done: true },
+  ]);
+
+  const toggleTask = (id: number) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === id) {
+        const newDone = !t.done;
+        return {
+          ...t,
+          done: newDone,
+          progress: t.id === 1 ? (newDone ? '1/1 bài' : '0/1 bài') :
+                    t.id === 2 ? (newDone ? '1/1 bài' : '0/1 bài') :
+                    t.id === 3 ? (newDone ? '1/1 bài' : '0/1 bài') :
+                    t.id === 4 ? (newDone ? '1/1' : '0/1') : t.progress
+        };
+      }
+      return t;
+    }));
+  };
+
+  const completedTasksCount = tasks.filter(t => t.done).length;
 
   // Fetch all profile details, stats, exam results, and mentor bookings from backend
   const loadData = async () => {
@@ -66,10 +93,6 @@ export default function ProfilePage() {
       // 3. Fetch Completed Exam History
       const resultsRes = await apiClient.get('/users/me/results');
       setResults(resultsRes.data?.data?.results || []);
-
-      // 4. Fetch Mentor Bookings
-      const bookingsRes = await apiClient.get('/bookings');
-      setBookings(bookingsRes.data?.data || []);
     } catch (err) {
       console.error('Failed to load profile data:', err);
     } finally {
@@ -84,16 +107,14 @@ export default function ProfilePage() {
   // Sync tab with search parameters
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam === 'settings') {
-      setActiveTab('settings');
-    } else if (tabParam === 'results') {
-      setActiveTab('results');
-    } else if (tabParam === 'bookings') {
-      setActiveTab('bookings');
-    } else if (tabParam === 'notes') {
-      setActiveTab('notes');
+    if (tabParam === 'profile') {
+      setActiveTab('profile');
+    } else if (tabParam === 'history') {
+      setActiveTab('history');
+    } else if (tabParam === 'achievements') {
+      setActiveTab('achievements');
     } else {
-      setActiveTab('courses');
+      setActiveTab('overview');
     }
   }, [searchParams]);
 
@@ -189,6 +210,7 @@ export default function ProfilePage() {
       setFormSaved(true);
       setTimeout(() => {
         setFormSaved(false);
+        setIsEditing(false);
       }, 1500);
 
       loadData(); // reload stats and text
@@ -226,103 +248,53 @@ export default function ProfilePage() {
     }
   };
 
+  // Stats values derived dynamically
+  const studyHours = stats?.studyHours !== null && stats?.studyHours !== undefined ? stats.studyHours : 0;
+
   const initials = formFullName
     ? formFullName.split(' ').slice(-1)[0][0]?.toUpperCase()
     : 'A';
 
-  // Stats values derived dynamically
-  const overallBand = stats?.overallBand !== null && stats?.overallBand !== undefined ? stats.overallBand.toFixed(1) : 'N/A';
-  const totalTests = stats?.totalTests !== null && stats?.totalTests !== undefined ? stats.totalTests : 0;
-  const topScore = stats?.topScore !== null && stats?.topScore !== undefined ? stats.topScore.toFixed(1) : 'N/A';
-  const studyHours = stats?.studyHours !== null && stats?.studyHours !== undefined ? stats.studyHours : 0;
+  // XP level calculation
+  const computedXp = (stats?.totalTests || 0) * 120 + Math.round((stats?.studyHours || 0) * 50);
+  const totalXp = 520 + computedXp;
+  const currentLevel = Math.floor(totalXp / 500) + 1;
+  const progressXp = totalXp % 500;
+  const xpPercent = Math.min(Math.round((progressXp / 500) * 100), 100);
 
-  // Stats Card data
-  const statsCards = [
-    {
-      icon: (
-        <svg className="w-5 h-5 text-[#b03030]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-        </svg>
-      ),
-      value: overallBand,
-      label: 'Avg Overall Band',
-      bgClass: 'hover:bg-red-50/20'
-    },
-    {
-      icon: (
-        <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-        </svg>
-      ),
-      value: totalTests,
-      label: 'Tests Completed',
-      bgClass: 'hover:bg-emerald-50/20'
-    },
-    {
-      icon: (
-        <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-        </svg>
-      ),
-      value: topScore,
-      label: 'Highest Band Score',
-      bgClass: 'hover:bg-amber-50/20'
-    },
-    {
-      icon: (
-        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      value: studyHours + 'h',
-      label: 'Total Study Time',
-      bgClass: 'hover:bg-blue-50/20'
-    }
+  // Active days grid cells calculation
+  const totalDays = 42;
+  const currentStreakVal = stats?.currentStreak || 1;
+  const gridCells = Array.from({ length: totalDays }).map((_, idx) => {
+    const isCurrentStreak = idx >= totalDays - currentStreakVal;
+    const isHistoricalActive = idx < totalDays - 7 && (idx % 3 === 0 || idx % 7 === 2);
+    const isActive = isCurrentStreak || isHistoricalActive;
+    return { isActive, isCurrentStreak };
+  });
+
+  const friends = [
+    { id: 1, name: 'Admin Apex IELTS', initials: 'AD', school: 'Đại học Bách Khoa Hà Nội', streak: 1 },
+    { id: 2, name: 'Lam Vu', initials: 'LA', school: 'Đại học Sư phạm Hà Nội', streak: 11 },
+    { id: 3, name: 'Nguyễn Văn Anh', initials: 'NA', school: 'Đại học Ngoại thương', streak: 1, image: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80' },
+    { id: 4, name: 'Vy Vũ', initials: 'VY', school: 'Đại học Kinh tế Quốc dân', streak: 4 },
   ];
 
-  // Dynamic Skills/Courses Shelf Items mapped to database statistics
-  const coursesShelf = [
-    {
-      title: 'Speaking Simulator',
-      daysBadge: 'AI Speaking Evaluator',
-      grade: stats?.speakingBand !== null && stats?.speakingBand !== undefined ? `${stats.speakingBand.toFixed(1)}` : 'N/A',
-      notesCount: 'Fluency & Coherence',
-      progress: stats?.speakingBand ? Math.min(Math.round((stats.speakingBand / 9) * 100), 100) : 0,
-      accentColor: '#4682b4',
-      bgLine: 'bg-sky-400',
-      badgeBg: 'bg-sky-50 text-sky-700 border-sky-200'
-    },
-    {
-      title: 'Writing Evaluator',
-      daysBadge: 'AI Essay Evaluation',
-      grade: stats?.writingBand !== null && stats?.writingBand !== undefined ? `${stats.writingBand.toFixed(1)}` : 'N/A',
-      notesCount: 'Task Achievement & Cohesion',
-      progress: stats?.writingBand ? Math.min(Math.round((stats.writingBand / 9) * 100), 100) : 0,
-      accentColor: '#d97706',
-      bgLine: 'bg-amber-400',
-      badgeBg: 'bg-amber-50 text-amber-700 border-amber-200'
-    },
-    {
-      title: 'Reading Practice',
-      daysBadge: 'Full IELTS Passage Reading',
-      grade: stats?.readingBand !== null && stats?.readingBand !== undefined ? `${stats.readingBand.toFixed(1)}` : 'N/A',
-      notesCount: 'Academic Vocabulary & Comprehension',
-      progress: stats?.readingBand ? Math.min(Math.round((stats.readingBand / 9) * 100), 100) : 0,
-      accentColor: '#005c42',
-      bgLine: 'bg-emerald-400',
-      badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200'
-    },
-    {
-      title: 'Listening Practice',
-      daysBadge: 'Audio Listening Session',
-      grade: stats?.listeningBand !== null && stats?.listeningBand !== undefined ? `${stats.listeningBand.toFixed(1)}` : 'N/A',
-      notesCount: 'Spelling Accuracy & Tracking',
-      progress: stats?.listeningBand ? Math.min(Math.round((stats.listeningBand / 9) * 100), 100) : 0,
-      accentColor: '#c92a2a',
-      bgLine: 'bg-pink-400',
-      badgeBg: 'bg-pink-50 text-pink-700 border-pink-200'
-    }
+  const subjectProgress = [
+    { name: 'IELTS Reading', score: stats?.readingBand ? `${stats.readingBand} Band` : 'N/A', progress: stats?.readingBand ? Math.min(Math.round((stats.readingBand / 9) * 100), 100) : 0, color: 'bg-emerald-500' },
+    { name: 'IELTS Listening', score: stats?.listeningBand ? `${stats.listeningBand} Band` : 'N/A', progress: stats?.listeningBand ? Math.min(Math.round((stats.listeningBand / 9) * 100), 100) : 0, color: 'bg-sky-500' },
+    { name: 'IELTS Writing', score: stats?.writingBand ? `${stats.writingBand} Band` : 'N/A', progress: stats?.writingBand ? Math.min(Math.round((stats.writingBand / 9) * 100), 100) : 0, color: 'bg-amber-500' },
+    { name: 'IELTS Speaking', score: stats?.speakingBand ? `${stats.speakingBand} Band` : 'N/A', progress: stats?.speakingBand ? Math.min(Math.round((stats.speakingBand / 9) * 100), 100) : 0, color: 'bg-purple-500' },
   ];
+
+  const achievements = [
+    { id: 1, title: 'Kỷ Luật Thép', desc: 'Đạt chuỗi streak học tập liên tiếp 5 ngày', earned: (stats?.currentStreak || 0) >= 5 },
+    { id: 2, title: 'Chăm Chỉ Học Tập', desc: 'Tích lũy 3 giờ học trên hệ thống', earned: (stats?.studyHours || 0) >= 3 },
+    { id: 3, title: 'Chiến binh IELTS', desc: 'Hoàn thành bài thi thử đầu tiên', earned: (stats?.totalTests || 0) >= 1 },
+    { id: 4, title: 'Vượt Ải Listening', desc: 'Đạt điểm Listening đầu tiên', earned: (stats?.listeningBand || 0) > 0 },
+    { id: 5, title: 'Nhà Văn IELTS', desc: 'Hoàn thành 1 bài viết Writing', earned: (stats?.writingBand || 0) > 0 },
+    { id: 6, title: 'Diễn Thuyết AI', desc: 'Hoàn thành 1 bài nói Speaking AI', earned: (stats?.speakingBand || 0) > 0 },
+  ];
+
 
   return (
     <div 
@@ -354,17 +326,17 @@ export default function ProfilePage() {
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-2">
               <div className="w-8 h-8 bg-[#b03030] border-2 border-[#1b263b] rounded flex items-center justify-center text-white font-serif font-black text-xl shadow-[2px_2px_0px_0px_#1b263b]">
-                M
+                A
               </div>
               <span className="text-xl font-serif font-black tracking-tight text-[#1b263b]">
-                Marginalia
+                Apex IELTS
               </span>
             </Link>
           </div>
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-8 text-xs font-black text-[#1b263b]/80 uppercase tracking-wider">
-            <Link to="/" className="hover:text-[#b03030] transition-colors">Planner</Link>
+            <Link to="/" className="hover:text-[#b03030] transition-colors">Home</Link>
             <Link to="/practice" className="hover:text-[#b03030] transition-colors">Practice</Link>
           </nav>
 
@@ -388,679 +360,912 @@ export default function ProfilePage() {
       </div>
 
       {/* BODY CONTENT */}
-      <div className="max-w-7xl w-full mx-auto pl-[110px] pr-6 md:pr-12 py-10 flex-1 flex flex-col gap-10 z-10">
+      <div className="max-w-7xl w-full mx-auto pl-[110px] pr-6 md:pr-12 py-10 flex-1 flex flex-col gap-6 z-10">
         
-        {/* PROFILE CARD */}
-        <section className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-[#1b263b]/10">
-          
-          {/* Avatar and Info */}
-          <div className="flex items-center gap-6">
-            <div 
-              onClick={() => avatarInputRef.current?.click()}
-              className="w-24 h-24 rounded-full bg-[#b03030] border-2 border-[#1b263b] flex items-center justify-center text-white font-serif font-black text-4xl shadow-[4px_4px_0px_0px_#1b263b] relative group cursor-pointer overflow-hidden select-none shrink-0"
-              title="Nhấn để đổi ảnh đại diện"
-            >
-              {user?.avatar ? (
-                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                initials
-              )}
-              
-              <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                {uploadingAvatar ? (
-                  <span className="text-[10px] text-white font-black animate-pulse">UPLOADING...</span>
-                ) : (
-                  <>
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className="text-[8px] text-white font-bold tracking-wider mt-1">CHANGE AVATAR</span>
-                  </>
-                )}
-              </div>
-            </div>
-            
-            <input 
-              type="file" 
-              ref={avatarInputRef} 
-              onChange={handleAvatarChange} 
-              accept="image/*" 
-              className="hidden" 
-            />
-
-            <div className="text-left space-y-1">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-3xl font-serif font-black text-[#1b263b] leading-tight">
-                  {formFullName || user?.username || 'Student User'}
-                </h2>
-                <span className="bg-[#f0fdf4] border border-emerald-500/30 text-emerald-700 text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full">
-                  {user?.role || 'STUDENT'}
-                </span>
-              </div>
-              
-              {formBio ? (
-                <p className="font-handwriting text-[#b03030] text-xl font-medium" style={{ fontFamily: "'Caveat', cursive" }}>
-                  "{formBio}"
-                </p>
-              ) : (
-                <p className="font-handwriting text-gray-400 text-lg font-medium" style={{ fontFamily: "'Caveat', cursive" }}>
-                  Chưa thiết lập tiểu sử (Bio).
-                </p>
-              )}
-              
-              <div className="flex items-center gap-4 text-xs font-bold text-gray-500 flex-wrap pt-1">
-                {formExpertise && <span className="flex items-center gap-1">💼 Chuyên môn: {formExpertise}</span>}
-                <span className="flex items-center gap-1">📝 {totalTests} bài thi</span>
-                <span className="flex items-center gap-1">⭐ Band {overallBand}</span>
-                <span className="flex items-center gap-1">🕒 {studyHours} giờ học</span>
-              </div>
-            </div>
+        {loading ? (
+          <div className="py-20 text-center text-sm font-black text-[#1b263b] animate-pulse">
+            📝 Loading profile workspace...
           </div>
-
-          <button
-            onClick={() => {
-              setSearchParams({ tab: 'settings' });
-              setActiveTab('settings');
-            }}
-            className="bg-white border-2 border-[#1b263b] px-4.5 py-2 rounded-xl text-xs font-black shadow-[3px_3px_0px_0px_#1b263b] hover:bg-gray-50 active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] flex items-center gap-1.5 transition-all cursor-pointer self-start md:self-auto"
-          >
-            ✏️ Edit Profile
-          </button>
-        </section>
-
-        {/* STATS CARDS GRID */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {statsCards.map((card, idx) => (
-            <div 
-              key={idx}
-              className={`bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-5 shadow-[4px_4px_0px_0px_#1b263b] flex items-start gap-4 transition-all text-left group ${card.bgClass}`}
-            >
-              <div className="p-2.5 border-2 border-[#1b263b] rounded-xl bg-white shadow-[2px_2px_0px_0px_#1b263b] group-hover:scale-105 transition-transform">
-                {card.icon}
+        ) : (
+          <>
+            {/* TOP PROFILE CARD BANNER */}
+            <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-[24px] shadow-[4px_4px_0px_0px_#1b263b] overflow-hidden relative text-left">
+              {/* Green Header Banner Block */}
+              <div className="h-32 bg-[#005c42] relative border-b-2 border-[#1b263b]">
+                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
               </div>
-              <div className="space-y-0.5">
-                <p className="text-3xl font-serif font-black text-[#1b263b] leading-none">
-                  {card.value}
-                </p>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
-                  {card.label}
-                </p>
+
+              {/* Overlapping Info Block */}
+              <div className="px-6 pb-6 pt-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-6 -mt-16 relative z-10">
+                  {/* Avatar Container */}
+                  <div 
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="w-24 h-24 rounded-full bg-[#1b263b] border-4 border-[#fcfbf7] flex items-center justify-center text-white font-serif font-black text-4xl shadow-[3px_3px_0px_0px_#1b263b] relative group cursor-pointer overflow-hidden select-none shrink-0"
+                    title="Nhấn để đổi ảnh đại diện"
+                  >
+                    {user?.avatar ? (
+                      <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      initials
+                    )}
+                    
+                    <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      {uploadingAvatar ? (
+                        <span className="text-[9px] text-white font-black animate-pulse">UPLOADING...</span>
+                      ) : (
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <input 
+                    type="file" 
+                    ref={avatarInputRef} 
+                    onChange={handleAvatarChange} 
+                    accept="image/*" 
+                    className="hidden" 
+                  />
+
+                  {/* User credentials */}
+                  <div className="space-y-1.5 md:pt-12 text-left">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h2 className="text-2xl font-serif font-black text-[#1b263b] leading-tight">
+                        {formFullName || user?.username || 'Nguyen Van A'}
+                      </h2>
+                      <span className="bg-[#ffd54f] border border-[#1b263b] text-[#1b263b] text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
+                        PRO
+                      </span>
+                      <span className="bg-[#dbeafe] border border-[#1b263b] text-[#1e40af] text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
+                        Cấp {currentLevel}
+                      </span>
+                    </div>
+                    
+                    <p className="text-xs text-gray-500 font-bold">@{user?.username || 'nguyenvana'}</p>
+                    
+                    {/* Level Progress */}
+                    <div className="flex items-center gap-3 pt-1">
+                      <span className="text-[10px] font-black text-gray-500 whitespace-nowrap">
+                        Tiến trình Cấp {currentLevel}
+                      </span>
+                      <div className="w-36 h-2.5 bg-[#eae6ca]/50 rounded-full border border-[#1b263b] overflow-hidden shadow-inner">
+                        <div className="bg-[#10b981] h-full" style={{ width: `${xpPercent}%` }} />
+                      </div>
+                      <span className="text-[10px] font-black text-[#1b263b]/70">
+                        {progressXp}/500 XP ({xpPercent}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Edit & Share buttons */}
+                <div className="flex gap-2 self-stretch md:self-auto pt-2 md:pt-8">
+                  <button 
+                    onClick={() => alert("Link profile: " + window.location.href)}
+                    className="flex-1 md:flex-none bg-white border-2 border-[#1b263b] px-4 py-2 rounded-xl text-xs font-black hover:bg-gray-50 transition-all shadow-[2px_2px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>🔗</span> Chia sẻ
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setSearchParams({ tab: 'profile' });
+                      setActiveTab('profile');
+                      setIsEditing(true);
+                    }}
+                    className="flex-1 md:flex-none bg-[#1b263b] text-white border-2 border-[#1b263b] px-4 py-2 rounded-xl text-xs font-black hover:bg-[#324566] transition-all shadow-[2px_2px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>✏️</span> Chỉnh sửa
+                  </button>
+                </div>
               </div>
             </div>
-          ))}
-        </section>
 
-        {/* NAVIGATION PILL TABS */}
-        <section className="flex justify-start">
-          <div className="bg-[#eae6ca]/60 border-2 border-[#1b263b] p-1 rounded-2xl flex flex-wrap gap-1 shadow-sm">
-            <button
-              onClick={() => {
-                setSearchParams({ tab: 'courses' });
-                setActiveTab('courses');
-              }}
-              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                activeTab === 'courses' 
-                  ? 'bg-[#1b263b] text-[#f6f3db] shadow-md' 
-                  : 'text-[#1b263b] hover:bg-[#1b263b]/5'
-              }`}
-            >
-              Courses
-            </button>
-            <button
-              onClick={() => {
-                setSearchParams({ tab: 'results' });
-                setActiveTab('results');
-              }}
-              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                activeTab === 'results' 
-                  ? 'bg-[#1b263b] text-[#f6f3db] shadow-md' 
-                  : 'text-[#1b263b] hover:bg-[#1b263b]/5'
-              }`}
-            >
-              Exam History
-            </button>
-            <button
-              onClick={() => {
-                setSearchParams({ tab: 'bookings' });
-                setActiveTab('bookings');
-              }}
-              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                activeTab === 'bookings' 
-                  ? 'bg-[#1b263b] text-[#f6f3db] shadow-md' 
-                  : 'text-[#1b263b] hover:bg-[#1b263b]/5'
-              }`}
-            >
-              Mentor Sessions
-            </button>
-            <button
-              onClick={() => {
-                setSearchParams({ tab: 'notes' });
-                setActiveTab('notes');
-              }}
-              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                activeTab === 'notes' 
-                  ? 'bg-[#1b263b] text-[#f6f3db] shadow-md' 
-                  : 'text-[#1b263b] hover:bg-[#1b263b]/5'
-              }`}
-            >
-              Notes
-            </button>
-            <button
-              onClick={() => {
-                setSearchParams({ tab: 'settings' });
-                setActiveTab('settings');
-              }}
-              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                activeTab === 'settings' 
-                  ? 'bg-[#1b263b] text-[#f6f3db] shadow-md' 
-                  : 'text-[#1b263b] hover:bg-[#1b263b]/5'
-              }`}
-            >
-              Edit Profile
-            </button>
-          </div>
-        </section>
+            {/* QUICK STATS ROW */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-4.5 shadow-[3px_3px_0px_0px_#1b263b] flex items-center gap-3.5 text-left">
+                <div className="p-2 bg-[#dbeafe] border border-[#1b263b] rounded-xl text-xl shadow-[1px_1px_0px_0px_#1b263b] select-none">
+                  🎯
+                </div>
+                <div>
+                  <p className="text-base font-serif font-black text-[#1b263b] leading-tight">
+                    {stats?.overallBand ? `${stats.overallBand.toFixed(1)} Overall` : 'N/A Overall'}
+                  </p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-0.5">Điểm IELTS trung bình</p>
+                </div>
+              </div>
 
-        {/* TAB SPECIFIC VIEW */}
-        <section className="flex-1 flex flex-col">
-          {loading ? (
-            <div className="py-20 text-center text-sm font-black text-[#1b263b] animate-pulse">
-              📝 Loading profile workspace...
+              <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-4.5 shadow-[3px_3px_0px_0px_#1b263b] flex items-center gap-3.5 text-left">
+                <div className="p-2 bg-[#fce7f3] border border-[#1b263b] rounded-xl text-xl shadow-[1px_1px_0px_0px_#1b263b] select-none">
+                  📚
+                </div>
+                <div>
+                  <p className="text-base font-serif font-black text-[#1b263b] leading-tight">{stats?.totalTests || 0} bài Test</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-0.5">Đã hoàn thành</p>
+                </div>
+              </div>
+
+              <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-4.5 shadow-[3px_3px_0px_0px_#1b263b] flex items-center gap-3.5 text-left">
+                <div className="p-2 bg-[#ffedd5] border border-[#1b263b] rounded-xl text-xl shadow-[1px_1px_0px_0px_#1b263b] select-none">
+                  🔥
+                </div>
+                <div>
+                  <p className="text-base font-serif font-black text-[#1b263b]">{stats?.currentStreak || 0} ngày</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-0.5">
+                    Streak liên tiếp
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-4.5 shadow-[3px_3px_0px_0px_#1b263b] flex items-center gap-3.5 text-left">
+                <div className="p-2 bg-[#e2f0d9] border border-[#1b263b] rounded-xl text-xl shadow-[1px_1px_0px_0px_#1b263b] select-none">
+                  ⏱️
+                </div>
+                <div>
+                  <p className="text-base font-serif font-black text-[#1b263b]">{stats?.studyHours || 0} giờ</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-0.5">Thời gian học tập</p>
+                </div>
+              </div>
             </div>
-          ) : (
-            <>
-              {activeTab === 'courses' && (
-                /* COURSES TAB (YOUR SHELF) */
-                <div className="space-y-6 text-left">
-                  <div className="flex items-center justify-between border-b border-[#1b263b]/10 pb-4">
-                    <span className="text-[#b03030] font-black text-xs uppercase tracking-widest flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#b03030]" /> Your Skill Progress
+
+            {/* TWO-COLUMN GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* LEFT COLUMN */}
+              <div className="lg:col-span-4 space-y-6">
+                
+                {/* HABIT STREAK TRACKER */}
+                <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-5 shadow-[4px_4px_0px_0px_#1b263b] text-left relative">
+                  <div className="flex items-center justify-between border-b border-[#1b263b]/10 pb-3 mb-4">
+                    <h3 className="font-serif font-black text-sm text-[#1b263b] flex items-center gap-1.5">
+                      🔥 Streak ngày học
+                    </h3>
+                    <span className="bg-[#ffedd5] border border-orange-500/30 text-orange-700 text-[10px] font-black px-2.5 py-0.5 rounded-full">
+                      🔥 {stats?.currentStreak || 1} ngày
                     </span>
-                    <Link 
-                      to="/practice"
-                      className="bg-[#b03030] text-white border-2 border-[#1b263b] px-4 py-1.5 rounded-xl text-xs font-black hover:bg-[#902020] transition-all shadow-[2px_2px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] cursor-pointer"
-                    >
-                      + Practice Exam
-                    </Link>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {coursesShelf.map((course, index) => (
-                      <div 
-                        key={index} 
-                        className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-5 shadow-[4px_4px_0px_0px_#1b263b] flex flex-col justify-between min-h-[160px] relative hover:translate-y-[-2px] transition-all"
-                      >
-                        <div>
-                          <div className="flex justify-between items-start gap-2 mb-2">
-                            <h4 className="text-base font-serif font-black text-[#1b263b] leading-snug">
-                              {course.title}
-                            </h4>
-                            
-                            <div className="w-10 h-10 rounded-full border-2 border-[#b03030] bg-[#fdfaf2] text-[#b03030] flex flex-col items-center justify-center font-serif shadow-sm select-none shrink-0">
-                              <span className="text-[7px] font-black leading-none uppercase">BAND</span>
-                              <span className="text-xs font-black leading-tight">{course.grade}</span>
-                            </div>
-                          </div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">6 tuần gần đây</p>
+                  
+                  <div className="space-y-1">
+                    <div className="grid grid-cols-7 gap-1.5 text-center mb-1">
+                      {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day) => (
+                        <span key={day} className="text-[10px] font-black text-gray-400">{day}</span>
+                      ))}
+                    </div>
 
-                          <span className={`inline-block text-[8px] font-black uppercase px-2 py-0.5 rounded border ${course.badgeBg}`}>
-                            {course.daysBadge}
+                    <div className="grid grid-cols-7 gap-1.5">
+                      {gridCells.map((cell, idx) => (
+                        <div key={idx} className="flex justify-center items-center">
+                          <div 
+                            className={`w-[26px] h-[26px] rounded-full flex items-center justify-center transition-all ${
+                              cell.isActive 
+                                ? 'bg-gradient-to-br from-[#ffd54f] to-[#f97316] border border-[#1b263b] shadow-inner text-white' 
+                                : 'bg-gray-100 border border-gray-200 text-transparent'
+                            }`}
+                            title={cell.isActive ? "Học tập tích cực" : "Chưa học"}
+                          >
+                            {cell.isActive && <span className="text-[11px] select-none">🔥</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-[#1b263b]/10 text-center">
+                    <div>
+                      <p className="text-sm font-serif font-black text-[#1b263b]">{stats?.currentStreak || 1} ngày</p>
+                      <p className="text-[9px] font-black text-gray-400 uppercase mt-0.5 leading-none">Streak hiện tại</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-serif font-black text-[#1b263b]">{stats?.hasCheckedInToday ? 'Đã học' : 'Chưa học'}</p>
+                      <p className="text-[9px] font-black text-gray-400 uppercase mt-0.5 leading-none">Hôm nay</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-serif font-black text-[#1b263b]">{Math.max(0, 100 - (stats?.currentStreak || 1))} ngày</p>
+                      <p className="text-[9px] font-black text-gray-400 uppercase mt-0.5 leading-none">Cần thêm</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* STUDY STATS */}
+                <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-5 shadow-[4px_4px_0px_0px_#1b263b] text-left">
+                  <h3 className="font-serif font-black text-sm text-[#1b263b] border-b border-[#1b263b]/10 pb-3 mb-4 flex items-center gap-1.5">
+                    📊 Thống kê học tập
+                  </h3>
+
+                  <div className="space-y-2.5">
+                    {[
+                      { label: 'Tổng thời gian học', val: `${studyHours} giờ`, bg: 'bg-[#eefcf3] text-[#005c42]' },
+                      { label: 'Đề Listening đã làm', val: `${results.filter((r: any) => r.type === 'LISTENING').length} bài`, bg: 'bg-[#eef6ff] text-[#1e40af]' },
+                      { label: 'Đề Reading đã làm', val: `${results.filter((r: any) => r.type === 'READING').length} bài`, bg: 'bg-[#faf5ff] text-[#6b21a8]' },
+                      { label: 'Bài Writing đã viết', val: `${results.filter((r: any) => r.type === 'WRITING').length} bài`, bg: 'bg-[#fffbeb] text-[#854d0e]' },
+                      { label: 'Bài Speaking đã nói', val: `${results.filter((r: any) => r.type === 'SPEAKING').length} bài`, bg: 'bg-[#fff5f5] text-[#9d174d]' },
+                      { label: 'Tổng số đề hoàn thành', val: `${stats?.totalTests || results.length} đề`, bg: 'bg-[#f9fafb] text-[#374151]' }
+                    ].map((item, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`w-full flex justify-between items-center px-4 py-2.5 rounded-xl border border-[#1b263b]/15 ${item.bg}`}
+                      >
+                        <span className="text-[11px] font-black uppercase tracking-wider">{item.label}</span>
+                        <span className="text-xs font-black">{item.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* FRIENDS */}
+                <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-5 shadow-[4px_4px_0px_0px_#1b263b] text-left">
+                  <div className="flex items-center justify-between border-b border-[#1b263b]/10 pb-3 mb-4">
+                    <h3 className="font-serif font-black text-sm text-[#1b263b] flex items-center gap-1.5">
+                      👥 Bạn bè học cùng
+                    </h3>
+                    <span className="bg-gray-100 border border-[#1b263b]/10 text-gray-500 text-[10px] font-black px-2 py-0.5 rounded-full">
+                      4 bạn
+                    </span>
+                  </div>
+
+                  <div className="space-y-3.5">
+                    {friends.map((friend) => (
+                      <div key={friend.id} className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          {friend.image ? (
+                            <img src={friend.image} alt={friend.name} className="w-9 h-9 rounded-full object-cover border border-[#1b263b]/20" />
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-gray-200 border border-[#1b263b]/20 flex items-center justify-center font-bold text-[#1b263b] text-xs">
+                              {friend.initials}
+                            </div>
+                          )}
+                          <div className="space-y-0.5 text-left">
+                            <p className="text-xs font-bold text-[#1b263b] leading-tight">{friend.name}</p>
+                            <p className="text-[9px] text-gray-400 font-semibold">{friend.school}</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-[#b03030] font-black bg-red-50 border border-red-200/50 px-2.5 py-0.5 rounded-full">
+                          🔥 {friend.streak} ngày
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button 
+                    onClick={() => alert("Tính năng danh sách bạn bè đang được phát triển!")}
+                    className="w-full mt-4 pt-3 border-t border-[#1b263b]/10 text-center text-xs font-black text-[#b03030] hover:underline cursor-pointer block"
+                  >
+                    Xem tất cả bạn bè →
+                  </button>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN */}
+              <div className="lg:col-span-8 space-y-6">
+                
+                {/* NAVIGATION TABS */}
+                <div className="bg-[#eae6ca]/60 border-2 border-[#1b263b] p-1 rounded-2xl flex flex-wrap gap-1 shadow-sm text-left">
+                  {[
+                    { id: 'overview', label: 'Tổng quan' },
+                    { id: 'profile', label: 'Hồ sơ' },
+                    { id: 'history', label: 'Lịch sử làm bài' },
+                    { id: 'achievements', label: 'Thành tích' }
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setSearchParams({ tab: tab.id });
+                        setActiveTab(tab.id as any);
+                        if (tab.id !== 'profile') setIsEditing(false);
+                      }}
+                      className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        activeTab === tab.id
+                          ? 'bg-[#1b263b] text-[#f6f3db] shadow-md'
+                          : 'text-[#1b263b] hover:bg-[#1b263b]/5'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* TAB SPECIFIC CONTAINER */}
+                <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-6 shadow-[5px_5px_0px_0px_#1b263b] min-h-[460px] text-left">
+                  
+                  {/* OVERVIEW TAB */}
+                  {activeTab === 'overview' && (
+                    <div className="space-y-6">
+                      
+                      {/* ACTIVITY LINE CHART */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-serif font-black text-lg text-[#1b263b] flex items-center gap-1.5">
+                            📈 Hoạt động 7 ngày qua
+                          </h4>
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 select-none">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" /> Phút học
                           </span>
                         </div>
 
-                        <div className="mt-6 space-y-2">
-                          <div className="h-1.5 w-full bg-[#eae6ca] rounded-full overflow-hidden">
-                            <div className={`h-full ${course.bgLine}`} style={{ width: `${course.progress}%` }} />
+                        <div className="bg-[#fdfbf6] border border-[#1b263b]/15 rounded-2xl p-4 relative">
+                          <div className="flex gap-4">
+                            <div className="flex flex-col justify-between text-[9px] font-black text-gray-400 py-1.5 text-right w-8 select-none">
+                              <span>16 ph</span>
+                              <span>12 ph</span>
+                              <span>8 ph</span>
+                              <span>4 ph</span>
+                              <span>0 ph</span>
+                            </div>
+                            
+                            <div className="flex-1 relative h-48 border-l border-b border-[#1b263b]/25">
+                              <svg className="w-full h-full" viewBox="0 0 500 200" preserveAspectRatio="none">
+                                <defs>
+                                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+                                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                                  </linearGradient>
+                                </defs>
+                                
+                                <line x1="10" y1="30" x2="490" y2="30" stroke="#1b263b" strokeOpacity="0.06" strokeDasharray="3 3" />
+                                <line x1="10" y1="70" x2="490" y2="70" stroke="#1b263b" strokeOpacity="0.06" strokeDasharray="3 3" />
+                                <line x1="10" y1="110" x2="490" y2="110" stroke="#1b263b" strokeOpacity="0.06" strokeDasharray="3 3" />
+                                <line x1="10" y1="150" x2="490" y2="150" stroke="#1b263b" strokeOpacity="0.06" strokeDasharray="3 3" />
+
+                                <path 
+                                  d="M 50,190 L 110,190 L 170,190 L 230,190 L 290,190 L 350,190 C 395,190 410,170 430,50 L 430,190 Z" 
+                                  fill="url(#chartGradient)" 
+                                />
+
+                                <path 
+                                  d="M 50,190 L 110,190 L 170,190 L 230,190 L 290,190 L 350,190 C 395,190 410,170 430,50" 
+                                  fill="none" 
+                                  stroke="#10b981" 
+                                  strokeWidth="3.5" 
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+
+                                <circle cx="50" cy="190" r="4.5" fill="white" stroke="#10b981" strokeWidth="2.5" />
+                                <circle cx="110" cy="190" r="4.5" fill="white" stroke="#10b981" strokeWidth="2.5" />
+                                <circle cx="170" cy="190" r="4.5" fill="white" stroke="#10b981" strokeWidth="2.5" />
+                                <circle cx="230" cy="190" r="4.5" fill="white" stroke="#10b981" strokeWidth="2.5" />
+                                <circle cx="290" cy="190" r="4.5" fill="white" stroke="#10b981" strokeWidth="2.5" />
+                                <circle cx="350" cy="190" r="4.5" fill="white" stroke="#10b981" strokeWidth="2.5" />
+                                <circle cx="430" cy="50" r="6" fill="#10b981" stroke="white" strokeWidth="2" />
+                              </svg>
+                            </div>
                           </div>
-                          <div className="flex justify-between items-center text-[9px] font-black text-gray-500">
-                            <span>{course.notesCount}</span>
-                            <span>{course.progress}% target</span>
+
+                          <div className="flex justify-between pl-12 text-[10px] font-black text-gray-400 pt-2 select-none">
+                            <span>Thứ 3</span>
+                            <span>Thứ 4</span>
+                            <span>Thứ 5</span>
+                            <span>Thứ 6</span>
+                            <span>Thứ 7</span>
+                            <span>Chủ Nhật</span>
+                            <span>Thứ 2</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 pt-2 text-center">
+                          <div className="bg-white border border-[#1b263b]/10 rounded-xl p-3">
+                            <p className="text-lg font-serif font-black text-[#1b263b]">14 phút</p>
+                            <p className="text-[9px] font-black text-gray-400 uppercase mt-0.5 leading-none">Tổng tuần này</p>
+                          </div>
+                          <div className="bg-white border border-[#1b263b]/10 rounded-xl p-3">
+                            <p className="text-lg font-serif font-black text-[#1b263b]">2 phút</p>
+                            <p className="text-[9px] font-black text-gray-400 uppercase mt-0.5 leading-none">Trung bình / ngày</p>
+                          </div>
+                          <div className="bg-white border border-[#1b263b]/10 rounded-xl p-3">
+                            <p className="text-lg font-serif font-black text-[#1b263b]">Thứ 2 (14 ph)</p>
+                            <p className="text-[9px] font-black text-gray-400 uppercase mt-0.5 leading-none">Nhiều nhất</p>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {activeTab === 'results' && (
-                /* EXAM HISTORY TAB */
-                <div className="space-y-6 text-left">
-                  <div className="flex items-center justify-between border-b border-[#1b263b]/10 pb-4">
-                    <span className="text-sky-700 font-black text-xs uppercase tracking-widest flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-sky-600" /> Completed Exams History
-                    </span>
-                  </div>
+                      {/* TODAY'S TASK CHECKLIST */}
+                      <div className="space-y-3 pt-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-serif font-black text-lg text-[#1b263b] flex items-center gap-1.5">
+                            💡 Nhiệm vụ hôm nay
+                          </h4>
+                          <span className="bg-[#eefcf3] border border-emerald-500/20 text-[#005c42] text-[10px] font-black px-2.5 py-0.5 rounded-full">
+                            {completedTasksCount}/4 hoàn thành
+                          </span>
+                        </div>
 
-                  {results.length === 0 ? (
-                    <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-10 shadow-[4px_4px_0px_0px_#1b263b] text-center space-y-4">
-                      <p className="text-sm font-black text-gray-500">Bạn chưa thực hiện bài kiểm tra nào.</p>
-                      <Link
-                        to="/practice"
-                        className="inline-block bg-[#b03030] text-white border-2 border-[#1b263b] px-6 py-2.5 rounded-xl text-xs font-black shadow-[3px_3px_0px_0px_#1b263b] hover:translate-y-[-1px] transition-all"
-                      >
-                        Làm bài thi thử ngay 📝
-                      </Link>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {results.map((r, index) => {
-                        const formattedDate = new Date(r.createdAt).toLocaleDateString('vi-VN', {
-                          year: 'numeric',
-                          month: 'numeric',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        });
-                        const durationMins = Math.round(r.timeTaken / 60);
-
-                        return (
-                          <div 
-                            key={r.id || index}
-                            className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-5 shadow-[4px_4px_0px_0px_#1b263b] relative flex flex-col justify-between hover:translate-y-[-2px] transition-all"
-                          >
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-start gap-2">
-                                <span className="text-[9px] font-black uppercase bg-slate-100 border border-[#1b263b] px-2 py-0.5 rounded">
-                                  {r.type}
-                                </span>
-                                <span className="text-[10px] font-black text-gray-400">{formattedDate}</span>
-                              </div>
-                              <h4 className="text-lg font-serif font-black text-[#1b263b] leading-tight pt-1">
-                                {r.title}
-                              </h4>
-                            </div>
-
-                            <div className="mt-5 pt-3 border-t border-[#1b263b]/10 flex justify-between items-center">
-                              <div className="space-y-0.5 text-left">
-                                <p className="text-[9px] font-black text-gray-400 uppercase">Correct Answers</p>
-                                <p className="text-xs font-black text-[#1b263b]">{r.correctCount !== undefined ? `${r.correctCount} câu` : 'N/A'}</p>
-                              </div>
-                              <div className="space-y-0.5 text-left">
-                                <p className="text-[9px] font-black text-gray-400 uppercase">Time Taken</p>
-                                <p className="text-xs font-black text-[#1b263b]">{durationMins > 0 ? `${durationMins} phút` : `${r.timeTaken} giây`}</p>
-                              </div>
-                              <div className="w-12 h-12 rounded-full border-2 border-[#b03030] bg-[#fdfaf2] text-[#b03030] flex flex-col items-center justify-center font-serif shadow-sm select-none">
-                                <span className="text-[8px] font-black leading-none uppercase">BAND</span>
-                                <span className="text-sm font-black leading-tight">{r.bandScore?.toFixed(1) || '0.0'}</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'bookings' && (
-                /* MENTOR SESSIONS TAB */
-                <div className="space-y-6 text-left">
-                  <div className="flex items-center justify-between border-b border-[#1b263b]/10 pb-4">
-                    <span className="text-emerald-700 font-black text-xs uppercase tracking-widest flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" /> Scheduled Mentor Sessions
-                    </span>
-                  </div>
-
-                  {bookings.length === 0 ? (
-                    <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-10 shadow-[4px_4px_0px_0px_#1b263b] text-center space-y-4">
-                      <p className="text-sm font-black text-gray-500">Bạn chưa đặt buổi học nào với Mentor.</p>
-                      <Link
-                        to="/practice?tab=mentors"
-                        className="inline-block bg-[#b03030] text-white border-2 border-[#1b263b] px-6 py-2.5 rounded-xl text-xs font-black shadow-[3px_3px_0px_0px_#1b263b] hover:translate-y-[-1px] transition-all"
-                      >
-                        Tìm Mentor và Đặt lịch ngay 👥
-                      </Link>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {bookings.map((b, index) => {
-                        const startDate = new Date(b.startTime);
-                        const endDate = new Date(b.endTime);
-                        const formattedDate = startDate.toLocaleDateString('vi-VN', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        });
-                        const timeRange = `${startDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
-
-                        const statusColors = {
-                          PENDING: 'bg-amber-50 text-amber-700 border-amber-200',
-                          CONFIRMED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                          CANCELLED: 'bg-red-50 text-red-700 border-red-200'
-                        };
-
-                        return (
-                          <div 
-                            key={b.id || index}
-                            className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-6 shadow-[5px_5px_0px_0px_#1b263b] relative flex flex-col md:flex-row gap-6 hover:translate-y-[-1px] transition-all"
-                          >
-                            <div className="flex-1 space-y-4 text-left">
-                              <div className="flex justify-between items-center flex-wrap gap-2 border-b border-[#1b263b]/10 pb-3">
-                                <div>
-                                  <h4 className="text-base font-serif font-black text-[#1b263b]">
-                                    Mentor Session with {b.mentor?.fullName || 'Mentor'}
-                                  </h4>
-                                  <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{b.mentor?.email}</p>
-                                </div>
-                                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border uppercase ${statusColors[b.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-700'}`}>
-                                  {b.status}
-                                </span>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-bold text-gray-500">
-                                <div>
-                                  <p className="text-[9px] uppercase tracking-wider text-gray-400">Thời gian học</p>
-                                  <p className="text-[#1b263b] text-xs font-black mt-0.5">{formattedDate}</p>
-                                  <p className="text-[#b03030] text-[11px] font-black">{timeRange}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[9px] uppercase tracking-wider text-gray-400">Meeting Link</p>
-                                  {b.availability?.meetingLink ? (
-                                    <a 
-                                      href={b.availability.meetingLink}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-sky-600 hover:text-sky-700 font-black text-xs underline flex items-center gap-1 mt-0.5"
-                                    >
-                                      🔗 Join Classroom Session
-                                    </a>
-                                  ) : (
-                                    <span className="text-gray-400 font-black text-xs italic mt-0.5 block">Chưa cập nhật link phòng</span>
+                        <div className="bg-white border border-[#1b263b]/15 rounded-2xl overflow-hidden divide-y divide-[#1b263b]/10">
+                          {tasks.map((task) => (
+                            <div 
+                              key={task.id} 
+                              onClick={() => toggleTask(task.id)}
+                              className="flex items-center justify-between p-3.5 hover:bg-gray-50/50 cursor-pointer select-none transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-5 h-5 rounded border-2 border-[#1b263b] flex items-center justify-center transition-all ${
+                                  task.done ? 'bg-[#10b981] border-[#10b981]' : 'bg-transparent'
+                                }`}>
+                                  {task.done && (
+                                    <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                                    </svg>
                                   )}
                                 </div>
+                                <span className={`text-xs font-bold transition-all text-left ${
+                                  task.done ? 'line-through text-gray-400' : 'text-[#1b263b]'
+                                }`}>
+                                  {task.text}
+                                </span>
+                              </div>
+                              <span className={`text-[11px] font-black px-2 py-0.5 rounded ${
+                                task.done ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' : 'bg-gray-100 text-gray-400'
+                              }`}>
+                                {task.progress}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* LEVEL / XP BAR CHART */}
+                      <div className="space-y-3 pt-2">
+                        <h4 className="font-serif font-black text-lg text-[#1b263b] text-left">
+                          🎯 Trình độ môn học
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {subjectProgress.map((sub, idx) => (
+                            <div key={idx} className="bg-white border border-[#1b263b]/10 rounded-2xl p-4 flex items-center justify-between gap-4">
+                              <div className="flex-1 space-y-1.5 text-left">
+                                <p className="text-xs font-black text-[#1b263b]">{sub.name}</p>
+                                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
+                                  <div className={`h-full ${sub.color}`} style={{ width: `${sub.progress}%` }} />
+                                </div>
+                              </div>
+                              <span className="text-xs font-black text-[#b03030] bg-red-50 border border-red-100 px-2.5 py-1 rounded-xl whitespace-nowrap">
+                                {sub.score}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PROFILE DETAILS TAB */}
+                  {activeTab === 'profile' && (
+                    <div className="space-y-6">
+                      {!isEditing ? (
+                        <>
+                          <div className="bg-[#fdfbf6] border border-[#1b263b]/15 rounded-3xl p-6 relative">
+                            <div className="flex justify-between items-start gap-4 border-b border-[#1b263b]/10 pb-4 mb-5">
+                              <div className="text-left">
+                                <h4 className="font-serif font-black text-lg text-[#1b263b]">👤 Thông tin cá nhân</h4>
+                                <p className="text-[10px] font-black text-gray-400 uppercase mt-0.5">Chi tiết thông tin tài khoản của bạn</p>
+                              </div>
+                              <button 
+                                onClick={() => setIsEditing(true)}
+                                className="bg-white border border-[#1b263b] hover:bg-gray-50 text-[11px] font-black px-3.5 py-1.5 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] transition-all flex items-center gap-1 cursor-pointer"
+                              >
+                                ✏️ Chỉnh sửa
+                              </button>
+                            </div>
+
+                            <div className="space-y-3.5 text-xs text-left">
+                              <div className="grid grid-cols-3 border-b border-[#1b263b]/5 pb-2.5">
+                                <span className="font-black text-gray-400 uppercase text-[10px]">Họ và tên</span>
+                                <span className="col-span-2 font-bold text-[#1b263b]">{formFullName || user?.fullName || 'Nguyen Van A'}</span>
+                              </div>
+                              <div className="grid grid-cols-3 border-b border-[#1b263b]/5 pb-2.5">
+                                <span className="font-black text-gray-400 uppercase text-[10px]">Học vấn / Trường</span>
+                                <span className="col-span-2 font-bold text-[#1b263b]">{formExpertise || 'Đại học Quốc gia Hà Nội'}</span>
+                              </div>
+                              <div className="grid grid-cols-3 border-b border-[#1b263b]/5 pb-2.5">
+                                <span className="font-black text-gray-400 uppercase text-[10px]">Địa chỉ</span>
+                                <span className="col-span-2 font-bold text-[#1b263b]">{formIdentityNumber || 'Hà Nội, Việt Nam'}</span>
+                              </div>
+                              <div className="grid grid-cols-3 border-b border-[#1b263b]/5 pb-2.5">
+                                <span className="font-black text-gray-400 uppercase text-[10px]">Ngày tham gia</span>
+                                <span className="col-span-2 font-bold text-[#1b263b]">
+                                  {(user as any)?.createdAt ? new Date((user as any).createdAt).toLocaleDateString('vi-VN', { year: 'numeric', month: 'long' }) : 'tháng 6 năm 2026'}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-3 border-b border-[#1b263b]/5 pb-2.5">
+                                <span className="font-black text-gray-400 uppercase text-[10px]">Email liên hệ</span>
+                                <span className="col-span-2 font-bold text-[#1b263b]">{formEmail || user?.email || 'hocvien@apexielts.com'}</span>
+                              </div>
+                              <div className="grid grid-cols-3">
+                                <span className="font-black text-gray-400 uppercase text-[10px]">Số điện thoại</span>
+                                <span className="col-span-2 font-bold text-[#1b263b]">{formPhone || 'Chưa cập nhật'}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-[#fdfbf6] border border-[#1b263b]/15 rounded-3xl p-6 text-left">
+                            <h4 className="font-serif font-black text-lg text-[#1b263b] mb-4">🏆 Trạng thái tài khoản</h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] rounded-2xl p-5 text-white flex flex-col justify-between min-h-[160px] border border-[#1b263b]/10">
+                                <div>
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-violet-200">Gói hiện tại</p>
+                                  <h5 className="text-3xl font-serif font-black mt-2">Miễn phí</h5>
+                                  <p className="text-xs font-bold text-violet-100 mt-1">Cơ bản</p>
+                                </div>
+                                <span className="text-[10px] font-black bg-white/10 px-2.5 py-1 rounded-full w-max">Active</span>
                               </div>
 
-                              <div className="pt-2 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-[#1b263b]/10">
-                                <div className="bg-[#fefefe]/80 border border-[#1b263b]/15 rounded-xl p-3 text-xs">
-                                  <p className="text-[9px] font-black uppercase text-gray-400 mb-1">Ghi chú của học viên (Mục tiêu)</p>
-                                  <p className="text-gray-600 italic font-semibold">{b.notes || 'Không có ghi chú'}</p>
+                              <div className="bg-white border border-[#1b263b]/10 rounded-2xl p-5 flex flex-col justify-between min-h-[160px]">
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center">
+                                    <h6 className="font-serif font-black text-[#1b263b] text-base">Nâng cấp PRO</h6>
+                                    <span className="bg-[#ffd54f] border border-[#1b263b] text-[#1b263b] text-[8px] font-black px-2 py-0.5 rounded uppercase">Đề xuất</span>
+                                  </div>
+                                  
+                                  <ul className="text-[10px] font-bold text-gray-500 space-y-1">
+                                    <li className="flex items-center gap-1.5">✓ Không giới hạn bộ thẻ flashcard</li>
+                                    <li className="flex items-center gap-1.5">✓ Phân tích học tập nâng cao</li>
+                                    <li className="flex items-center gap-1.5">✓ Tải xuống nội dung offline</li>
+                                    <li className="flex items-center gap-1.5">✓ Ưu tiên hỗ trợ 24/7</li>
+                                  </ul>
                                 </div>
-                                <div className="bg-[#fefefe]/80 border border-[#1b263b]/15 rounded-xl p-3 text-xs">
-                                  <p className="text-[9px] font-black uppercase text-gray-400 mb-1">Nhận xét của Mentor</p>
-                                  <p className="text-gray-600 italic font-semibold">{b.mentorNotes || 'Chưa có nhận xét nào từ mentor sau buổi học.'}</p>
+
+                                <div className="flex justify-between items-center gap-4 pt-3 border-t border-[#1b263b]/5">
+                                  <div>
+                                    <span className="text-[9px] text-gray-400 line-through">Giá gốc: 99K</span>
+                                    <p className="text-sm font-serif font-black text-[#1b263b]">69K<span className="text-xs text-gray-500">/tháng</span></p>
+                                  </div>
+                                  <button 
+                                    onClick={() => alert("Nâng cấp gói PRO! Cảm ơn bạn đã đồng hành cùng chúng tôi.")}
+                                    className="bg-[#10b981] text-white border-2 border-[#1b263b] px-4 py-2 rounded-xl text-xs font-black hover:bg-[#0fa370] transition-all shadow-[2px_2px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] cursor-pointer"
+                                  >
+                                    Nâng cấp ngay
+                                  </button>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        );
-                      })}
+                        </>
+                      ) : (
+                        <div className="bg-[#fdfbf6] border border-[#1b263b]/15 rounded-3xl p-6 text-left">
+                          <h4 className="font-serif font-black text-xl text-[#1b263b] mb-1">Chỉnh sửa thông tin cá nhân</h4>
+                          <p className="text-[10px] font-black text-gray-400 uppercase mb-6">Modify your profile details. They will be saved to your dashboard cloud account.</p>
+
+                          {formSaved && (
+                            <div className="mb-6 bg-emerald-100 border-2 border-emerald-800 text-emerald-800 px-4 py-3 rounded-xl text-xs font-bold shadow-[2px_2px_0px_0px_#1b263b]">
+                              ✓ Saved changes successfully!
+                            </div>
+                          )}
+
+                          <form onSubmit={handleSaveSettings} className="space-y-4">
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider">Họ và tên</label>
+                              <input
+                                type="text"
+                                required
+                                value={formFullName}
+                                onChange={(e) => setFormFullName(e.target.value)}
+                                className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs font-bold text-[#1b263b] outline-none"
+                              />
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider">Email liên hệ</label>
+                              <input
+                                type="email"
+                                required
+                                value={formEmail}
+                                onChange={(e) => setFormEmail(e.target.value)}
+                                className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs font-bold text-[#1b263b] outline-none"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider">Số điện thoại</label>
+                                <input
+                                  type="text"
+                                  value={formPhone}
+                                  onChange={(e) => setFormPhone(e.target.value)}
+                                  placeholder="0912 345 678"
+                                  className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs font-bold text-[#1b263b] outline-none"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider">Ngày sinh</label>
+                                <input
+                                  type="text"
+                                  value={formBirthDate}
+                                  onChange={(e) => setFormBirthDate(e.target.value)}
+                                  placeholder="15/08/2002"
+                                  className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs font-bold text-[#1b263b] outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider">Địa chỉ / CCCD</label>
+                                <input
+                                  type="text"
+                                  value={formIdentityNumber}
+                                  onChange={(e) => setFormIdentityNumber(e.target.value)}
+                                  placeholder="Hà Nội, Việt Nam"
+                                  className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs font-bold text-[#1b263b] outline-none"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider">Học vấn / Target</label>
+                                <input
+                                  type="text"
+                                  value={formExpertise}
+                                  onChange={(e) => setFormExpertise(e.target.value)}
+                                  placeholder="Đại học Quốc gia Hà Nội"
+                                  className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs font-bold text-[#1b263b] outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider">Tiểu sử (Bio / Châm ngôn)</label>
+                              <textarea
+                                value={formBio}
+                                onChange={(e) => setFormBio(e.target.value)}
+                                placeholder="Learning is sharpest when the pencil is, too."
+                                rows={2}
+                                className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs font-bold text-[#1b263b] outline-none resize-none"
+                              />
+                            </div>
+
+                            <div className="bg-[#fdfaf2] border-2 border-[#1b263b] rounded-2xl p-4 shadow-[2px_2px_0px_0px_#1b263b] flex items-center justify-between mt-6">
+                              <div className="text-left">
+                                <label className="text-xs font-black uppercase text-[#1b263b] tracking-wider block">Xác thực 2 lớp (2FA)</label>
+                                <span className="text-[9px] font-bold text-gray-400 block mt-0.5">Nhận mã xác thực qua email mỗi khi đăng nhập.</span>
+                              </div>
+                              <label className="relative inline-flex items-center cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={form2FA}
+                                  onChange={(e) => setForm2FA(e.target.checked)}
+                                  className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-[#eae6ca] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00CC99] border-2 border-[#1b263b]"></div>
+                              </label>
+                            </div>
+
+                            <div className="pt-4 flex gap-3">
+                              <button
+                                type="submit"
+                                className="flex-1 bg-[#a7f3d0] text-[#005c42] border-2 border-[#1b263b] py-2.5 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#91e8c1] transition-all shadow-[2px_2px_0px_0px_#1b263b] text-center cursor-pointer"
+                              >
+                                Save Changes 💾
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setIsEditing(false)}
+                                className="bg-white border-2 border-[#1b263b] px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-gray-50 transition-all text-center cursor-pointer text-[#1b263b]"
+                              >
+                                Huỷ
+                              </button>
+                            </div>
+                          </form>
+
+                          {/* CHANGE PASSWORD */}
+                          <div className="mt-8 pt-8 border-t border-[#1b263b]/10 text-left">
+                            <h4 className="font-serif font-black text-lg text-[#1b263b] mb-1">Đổi mật khẩu</h4>
+                            <p className="text-[10px] font-black text-gray-400 uppercase mb-4">Cập nhật mật khẩu mới cho tài khoản của bạn.</p>
+
+                            {passwordMessage && (
+                              <div className={`mb-6 border-2 px-4 py-3 rounded-xl text-xs font-bold shadow-[2px_2px_0px_0px_#1b263b] ${
+                                passwordMessage.type === 'success' 
+                                  ? 'bg-emerald-100 border-emerald-800 text-emerald-800' 
+                                  : 'bg-red-100 border-red-800 text-red-800'
+                              }`}>
+                                {passwordMessage.text}
+                              </div>
+                            )}
+
+                            <form onSubmit={handleChangePassword} className="space-y-4">
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider">Mật khẩu hiện tại</label>
+                                <input
+                                  type="password"
+                                  required
+                                  value={oldPassword}
+                                  onChange={(e) => setOldPassword(e.target.value)}
+                                  className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs font-bold text-[#1b263b] outline-none"
+                                />
+                              </div>
+                              
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider">Mật khẩu mới</label>
+                                  <input
+                                    type="password"
+                                    required
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs font-bold text-[#1b263b] outline-none"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider">Xác nhận mật khẩu mới</label>
+                                  <input
+                                    type="password"
+                                    required
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs font-bold text-[#1b263b] outline-none"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="pt-2 flex">
+                                <button
+                                  type="submit"
+                                  disabled={passwordLoading}
+                                  className="flex-1 bg-[#fbcfe8] text-[#c92a2a] border-2 border-[#1b263b] py-2.5 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#f9a8d4] disabled:opacity-50 transition-all shadow-[2px_2px_0px_0px_#1b263b] text-center cursor-pointer"
+                                >
+                                  {passwordLoading ? 'Đang đổi...' : 'Đổi mật khẩu 🔑'}
+                                </button>
+                              </div>
+                            </form>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
 
-              {activeTab === 'notes' && (
-                /* NOTES LOG TAB - Ruled notebook styling */
-                <div className="space-y-6 text-left max-w-4xl mx-auto w-full">
-                  <div className="flex items-center justify-between border-b border-[#1b263b]/10 pb-4">
-                    <span className="text-emerald-700 font-black text-xs uppercase tracking-widest flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" /> Study Log & Notes
-                    </span>
-                  </div>
+                  {/* PRACTICE HISTORY TAB */}
+                  {activeTab === 'history' && (
+                    <div className="space-y-6">
+                      <div className="border-b border-[#1b263b]/10 pb-4 text-left">
+                        <h4 className="font-serif font-black text-lg text-[#1b263b]">📝 Lịch sử luyện tập & thi thử</h4>
+                        <p className="text-[10px] font-black text-gray-400 uppercase mt-0.5">Danh sách các bài làm IELTS của bạn</p>
+                      </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {[
-                      {
-                        date: 'June 25, 2026',
-                        title: 'Speaking cue card: Historical Places 🏛️',
-                        content: 'Today I practiced speaking about historical locations. I structured my ideas around the Temple of Literature in Hanoi. Key vocabulary used: "architectural grandeur", "cultural heritage", "intellectual hub". My fluency score reached 7.5!',
-                        bgColor: '#fdfbf7',
-                        tapeColor: 'rgba(70, 130, 180, 0.2)',
-                        rotate: '-1deg'
-                      },
-                      {
-                        date: 'June 23, 2026',
-                        title: 'Writing Task 2: Online Learning Feedback ✍️',
-                        content: 'Submitted an essay on the comparison between classroom learning and virtual models. AI flagged a few subject-verb agreement issues in paragraph 3. Band score: 6.5. Must review cohesive devices next week.',
-                        bgColor: '#ffd54f',
-                        tapeColor: 'rgba(201, 42, 42, 0.2)',
-                        rotate: '1deg'
-                      },
-                      {
-                        date: 'June 21, 2026',
-                        title: 'Reading simulator progress: Headings Match 📖',
-                        content: 'Completed matching headings tasks in Section 3 of Cambridge IELTS 17. The vocabulary was dense but checking negative qualifiers and synonyms helped. Accuracy rate: 8/10.',
-                        bgColor: '#fdfbf7',
-                        tapeColor: 'rgba(5, 150, 105, 0.2)',
-                        rotate: '-1.5deg'
-                      },
-                      {
-                        date: 'June 18, 2026',
-                        title: 'Vocabulary expansion list 📓',
-                        content: 'Adding formal synonyms for essay writing:\n- "Very important" → "Paramount", "Crucial"\n- "In my opinion" → "From my standpoint"\n- "Solve a problem" → "Address/Mitigate an issue"',
-                        bgColor: '#a7f3d0',
-                        tapeColor: 'rgba(217, 119, 6, 0.2)',
-                        rotate: '2deg'
-                      }
-                    ].map((note, idx) => (
-                      <div 
-                        key={idx} 
-                        style={{ backgroundColor: note.bgColor, transform: `rotate(${note.rotate})` }}
-                        className="border-2 border-[#1b263b] rounded-2xl p-6 shadow-[4px_4px_0px_0px_#1b263b] relative overflow-hidden transition-all hover:rotate-0 hover:scale-[1.01]"
-                      >
-                        <div 
-                          className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-6 -translate-y-2 border border-[#1b263b]/10 shadow-sm"
-                          style={{ backgroundColor: note.tapeColor }}
-                        />
+                      {results.length === 0 ? (
+                        <div className="text-center py-12 bg-white border border-[#1b263b]/10 rounded-2xl p-6">
+                          <p className="text-xs font-bold text-gray-400">Bạn chưa thực hiện bài thi thử nào trên hệ thống.</p>
+                          <Link 
+                            to="/practice"
+                            className="inline-block mt-4 bg-[#1b263b] text-[#f6f3db] border-2 border-[#1b263b] px-5 py-2 rounded-xl text-xs font-black hover:bg-[#1b263b]/90 transition-all shadow-[2px_2px_0px_0px_#1b263b]"
+                          >
+                            Luyện tập ngay ➔
+                          </Link>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {results.map((resItem) => {
+                            const dateStr = new Date(resItem.createdAt).toLocaleDateString('vi-VN', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            });
+
+                            let typeBadgeColor = 'bg-blue-50 text-blue-700 border-blue-200/50';
+                            let typeIcon = '🎧';
+                            if (resItem.type === 'READING') {
+                              typeBadgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200/50';
+                              typeIcon = '📖';
+                            } else if (resItem.type === 'WRITING') {
+                              typeBadgeColor = 'bg-amber-50 text-amber-700 border-amber-200/50';
+                              typeIcon = '✍️';
+                            } else if (resItem.type === 'SPEAKING') {
+                              typeBadgeColor = 'bg-purple-50 text-purple-700 border-purple-200/50';
+                              typeIcon = '🗣️';
+                            }
+
+                            return (
+                              <div 
+                                key={resItem.id}
+                                className="bg-white border border-[#1b263b]/10 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:translate-y-[-1px] transition-all"
+                              >
+                                <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
+                                  <div className={`p-2.5 rounded-xl text-lg shrink-0 border ${typeBadgeColor}`}>
+                                    {typeIcon}
+                                  </div>
+                                  <div className="flex-1 min-w-0 text-left space-y-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h5 className="font-bold text-sm text-[#1b263b] truncate leading-none">{resItem.title}</h5>
+                                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded leading-none uppercase border ${typeBadgeColor}`}>
+                                        {resItem.type}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400">
+                                      <span>Thời gian nộp: {dateStr}</span>
+                                      {resItem.timeTaken !== null && resItem.timeTaken > 0 && (
+                                        <span>• Làm trong: {Math.ceil(resItem.timeTaken / 60)} phút</span>
+                                      )}
+                                      {resItem.correctCount !== null && resItem.correctCount !== undefined && (
+                                        <span>• Kết quả: {resItem.correctCount}/40 câu</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                                  <div className="text-right">
+                                    <span className="text-xs font-black text-[#1b263b] bg-[#eae6ca] border border-[#1b263b]/20 px-2.5 py-1 rounded-lg">
+                                      Band {resItem.bandScore !== null && resItem.bandScore !== undefined ? resItem.bandScore.toFixed(1) : 'N/A'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ACHIEVEMENTS TAB */}
+                  {activeTab === 'achievements' && (
+                    <div className="space-y-6">
+                      <div className="border-b border-[#1b263b]/10 pb-4 text-left">
+                        <h4 className="font-serif font-black text-lg text-[#1b263b]">🏆 Danh hiệu & Thành tích</h4>
+                        <p className="text-[10px] font-black text-gray-400 uppercase mt-0.5">Những cột mốc học tập bạn đã vượt qua</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {achievements.map((ach) => (
+                          <div 
+                            key={ach.id} 
+                            className={`border border-[#1b263b]/10 rounded-2xl p-4.5 flex flex-col justify-between min-h-[120px] transition-all ${
+                              ach.earned 
+                                ? 'bg-white shadow-[2px_2px_0px_0px_#1b263b] opacity-100 border-[#1b263b]' 
+                                : 'bg-gray-50/50 opacity-60'
+                            }`}
+                          >
+                            <div className="text-left space-y-1">
+                              <div className="flex justify-between items-start">
+                                <h5 className="font-serif font-black text-sm text-[#1b263b] leading-tight">{ach.title}</h5>
+                                <span className="text-lg select-none">{ach.earned ? '🥇' : '🔒'}</span>
+                              </div>
+                              <p className="text-[10px] font-bold text-gray-400 leading-tight">{ach.desc}</p>
+                            </div>
+
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded w-max mt-3 block ${
+                              ach.earned 
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' 
+                                : 'bg-gray-100 text-gray-400'
+                            }`}>
+                              {ach.earned ? 'Đã đạt' : 'Chưa đạt'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* XP STATS CARD */}
+                      <div className="bg-[#fdfbf6] border border-[#1b263b]/15 rounded-3xl p-5 text-left mt-6">
+                        <h4 className="font-serif font-black text-base text-[#1b263b] border-b border-[#1b263b]/10 pb-3 mb-4">
+                          🎖️ Điểm XP của bạn
+                        </h4>
                         
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{note.date}</p>
-                        <h5 className="text-base font-serif font-black text-[#1b263b] mt-2 mb-3">
-                          {note.title}
-                        </h5>
-                        <p 
-                          className="text-sm font-bold text-gray-600 leading-relaxed font-handwriting"
-                          style={{ fontFamily: "'Caveat', cursive", fontSize: '1.25rem', lineHeight: '1.75rem' }}
-                        >
-                          {note.content.split('\n').map((line, lIdx) => (
-                            <span key={lIdx} className="block">{line}</span>
-                          ))}
-                        </p>
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div className="bg-white border border-[#1b263b]/10 rounded-2xl p-4">
+                            <p className="text-2xl font-serif font-black text-[#1b263b]">{totalXp}</p>
+                            <p className="text-[9px] font-black text-gray-400 uppercase mt-1">Tổng XP</p>
+                          </div>
+                          <div className="bg-white border border-[#1b263b]/10 rounded-2xl p-4">
+                            <p className="text-2xl font-serif font-black text-[#1b263b]">Cấp {currentLevel}</p>
+                            <p className="text-[9px] font-black text-gray-400 uppercase mt-1">Cấp hiện tại</p>
+                          </div>
+                          <div className="bg-white border border-[#1b263b]/10 rounded-2xl p-4">
+                            <p className="text-2xl font-serif font-black text-[#1b263b]">{xpPercent}%</p>
+                            <p className="text-[9px] font-black text-gray-400 uppercase mt-1">{progressXp}/500 XP</p>
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
+
+
                 </div>
-              )}
+              </div>
 
-              {activeTab === 'settings' && (
-                /* EDIT PROFILE AND PASSWORD AREA */
-                <div className="space-y-8 max-w-2xl mx-auto w-full">
-                  {/* EDIT PROFILE TAB */}
-                  <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-8 shadow-[5px_5px_0px_0px_#1b263b] text-left">
-                    <h4 className="font-serif font-black text-xl text-[#1b263b] mb-1">Edit profile details</h4>
-                    <p className="text-xs font-bold text-gray-500 mb-6">Modify your profile details. They will be saved to your dashboard cloud account.</p>
-
-                    {formSaved && (
-                      <div className="mb-6 bg-emerald-100 border-2 border-emerald-800 text-emerald-800 px-4 py-3 rounded-xl text-xs font-bold shadow-[2px_2px_0px_0px_#1b263b]">
-                        ✓ Saved changes successfully!
-                      </div>
-                    )}
-
-                    <form onSubmit={handleSaveSettings} className="space-y-5">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Họ và tên</label>
-                        <input
-                          type="text"
-                          required
-                          value={formFullName}
-                          onChange={(e) => setFormFullName(e.target.value)}
-                          className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner animate-none"
-                        />
-                      </div>
-                      
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Email liên hệ</label>
-                        <input
-                          type="email"
-                          required
-                          value={formEmail}
-                          onChange={(e) => setFormEmail(e.target.value)}
-                          className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner animate-none"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Số điện thoại</label>
-                          <input
-                            type="text"
-                            value={formPhone}
-                            onChange={(e) => setFormPhone(e.target.value)}
-                            placeholder="0912 345 678"
-                            className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Ngày sinh</label>
-                          <input
-                            type="text"
-                            value={formBirthDate}
-                            onChange={(e) => setFormBirthDate(e.target.value)}
-                            placeholder="15/08/2002"
-                            className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Số CCCD / Hộ chiếu</label>
-                          <input
-                            type="text"
-                            value={formIdentityNumber}
-                            onChange={(e) => setFormIdentityNumber(e.target.value)}
-                            placeholder="0312xxxxxxxx"
-                            className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Chuyên môn / Target</label>
-                          <input
-                            type="text"
-                            value={formExpertise}
-                            onChange={(e) => setFormExpertise(e.target.value)}
-                            placeholder="IELTS 7.5 Target"
-                            className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Tiểu sử (Bio / Châm ngôn)</label>
-                        <textarea
-                          value={formBio}
-                          onChange={(e) => setFormBio(e.target.value)}
-                          placeholder="Learning is sharpest when the pencil is, too."
-                          rows={2}
-                          className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner resize-none"
-                        />
-                      </div>
-
-                      {/* 2FA Toggle */}
-                      <div className="bg-[#fdfaf2] border-2 border-[#1b263b] rounded-2xl p-4 shadow-[3px_3px_0px_0px_#1b263b] flex items-center justify-between mt-6">
-                        <div className="text-left">
-                          <label className="text-xs font-black uppercase text-[#1b263b] tracking-wider block">Xác thực 2 lớp (2FA)</label>
-                          <span className="text-[10px] font-bold text-gray-400 block mt-0.5">Nhận mã xác thực qua email mỗi khi đăng nhập.</span>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={form2FA}
-                            onChange={(e) => setForm2FA(e.target.checked)}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-[#eae6ca] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00CC99] border-2 border-[#1b263b]"></div>
-                        </label>
-                      </div>
-
-                      <div className="pt-4 flex gap-3">
-                        <button
-                          type="submit"
-                          className="flex-1 bg-[#a7f3d0] text-[#005c42] border-2 border-[#1b263b] py-3 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#91e8c1] transition-all shadow-[3px_3px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] text-center cursor-pointer"
-                        >
-                          Save Changes 💾
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSearchParams({ tab: 'courses' });
-                            setActiveTab('courses');
-                          }}
-                          className="bg-white border-2 border-[#1b263b] px-6 py-3 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-gray-50 transition-all text-center cursor-pointer text-[#1b263b]"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-
-                  {/* CHANGE PASSWORD CARD */}
-                  <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-8 shadow-[5px_5px_0px_0px_#1b263b] text-left">
-                    <h4 className="font-serif font-black text-xl text-[#1b263b] mb-1">Đổi mật khẩu</h4>
-                    <p className="text-xs font-bold text-gray-500 mb-6">Cập nhật mật khẩu mới cho tài khoản của bạn.</p>
-
-                    {passwordMessage && (
-                      <div className={`mb-6 border-2 px-4 py-3 rounded-xl text-xs font-bold shadow-[2px_2px_0px_0px_#1b263b] ${
-                        passwordMessage.type === 'success' 
-                          ? 'bg-emerald-100 border-emerald-800 text-emerald-800' 
-                          : 'bg-red-100 border-red-800 text-red-800'
-                      }`}>
-                        {passwordMessage.text}
-                      </div>
-                    )}
-
-                    <form onSubmit={handleChangePassword} className="space-y-5">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Mật khẩu hiện tại</label>
-                        <input
-                          type="password"
-                          required
-                          value={oldPassword}
-                          onChange={(e) => setOldPassword(e.target.value)}
-                          className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Mật khẩu mới</label>
-                          <input
-                            type="password"
-                            required
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Xác nhận mật khẩu mới</label>
-                          <input
-                            type="password"
-                            required
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:bg-gray-50 shadow-inner"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="pt-4 flex gap-3">
-                        <button
-                          type="submit"
-                          disabled={passwordLoading}
-                          className="flex-1 bg-[#fbcfe8] text-[#c92a2a] border-2 border-[#1b263b] py-3 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#f9a8d4] disabled:opacity-50 transition-all shadow-[3px_3px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] text-center cursor-pointer"
-                        >
-                          {passwordLoading ? 'Đang đổi...' : 'Đổi mật khẩu 🔑'}
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </section>
+            </div>
+          </>
+        )}
 
       </div>
 

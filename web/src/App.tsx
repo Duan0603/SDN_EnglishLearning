@@ -7,6 +7,7 @@ import AdminDashboard from './features/admin/AdminDashboard'
 import HomeNewTests from './features/landing/HomeNewTests'
 import PracticeWorkspace from './features/practice/PracticeWorkspace'
 import ProfilePage from './features/profile/ProfilePage'
+import SettingsPage from './features/settings/SettingsPage'
 import ReadingWorkspace from './features/practice/ReadingWorkspace'
 import ListeningWorkspace from './features/practice/ListeningWorkspace'
 import WritingWorkspace from './features/practice/WritingWorkspace'
@@ -132,6 +133,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />

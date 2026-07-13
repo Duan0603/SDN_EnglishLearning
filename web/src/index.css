@@ -45,3 +45,13 @@
 .custom-pencil-cursor select {
   cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24'><polygon points='0,0 2,5 5,2' fill='%231b263b' /><polygon points='2,5 5,2 8,5 5,8' fill='%23eae7cd' stroke='%231b263b' stroke-width='1' /><polygon points='5,8 8,5 17,14 14,17' fill='%23ffd54f' stroke='%231b263b' stroke-width='1' /><polygon points='14,17 17,14 19,16 16,19' fill='%239ca3af' stroke='%231b263b' stroke-width='1' /><polygon points='16,19 19,16 22,19 19,22' fill='%23fbcfe8' stroke='%231b263b' stroke-width='1' /></svg>") 2 2, auto !important;
 }
+
+/* Ensure the notebook cards background color is opaque and solid to prevent background lines from showing through */
+.bg-\[\#fcfbf7\],
+.bg-notebook-card-solid {
+  background-color: #fcfbf7 !important;
+}
+
+.bg-\[\#fdfbf6\] {
+  background-color: #fdfbf6 !important;
+}
