@@ -4,6 +4,7 @@ import { authentication } from '../../auth/authUtils.js';
 import { AdminUserController } from '../../controllers/adminUser.controller.js';
 import { AdminSubmissionController } from '../../controllers/adminSubmission.controller';
 import { AdminMentorController } from '../../controllers/adminMentor.controller';
+import { AdminBookingController } from '../../controllers/adminBooking.controller';
 
 export const adminRouter = express.Router();
 
@@ -37,3 +38,9 @@ adminRouter.patch('/mentor-requests/:id/reject', asyncHandler(AdminMentorControl
 // ── Student Practice Results / Submissions Management ──────
 adminRouter.get('/submissions', asyncHandler(AdminSubmissionController.getAllSubmissions));
 adminRouter.delete('/submissions/:id', asyncHandler(AdminSubmissionController.deleteSubmission));
+
+// ── Booking Management (Epic 4) ─────────────────────────────
+adminRouter.get('/bookings', asyncHandler(AdminBookingController.getAllBookings));
+adminRouter.patch('/bookings/:id/confirm', asyncHandler(AdminBookingController.confirmBooking));
+adminRouter.patch('/bookings/:id/cancel', asyncHandler(AdminBookingController.cancelBooking));
+

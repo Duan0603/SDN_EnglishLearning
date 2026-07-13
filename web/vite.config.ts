@@ -7,7 +7,7 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000,
+    port: 8081,
     strictPort: true,
     proxy: {
       // Proxy API requests to backend — avoids CORS issues in dev

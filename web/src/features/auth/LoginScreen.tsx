@@ -12,6 +12,7 @@ export default function LoginScreen() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const [require2FA, setRequire2FA] = useState(false);
   const [otpCode, setOtpCode] = useState('');
@@ -190,7 +191,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f3dc] bg-notebook-paper bg-notebook bg-repeat text-[#1b263b] flex items-center justify-center p-4 md:p-12 relative overflow-hidden custom-pencil-cursor">
+    <div className="min-h-screen bg-[#f5f3dc] bg-notebook-paper bg-notebook bg-repeat text-[#1b263b] flex items-center justify-center p-4 md:p-12 relative overflow-hidden custom-pencil-cursor select-none">
       
       {/* Real Spiral Binder Graphic on the Left side */}
       <div className="absolute left-3 top-0 bottom-0 w-10 flex flex-col justify-around pointer-events-none z-20 opacity-90 select-none">
@@ -202,11 +203,22 @@ export default function LoginScreen() {
         ))}
       </div>
 
+      {/* Background Stickers & Targets */}
+      <div className="absolute right-8 top-12 bg-[#ffd54f] border-2 border-[#1b263b] px-4 py-2 rounded-xl shadow-[3px_3px_0px_0px_#1b263b] rotate-6 text-xs font-black tracking-wider hidden md:block">
+        TARGET: BAND 7.5+ 🎯
+      </div>
+      <div className="absolute left-24 bottom-12 bg-sky-100 text-[#4682b4] border border-[#1b263b] px-3 py-1.5 rounded-lg shadow-[2px_2px_0px_0px_#1b263b] -rotate-6 text-[10px] font-black hidden md:block">
+        AI EVALUATOR ACTIVE 🤖
+      </div>
+
       <div className="max-w-6xl w-full grid lg:grid-cols-12 gap-12 items-center relative z-10 pl-12">
         
         {/* Left Column: Animation & Welcome Memo */}
         <div className="lg:col-span-6 space-y-6 flex flex-col items-center lg:items-start text-center lg:text-left">
           <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-6 shadow-[4px_4px_0px_0px_#1b263b] w-full max-w-lg relative overflow-hidden">
+            {/* Top Tape Decoration */}
+            <div className="absolute -top-3 left-1/3 w-28 h-8 bg-amber-200/60 border-l border-r border-[#1b263b] -rotate-3 z-10" />
+
             {/* Red margin vertical line inside the lottie card */}
             <div className="absolute left-6 top-0 bottom-0 w-px bg-[#e0565b]/40 pointer-events-none" />
             
@@ -255,7 +267,11 @@ export default function LoginScreen() {
           {/* Card header spiral ring holes decoration */}
           <div className="absolute -top-3.5 left-0 right-0 flex justify-around px-8 pointer-events-none select-none">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="w-4 h-4 rounded-full bg-[#f5f3dc] border-2 border-[#1b263b] shadow-inner" />
+              <div key={i} className="flex flex-col items-center">
+                {/* Loop ring representation */}
+                <div className="w-1.5 h-6 bg-gradient-to-b from-gray-400 to-gray-300 rounded-full border border-gray-500 shadow-md" />
+                <div className="w-3.5 h-3.5 rounded-full bg-[#f5f3dc] border-2 border-[#1b263b] shadow-inner -mt-3.5" />
+              </div>
             ))}
           </div>
 
@@ -292,8 +308,8 @@ export default function LoginScreen() {
                 </div>
 
                 <form onSubmit={handleVerify2FA} className="space-y-4">
-                  <div className="space-y-1 text-left">
-                    <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                  <div className="space-y-1 text-left relative group">
+                    <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1 group-focus-within:text-[#4682b4] transition-colors">
                       Mã OTP (6 chữ số)
                     </label>
                     <input
@@ -302,7 +318,7 @@ export default function LoginScreen() {
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                       placeholder="------"
-                      className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-4 py-3 text-center text-lg font-bold tracking-[0.5em] text-[#1b263b] outline-none focus:border-[#4682b4] transition-all shadow-inner"
+                      className="w-full bg-[#fefefe] border-2 border-[#1b263b] focus:border-[#4682b4] rounded-xl px-4 py-3 text-center text-lg font-bold tracking-[0.5em] text-[#1b263b] outline-none transition-all shadow-[2px_2px_0px_0px_#1b263b]"
                       required
                     />
                   </div>
@@ -339,7 +355,7 @@ export default function LoginScreen() {
               <div className={`transition-all duration-500 ease-in-out ${!isRegisterMode ? 'max-h-[480px]' : 'max-h-[590px]'}`}>
                 <div className="flex w-[200%] transition-transform duration-500 ease-in-out" style={{ transform: isRegisterMode ? 'translateX(-50%)' : 'translateX(0%)' }}>
                   
-                  {/* COLUMN 1: LOGIN FORM (50% of track width) */}
+                  {/* COLUMN 1: LOGIN FORM */}
                   <div className={`w-1/2 pr-3 space-y-4 transition-opacity duration-500 ${!isRegisterMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                     
                     {/* Title & Logo */}
@@ -354,38 +370,51 @@ export default function LoginScreen() {
                     </div>
 
                     <form onSubmit={handleLoginSubmit} className="space-y-4">
-                      <div className="space-y-1 text-left">
-                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
-                          Tên tài khoản (Username)
+                      <div className="space-y-1 text-left relative group">
+                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1 group-focus-within:text-[#c92a2a] transition-colors">
+                          Tên tài khoản hoặc Email
                         </label>
-                        <input
-                          type="text"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          placeholder="e.g. student123"
-                          className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
-                          required
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="e.g. student123"
+                            className="w-full bg-[#fefefe] border-2 border-[#1b263b] focus:border-[#c92a2a] rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-[#1b263b] outline-none transition-all shadow-[2px_2px_0px_0px_#1b263b] focus:shadow-[4px_4px_0px_0px_#1b263b] focus:-translate-y-0.5"
+                            required
+                          />
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">👤</span>
+                        </div>
                       </div>
 
-                      <div className="space-y-1 text-left">
-                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                      <div className="space-y-1 text-left relative group">
+                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1 group-focus-within:text-[#c92a2a] transition-colors">
                           Mật khẩu (Password)
                         </label>
-                        <input
-                          type="password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-4 py-3 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
-                          required
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="••••••••"
+                            className="w-full bg-[#fefefe] border-2 border-[#1b263b] focus:border-[#c92a2a] rounded-xl pl-9 pr-14 py-2.5 text-xs font-bold text-[#1b263b] outline-none transition-all shadow-[2px_2px_0px_0px_#1b263b] focus:shadow-[4px_4px_0px_0px_#1b263b] focus:-translate-y-0.5"
+                            required
+                          />
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">🔒</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-400 hover:text-[#c92a2a] uppercase tracking-wider transition-colors"
+                          >
+                            {showPassword ? "Ẩn" : "Hiện"}
+                          </button>
+                        </div>
                       </div>
 
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-[#c92a2a] text-white font-black text-xs py-3.5 rounded-xl hover:bg-[#b01e1e] active:scale-[0.98] transition-all shadow-[3px_3px_0px_0px_#1b263b] border-2 border-[#1b263b] flex items-center justify-center gap-2 uppercase tracking-wider"
+                        className="w-full bg-[#c92a2a] text-white font-black text-xs py-3.5 rounded-xl hover:bg-[#b01e1e] active:translate-y-0.5 active:shadow-[2px_2px_0px_0px_#1b263b] transition-all border-2 border-[#1b263b] flex items-center justify-center gap-2 uppercase tracking-wider shadow-[4px_4px_0px_0px_#1b263b] hover:shadow-[2px_2px_0px_0px_#1b263b] hover:translate-x-0.5 hover:translate-y-0.5 cursor-pointer"
                       >
                         {loading ? (
                           <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -414,14 +443,14 @@ export default function LoginScreen() {
                           setIsRegisterMode(true);
                           dispatch(loginFailure(''));
                         }}
-                        className="text-[#c92a2a] underline font-black hover:text-[#b01e1e] transition-colors"
+                        className="text-[#c92a2a] underline font-black hover:text-[#b01e1e] transition-colors cursor-pointer"
                       >
                         Đăng ký ngay
                       </button>
                     </div>
                   </div>
 
-                  {/* COLUMN 2: REGISTER FORM (50% of track width) */}
+                  {/* COLUMN 2: REGISTER FORM */}
                   <div className={`w-1/2 pl-3 space-y-4 transition-opacity duration-500 ${isRegisterMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                     
                     {/* Title & Logo */}
@@ -437,81 +466,103 @@ export default function LoginScreen() {
 
                     <form onSubmit={handleRegisterSubmit} className="space-y-2">
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1 text-left">
-                          <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                        <div className="space-y-1 text-left relative group">
+                          <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1 group-focus-within:text-[#c92a2a] transition-colors">
                             Họ và tên
                           </label>
-                          <input
-                            type="text"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            placeholder="Nguyễn Văn A"
-                            className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
-                            required
-                          />
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={fullName}
+                              onChange={(e) => setFullName(e.target.value)}
+                              placeholder="Nguyễn Văn A"
+                              className="w-full bg-[#fefefe] border-2 border-[#1b263b] focus:border-[#c92a2a] rounded-xl pl-8 pr-3 py-2.5 text-xs font-bold text-[#1b263b] outline-none transition-all shadow-[2px_2px_0px_0px_#1b263b] focus:shadow-[4px_4px_0px_0px_#1b263b] focus:-translate-y-0.5"
+                              required
+                            />
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">📝</span>
+                          </div>
                         </div>
 
-                        <div className="space-y-1 text-left">
-                          <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                        <div className="space-y-1 text-left relative group">
+                          <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1 group-focus-within:text-[#c92a2a] transition-colors">
                             Số điện thoại
                           </label>
-                          <input
-                            type="tel"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="0912345678"
-                            className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
-                            required
-                          />
+                          <div className="relative">
+                            <input
+                              type="tel"
+                              value={phone}
+                              onChange={(e) => setPhone(e.target.value)}
+                              placeholder="0912345678"
+                              className="w-full bg-[#fefefe] border-2 border-[#1b263b] focus:border-[#c92a2a] rounded-xl pl-8 pr-3 py-2.5 text-xs font-bold text-[#1b263b] outline-none transition-all shadow-[2px_2px_0px_0px_#1b263b] focus:shadow-[4px_4px_0px_0px_#1b263b] focus:-translate-y-0.5"
+                              required
+                            />
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">📞</span>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="space-y-1 text-left">
-                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                      <div className="space-y-1 text-left relative group">
+                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1 group-focus-within:text-[#c92a2a] transition-colors">
                           Địa chỉ Email
                         </label>
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="email@example.com"
-                          className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
-                          required
-                        />
+                        <div className="relative">
+                          <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="email@example.com"
+                            className="w-full bg-[#fefefe] border-2 border-[#1b263b] focus:border-[#c92a2a] rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-[#1b263b] outline-none transition-all shadow-[2px_2px_0px_0px_#1b263b] focus:shadow-[4px_4px_0px_0px_#1b263b] focus:-translate-y-0.5"
+                            required
+                          />
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">✉</span>
+                        </div>
                       </div>
 
-                      <div className="space-y-1 text-left">
-                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                      <div className="space-y-1 text-left relative group">
+                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1 group-focus-within:text-[#c92a2a] transition-colors">
                           Tên tài khoản (Username)
                         </label>
-                        <input
-                          type="text"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          placeholder="Username mong muốn..."
-                          className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
-                          required
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="Username mong muốn..."
+                            className="w-full bg-[#fefefe] border-2 border-[#1b263b] focus:border-[#c92a2a] rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-[#1b263b] outline-none transition-all shadow-[2px_2px_0px_0px_#1b263b] focus:shadow-[4px_4px_0px_0px_#1b263b] focus:-translate-y-0.5"
+                            required
+                          />
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">👤</span>
+                        </div>
                       </div>
 
-                      <div className="space-y-1 text-left">
-                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1">
+                      <div className="space-y-1 text-left relative group">
+                        <label className="block text-[10px] font-black text-[#1b263b]/70 uppercase tracking-wider pl-1 group-focus-within:text-[#c92a2a] transition-colors">
                           Mật khẩu (Password)
                         </label>
-                        <input
-                          type="password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="Tối thiểu 6 ký tự..."
-                          className="w-full bg-[#fefefe] border-2 border-[#1b263b] rounded-xl px-3 py-2 text-xs font-bold text-[#1b263b] outline-none focus:border-[#c92a2a] transition-all shadow-inner"
-                          required
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Tối thiểu 6 ký tự..."
+                            className="w-full bg-[#fefefe] border-2 border-[#1b263b] focus:border-[#c92a2a] rounded-xl pl-9 pr-14 py-2.5 text-xs font-bold text-[#1b263b] outline-none transition-all shadow-[2px_2px_0px_0px_#1b263b] focus:shadow-[4px_4px_0px_0px_#1b263b] focus:-translate-y-0.5"
+                            required
+                          />
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">🔒</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-400 hover:text-[#c92a2a] uppercase tracking-wider transition-colors"
+                          >
+                            {showPassword ? "Ẩn" : "Hiện"}
+                          </button>
+                        </div>
                       </div>
 
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-[#c92a2a] text-white font-black text-xs py-3.5 rounded-xl hover:bg-[#b01e1e] active:scale-[0.98] transition-all shadow-[3px_3px_0px_0px_#1b263b] border-2 border-[#1b263b] flex items-center justify-center gap-2 uppercase tracking-wider"
+                        className="w-full bg-[#c92a2a] text-white font-black text-xs py-3.5 rounded-xl hover:bg-[#b01e1e] active:translate-y-0.5 active:shadow-[2px_2px_0px_0px_#1b263b] transition-all border-2 border-[#1b263b] flex items-center justify-center gap-2 uppercase tracking-wider shadow-[4px_4px_0px_0px_#1b263b] hover:shadow-[2px_2px_0px_0px_#1b263b] hover:translate-x-0.5 hover:translate-y-0.5 cursor-pointer"
                       >
                         {loading ? (
                           <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -529,7 +580,7 @@ export default function LoginScreen() {
                           setIsRegisterMode(false);
                           dispatch(loginFailure(''));
                         }}
-                        className="text-[#c92a2a] underline font-black hover:text-[#b01e1e] transition-colors"
+                        className="text-[#c92a2a] underline font-black hover:text-[#b01e1e] transition-colors cursor-pointer"
                       >
                         Đăng nhập ngay
                       </button>
