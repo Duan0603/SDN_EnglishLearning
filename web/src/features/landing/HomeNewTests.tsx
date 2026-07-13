@@ -118,7 +118,7 @@ export default function HomeNewTests() {
                           👤 My Profile
                         </Link>
                         <Link
-                          to="/profile?tab=settings"
+                          to="/settings"
                           onClick={() => setIsDropdownOpen(false)}
                           className="w-full px-4 py-2 text-xs font-black text-[#1b263b] hover:bg-[#1b263b] hover:text-[#f5f3dc] transition-all text-left flex items-center gap-2 border-b border-[#1b263b]/10 cursor-pointer block"
                         >
