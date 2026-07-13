@@ -47,21 +47,14 @@ export default function AdminDashboard() {
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'STUDENT' | 'MENTOR' | 'PENDING'>('ALL')
-
   // Data States
   const [usersList, setUsersList] = useState<User[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersError, setUsersError] = useState<string | null>(null)
 
-  const [bookingsList, setBookingsList] = useState<Booking[]>([
-    { id: 'BK001', studentName: 'Nguyen Minh Anh', mentorName: 'Emily Smith', dateTime: '2026-06-18 09:00', amount: 350000, status: 'Confirmed' },
-    { id: 'BK002', studentName: 'Tran Huu Binh', mentorName: 'David Lee', dateTime: '2026-06-18 14:00', amount: 400000, status: 'Pending' },
-    { id: 'BK003', studentName: 'Le Thi Hoa', mentorName: 'Sarah Nguyen', dateTime: '2026-06-19 10:30', amount: 350000, status: 'Confirmed' },
-    { id: 'BK004', studentName: 'Nguyen Minh Anh', mentorName: 'Emily Smith', dateTime: '2026-06-20 16:00', amount: 350000, status: 'Pending' },
-    { id: 'BK005', studentName: 'Pham Minh Hoang', mentorName: 'Sarah Nguyen', dateTime: '2026-06-21 08:30', amount: 350000, status: 'Confirmed' },
-    { id: 'BK006', studentName: 'Tran Huu Binh', mentorName: 'John Doe', dateTime: '2026-06-21 15:00', amount: 400000, status: 'Completed' },
-    { id: 'BK007', studentName: 'Vu Hoang Lam', mentorName: 'Emily Smith', dateTime: '2026-06-22 10:00', amount: 350000, status: 'Cancelled' }
-  ])
+  const [bookingsList, setBookingsList] = useState<Booking[]>([])
+  const [bookingsLoading, setBookingsLoading] = useState(false)
+  const [bookingsError, setBookingsError] = useState<string | null>(null)
 
   // Exams State
   const [examsList, setExamsList] = useState<Exam[]>([])
@@ -201,17 +194,52 @@ export default function AdminDashboard() {
     }
   }
 
+  const fetchBookings = async () => {
+    setBookingsLoading(true)
+    setBookingsError(null)
+    try {
+      const res = await apiClient.get('/admin/bookings')
+      const raw = res.data?.data || []
+      setBookingsList(raw.map((b: any) => ({
+        id: b.id,
+        studentName: b.student?.fullName || 'Học viên',
+        mentorName: b.mentor?.fullName || 'Mentor',
+        dateTime: new Date(b.startTime).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }),
+        amount: 350000,
+        status: b.status === 'PENDING' ? 'Pending' :
+                b.status === 'CONFIRMED' ? 'Confirmed' :
+                b.status === 'COMPLETED' ? 'Completed' : 'Cancelled'
+      })))
+    } catch (err: any) {
+      console.warn('Backend connection failed, using mockup booking data:', err.message)
+      setBookingsList([
+        { id: 'BK001', studentName: 'Nguyen Minh Anh', mentorName: 'Emily Smith', dateTime: '2026-06-18 09:00', amount: 350000, status: 'Confirmed' },
+        { id: 'BK002', studentName: 'Tran Huu Binh', mentorName: 'David Lee', dateTime: '2026-06-18 14:00', amount: 400000, status: 'Pending' },
+        { id: 'BK003', studentName: 'Le Thi Hoa', mentorName: 'Sarah Nguyen', dateTime: '2026-06-19 10:30', amount: 350000, status: 'Confirmed' },
+        { id: 'BK004', studentName: 'Nguyen Minh Anh', mentorName: 'Emily Smith', dateTime: '2026-06-20 16:00', amount: 350000, status: 'Pending' },
+        { id: 'BK005', studentName: 'Pham Minh Hoang', mentorName: 'Sarah Nguyen', dateTime: '2026-06-21 08:30', amount: 350000, status: 'Confirmed' },
+        { id: 'BK006', studentName: 'Tran Huu Binh', mentorName: 'John Doe', dateTime: '2026-06-21 15:00', amount: 400000, status: 'Completed' },
+        { id: 'BK007', studentName: 'Vu Hoang Lam', mentorName: 'Emily Smith', dateTime: '2026-06-22 10:00', amount: 350000, status: 'Cancelled' }
+      ])
+      setBookingsError('Đang dùng dữ liệu mô phỏng. Kết nối backend để tải lịch học thực tế.')
+    } finally {
+      setBookingsLoading(false)
+    }
+  }
+
   // Load initial data on mount for stats cards & detail views
   useEffect(() => {
     fetchUsers()
     fetchSubmissions()
     fetchExams()
+    fetchBookings()
   }, [])
 
   useEffect(() => {
     if (activeTab === 'users') fetchUsers()
     if (activeTab === 'submissions') fetchSubmissions()
     if (activeTab === 'exams') fetchExams()
+    if (activeTab === 'orders') fetchBookings()
   }, [activeTab])
 
   const fetchSubmissions = async () => {
@@ -483,16 +511,29 @@ export default function AdminDashboard() {
   // ────────────────────────────────────────────────────────
   // HANDLERS: Booking status
   // ────────────────────────────────────────────────────────
-  const handleBookingConfirm = (id: string) => {
-    setBookingsList((prev) =>
-      prev.map((bk) => (bk.id === id ? { ...bk, status: 'Confirmed' } : bk))
-    )
+  const handleBookingConfirm = async (id: string) => {
+    try {
+      await apiClient.patch(`/admin/bookings/${id}/confirm`)
+      setBookingsList((prev) =>
+        prev.map((bk) => (bk.id === id ? { ...bk, status: 'Confirmed' } : bk))
+      )
+      alert('Xác nhận lịch học thành công!')
+    } catch (err: any) {
+      alert('Lỗi xác nhận lịch học: ' + (err.response?.data?.message || err.message))
+    }
   }
 
-  const handleBookingCancel = (id: string) => {
-    setBookingsList((prev) =>
-      prev.map((bk) => (bk.id === id ? { ...bk, status: 'Cancelled' } : bk))
-    )
+  const handleBookingCancel = async (id: string) => {
+    const reason = prompt('Nhập lý do hủy lịch học (nếu có):') || 'Hủy bởi Admin'
+    try {
+      await apiClient.patch(`/admin/bookings/${id}/cancel`, { cancelReason: reason })
+      setBookingsList((prev) =>
+        prev.map((bk) => (bk.id === id ? { ...bk, status: 'Cancelled' } : bk))
+      )
+      alert('Đã hủy lịch học thành công!')
+    } catch (err: any) {
+      alert('Lỗi hủy lịch học: ' + (err.response?.data?.message || err.message))
+    }
   }
 
   // ────────────────────────────────────────────────────────
@@ -807,8 +848,12 @@ export default function AdminDashboard() {
       <div className="w-64 bg-[#fcfbf7] border-r-2 border-[#1b263b] flex flex-col justify-between relative z-20 shadow-[2px_0_10px_rgba(27,38,59,0.05)]">
         <div>
           {/* Logo Brand */}
-          <div className="p-6 border-b-2 border-[#1b263b] flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#c92a2a] border-2 border-[#1b263b] rounded-xl flex items-center justify-center text-white font-serif font-black text-xl shadow-[2px_2px_0px_0px_#1b263b]">
+          <div 
+            onClick={() => navigate('/')} 
+            className="p-6 border-b-2 border-[#1b263b] flex items-center gap-3 cursor-pointer hover:bg-black/[0.03] transition-colors"
+            title="Quay lại Trang chủ"
+          >
+            <div className="w-10 h-10 bg-[#c92a2a] border-2 border-[#1b263b] rounded-xl flex items-center justify-center text-white font-serif font-black text-xl shadow-[2px_2px_0px_0px_#1b263b] hover:scale-105 active:scale-95 transition-transform">
               A
             </div>
             <div>
@@ -824,7 +869,7 @@ export default function AdminDashboard() {
             {[
               { id: 'dashboard', name: 'Dashboard', icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z' },
               { id: 'users', name: 'Quản lý Người dùng', icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z' },
-              { id: 'orders', name: 'Quản lý Đơn hàng', icon: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z' },
+              { id: 'orders', name: 'Quản lý Đặt lịch Mentor', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
               { id: 'exams', name: 'Quản lý Đề thi', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
               { id: 'submissions', name: 'Kết quả làm bài', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' }
             ].map((item) => {
@@ -836,7 +881,7 @@ export default function AdminDashboard() {
                     setActiveTab(item.id as any)
                     setSearchQuery('')
                   }}
-                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-300 relative group border-2 ${
+                  className={`w-full flex items-center text-left gap-3.5 px-4 py-3 rounded-xl transition-all duration-300 relative group border-2 ${
                     isActive
                       ? 'bg-[#ffd54f] border-[#1b263b] text-[#1b263b] font-black shadow-[2px_2px_0px_0px_#1b263b]'
                       : 'text-[#1b263b]/70 border-transparent hover:bg-white/50 hover:text-[#1b263b]'
@@ -888,7 +933,7 @@ export default function AdminDashboard() {
             <h1 className="text-lg font-black text-[#1b263b] capitalize tracking-wide flex items-center gap-2 font-serif">
               {activeTab === 'dashboard' && 'Dashboard Overview'}
               {activeTab === 'users' && 'Quản Lý Người Dùng'}
-              {activeTab === 'orders' && 'Quản Lý Đơn Hàng'}
+              {activeTab === 'orders' && 'Quản Lý Đặt Lịch Mentor'}
               {activeTab === 'exams' && 'Quản Lý Đề Thi'}
               {activeTab === 'submissions' && 'Quản Lý Kết Quả Làm Bài'}
             </h1>
@@ -1245,6 +1290,14 @@ export default function AdminDashboard() {
              ──────────────────────────────────────────────────────── */}
           {activeTab === 'orders' && (
             <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-6 animate-fade-in relative z-10">
+              {/* Backend Error Warning Display */}
+              {bookingsError && (
+                <div className="bg-[#fbcfe8] border-2 border-[#1b263b] text-[#9d174d] px-5 py-3 rounded-2xl text-xs font-black flex items-center justify-between shadow-[2px_2px_0px_0px_#1b263b]">
+                  <span>⚠️ {bookingsError}</span>
+                  <button onClick={() => setBookingsError(null)} className="text-[#9d174d] hover:text-rose-700 font-bold ml-2">✕</button>
+                </div>
+              )}
+
               {/* Controls bar */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center bg-white border-2 border-[#1b263b] focus-within:border-[#c92a2a] rounded-xl px-4 py-2.5 w-full md:w-96 transition-all shadow-[2px_2px_0px_0px_#1b263b]">
@@ -1276,7 +1329,13 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredBookings.length === 0 ? (
+                    {bookingsLoading ? (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-[#1b263b]/60 font-black">
+                          <span className="inline-block animate-pulse">Đang tải danh sách lịch đặt...</span>
+                        </td>
+                      </tr>
+                    ) : filteredBookings.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="p-8 text-center text-[#1b263b]/60 font-black">
                           Không có giao dịch/lịch đặt nào phù hợp.
