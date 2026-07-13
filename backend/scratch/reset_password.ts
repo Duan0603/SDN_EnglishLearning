@@ -7,22 +7,25 @@ import bcrypt from "bcryptjs";
 
 async function main() {
   try {
-    const email = "vuhailam05@gmail.com";
     const newPasswordText = "password123";
-    
-    // Hash password with 10 rounds
     const hashedPassword = await bcrypt.hash(newPasswordText, 10);
     
-    // Update the password in MongoDB
-    const result = await userModel.updateOne(
-      { email: email },
-      { $set: { password: hashedPassword, isTwoFactorEnabled: false } }
+    // 1. Update vuhailam05@gmail.com
+    await userModel.updateOne(
+      { email: "vuhailam05@gmail.com" },
+      { $set: { password: hashedPassword, isTwoFactorEnabled: false, role: "MENTOR" } }
     );
+    console.log("Successfully updated vuhailam05@gmail.com to MENTOR.");
+
+    // 2. Update mentor@sdn.com
+    await userModel.updateOne(
+      { email: "mentor@sdn.com" },
+      { $set: { password: hashedPassword, isTwoFactorEnabled: false, role: "MENTOR" } }
+    );
+    console.log("Successfully updated mentor@sdn.com password to password123.");
     
-    console.log(`Successfully updated user ${email} password to: ${newPasswordText}`);
-    console.log("MongoDB update result:", result);
   } catch (error: any) {
-    console.error("Failed to reset password:", error);
+    console.error("Failed to reset passwords:", error);
   } finally {
     const mongoose = await import("mongoose");
     await mongoose.default.disconnect();
