@@ -302,7 +302,7 @@ export default function PracticeWorkspace() {
       const handleBookingUpdate = (data: any) => {
         console.log('[Socket] Received booking:update event:', data);
         const { studentId, mentorId } = data;
-        const currentUserId = user?.id;
+        const currentUserId = user?.id || user?._id;
         if (currentUserId && (currentUserId === studentId || currentUserId === mentorId)) {
           if (isMentor) {
             fetchMySlots();
@@ -596,7 +596,7 @@ export default function PracticeWorkspace() {
 
     socket.emit('chat:send_message', {
       bookingId: selectedBookingForChat.id,
-      senderId: user?.id,
+      senderId: user?.id || user?._id,
       content: messageContent
     });
   };
@@ -1766,7 +1766,7 @@ export default function PracticeWorkspace() {
                       </div>
                     ) : (
                       chatMessages.map((msg) => {
-                        const isMe = msg.senderId === user?.id;
+                        const isMe = msg.senderId === (user?.id || user?._id);
                         return (
                           <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[80%] border-2 border-[#1b263b] rounded-2xl p-3 shadow-[2px_2px_0px_0px_#1b263b] text-left ${
