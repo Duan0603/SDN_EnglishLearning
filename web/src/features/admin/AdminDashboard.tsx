@@ -41,12 +41,19 @@ export default function AdminDashboard() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
 
-  // Tab State: 'dashboard' | 'users' | 'orders' | 'exams' | 'submissions'
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'orders' | 'exams' | 'submissions'>('dashboard')
+  // Tab State: 'dashboard' | 'users' | 'orders' | 'exams' | 'submissions' | 'mentorRequests'
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'orders' | 'exams' | 'submissions' | 'mentorRequests'>('dashboard')
   
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'STUDENT' | 'MENTOR' | 'PENDING'>('ALL')
+  
+  // Mentor requests state
+  const [mentorReqsList, setMentorReqsList] = useState<any[]>([])
+  const [mentorReqsLoading, setMentorReqsLoading] = useState(false)
+  const [mentorReqsError, setMentorReqsError] = useState<string | null>(null)
+  const [mentorReqsFilter, setMentorReqsFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
+
   // Data States
   const [usersList, setUsersList] = useState<User[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
@@ -226,6 +233,57 @@ export default function AdminDashboard() {
       setBookingsLoading(false)
     }
   }
+  const fetchMentorRequests = async () => {
+    setMentorReqsLoading(true)
+    setMentorReqsError(null)
+    try {
+      const queryStatus = mentorReqsFilter === 'ALL' ? '' : `?status=${mentorReqsFilter}`
+      const res = await apiClient.get(`/admin/mentor-requests${queryStatus}`)
+      const raw = res.data?.data || []
+      setMentorReqsList(raw.map((req: any) => ({ ...req, id: req._id || req.id })))
+    } catch (err: any) {
+      console.warn('Failed to fetch mentor requests:', err.message)
+      setMentorReqsError('Lỗi tải danh sách yêu cầu nâng cấp Mentor.')
+    } finally {
+      setMentorReqsLoading(false)
+    }
+  }
+
+  const handleApproveMentorRequest = async (id: string) => {
+    if (!confirm('Bạn có chắc chắn muốn phê duyệt học viên này lên Mentor?')) return
+    try {
+      const res = await apiClient.patch(`/admin/mentor-requests/${id}/approve`)
+      if (res.data?.success) {
+        alert('Phê duyệt tài khoản lên Mentor thành công!')
+        fetchMentorRequests()
+      } else {
+        alert('Phê duyệt thất bại.')
+      }
+    } catch (err: any) {
+      alert('Lỗi phê duyệt: ' + (err.response?.data?.message || err.message))
+    }
+  }
+
+  const handleRejectMentorRequest = async (id: string) => {
+    const reason = prompt('Nhập lý do từ chối yêu cầu đăng ký Mentor:')
+    if (reason === null) return; // cancelled
+    if (!reason.trim()) {
+      alert('Vui lòng nhập lý do từ chối!')
+      return
+    }
+
+    try {
+      const res = await apiClient.patch(`/admin/mentor-requests/${id}/reject`, { reason })
+      if (res.data?.success) {
+        alert('Đã từ chối yêu cầu nâng cấp Mentor.')
+        fetchMentorRequests()
+      } else {
+        alert('Từ chối thất bại.')
+      }
+    } catch (err: any) {
+      alert('Lỗi từ chối: ' + (err.response?.data?.message || err.message))
+    }
+  }
 
   // Load initial data on mount for stats cards & detail views
   useEffect(() => {
@@ -233,6 +291,7 @@ export default function AdminDashboard() {
     fetchSubmissions()
     fetchExams()
     fetchBookings()
+    fetchMentorRequests()
   }, [])
 
   useEffect(() => {
@@ -240,7 +299,8 @@ export default function AdminDashboard() {
     if (activeTab === 'submissions') fetchSubmissions()
     if (activeTab === 'exams') fetchExams()
     if (activeTab === 'orders') fetchBookings()
-  }, [activeTab])
+    if (activeTab === 'mentorRequests') fetchMentorRequests()
+  }, [activeTab, mentorReqsFilter])
 
   const fetchSubmissions = async () => {
     setSubmissionsLoading(true)
@@ -870,6 +930,7 @@ export default function AdminDashboard() {
               { id: 'dashboard', name: 'Dashboard', icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z' },
               { id: 'users', name: 'Quản lý Người dùng', icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z' },
               { id: 'orders', name: 'Quản lý Đặt lịch Mentor', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+              { id: 'mentorRequests', name: 'Duyệt hồ sơ Mentor', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
               { id: 'exams', name: 'Quản lý Đề thi', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
               { id: 'submissions', name: 'Kết quả làm bài', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' }
             ].map((item) => {
@@ -934,6 +995,7 @@ export default function AdminDashboard() {
               {activeTab === 'dashboard' && 'Dashboard Overview'}
               {activeTab === 'users' && 'Quản Lý Người Dùng'}
               {activeTab === 'orders' && 'Quản Lý Đặt Lịch Mentor'}
+              {activeTab === 'mentorRequests' && 'Duyệt Yêu Cầu Nâng Cấp Mentor'}
               {activeTab === 'exams' && 'Quản Lý Đề Thi'}
               {activeTab === 'submissions' && 'Quản Lý Kết Quả Làm Bài'}
             </h1>
@@ -974,7 +1036,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex gap-2.5">
                     <button 
-                      onClick={() => setActiveTab('users')}
+                      onClick={() => setActiveTab('mentorRequests')}
                       className="bg-[#ffd54f] text-[#1b263b] border-2 border-[#1b263b] font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-[2px_2px_0px_0px_#1b263b] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_#1b263b]"
                     >
                       Duyệt Mentor ngay
@@ -1100,6 +1162,169 @@ export default function AdminDashboard() {
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ────────────────────────────────────────────────────────
+              MENTOR REQUESTS MANAGEMENT VIEW
+             ──────────────────────────────────────────────────────── */}
+          {activeTab === 'mentorRequests' && (
+            <div className="space-y-6 relative z-10 animate-fade-in text-left">
+              {mentorReqsError && (
+                <div className="bg-[#fbcfe8] border-2 border-[#1b263b] text-[#9d174d] px-5 py-3 rounded-2xl text-xs font-black flex items-center justify-between shadow-[2px_2px_0px_0px_#1b263b]">
+                  <span>⚠️ {mentorReqsError}</span>
+                  <button onClick={() => setMentorReqsError(null)} className="text-[#9d174d] hover:text-rose-700 font-bold ml-2">✕</button>
+                </div>
+              )}
+
+              <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-2xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-6">
+                {/* Control bar */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-[#1b263b] font-serif">Danh sách yêu cầu nâng cấp Mentor</h3>
+                    <p className="text-xs text-[#1b263b]/70">Duyệt hồ sơ và chứng chỉ của học viên đăng ký làm người hướng dẫn</p>
+                  </div>
+
+                  {/* Filter Switcher */}
+                  <div className="flex items-center gap-2">
+                    <div className="bg-white p-1 rounded-xl border-2 border-[#1b263b] flex gap-1 shadow-[2px_2px_0px_0px_#1b263b]">
+                      {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((flt) => {
+                        const isActive = mentorReqsFilter === flt
+                        return (
+                          <button
+                            key={flt}
+                            onClick={() => setMentorReqsFilter(flt)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition-all ${
+                              isActive 
+                                ? 'bg-[#ffd54f] border border-[#1b263b] text-[#1b263b] shadow-[1px_1px_0px_0px_#1b263b]' 
+                                : 'text-[#1b263b]/70 hover:bg-[#f5f3dc]'
+                            }`}
+                          >
+                            {flt === 'PENDING' ? 'Chờ duyệt' : flt === 'APPROVED' ? 'Đã duyệt' : flt === 'REJECTED' ? 'Từ chối' : 'Tất cả'}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table requests */}
+                <div className="overflow-x-auto border-2 border-[#1b263b] rounded-xl bg-white shadow-[2px_2px_0px_0px_#1b263b]">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#f5f3dc] border-b-2 border-[#1b263b]">
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Học Viên ứng tuyển</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Lĩnh vực chuyên môn</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Giới thiệu bản thân</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Chứng chỉ</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider">Trạng thái</th>
+                        <th className="p-4 text-xs font-black text-[#1b263b] uppercase tracking-wider text-right">Hành Động</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mentorReqsLoading ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-[#1b263b]/60 font-black">
+                            <span className="inline-block animate-pulse">Đang tải yêu cầu đăng ký...</span>
+                          </td>
+                        </tr>
+                      ) : mentorReqsList.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-[#1b263b]/60 font-black">
+                            Không tìm thấy yêu cầu đăng ký Mentor nào.
+                          </td>
+                        </tr>
+                      ) : (
+                        mentorReqsList.map((item: any) => (
+                          <tr key={item.id} className="border-b border-[#1b263b]/10 hover:bg-[#f5f3dc]/25 transition-colors">
+                            <td className="p-4">
+                              <div className="flex items-center gap-3">
+                                {item.user?.avatar ? (
+                                  <img src={item.user.avatar} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-[#1b263b]/20" />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-gray-200 border border-[#1b263b]/20 flex items-center justify-center font-bold text-[#1b263b] text-xs">
+                                    {(item.user?.fullName || 'H').charAt(0)}
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="text-sm font-bold text-[#1b263b]">{item.user?.fullName || 'Học viên'}</p>
+                                  <p className="text-xs text-[#1b263b]/60 font-semibold">@{item.user?.username || 'user'}</p>
+                                  <p className="text-[9px] text-[#1b263b]/40 font-semibold">{item.user?.email}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <p className="text-xs font-bold text-[#1b263b] line-clamp-2 max-w-[200px]" title={item.expertise}>
+                                {item.expertise || 'N/A'}
+                              </p>
+                            </td>
+                            <td className="p-4">
+                              <p className="text-xs text-[#1b263b]/80 max-w-[250px] line-clamp-3" title={item.bio}>
+                                {item.bio || 'N/A'}
+                              </p>
+                            </td>
+                            <td className="p-4">
+                              <div className="flex flex-col gap-1">
+                                {item.certificates && item.certificates.length > 0 ? (
+                                  item.certificates.map((certUrl: string, cIdx: number) => (
+                                    <a
+                                      key={cIdx}
+                                      href={certUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-xs text-blue-600 hover:text-blue-800 font-bold hover:underline flex items-center gap-1"
+                                    >
+                                      📄 Chứng chỉ {cIdx + 1}
+                                    </a>
+                                  ))
+                                ) : (
+                                  <span className="text-xs text-gray-400">Không có</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <span
+                                className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border-2 border-[#1b263b]/40 shadow-[1px_1px_0px_0px_#1b263b] ${
+                                  item.status === 'APPROVED'
+                                    ? 'bg-[#a7f3d0] text-[#005c42]'
+                                    : item.status === 'PENDING'
+                                    ? 'bg-[#ffd54f] text-[#1b263b]'
+                                    : 'bg-[#fbcfe8] text-[#9d174d]'
+                                }`}
+                              >
+                                {item.status === 'APPROVED' ? 'Đã duyệt' : item.status === 'PENDING' ? 'Chờ duyệt' : 'Từ chối'}
+                              </span>
+                              {item.status === 'REJECTED' && item.adminComment && (
+                                <p className="text-[10px] text-red-600 font-bold mt-1 max-w-[150px] truncate" title={item.adminComment}>
+                                  Lý do: {item.adminComment}
+                                </p>
+                              )}
+                            </td>
+                            <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
+                              {item.status === 'PENDING' && (
+                                <>
+                                  <button
+                                    onClick={() => handleApproveMentorRequest(item.id)}
+                                    className="bg-[#a7f3d0] hover:bg-emerald-300 border-2 border-[#1b263b] text-[#005c42] px-2.5 py-1.5 rounded-lg text-[10px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
+                                  >
+                                    Phê duyệt
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectMentorRequest(item.id)}
+                                    className="bg-[#fbcfe8] hover:bg-rose-200 border-2 border-[#1b263b] text-[#9d174d] px-2.5 py-1.5 rounded-lg text-[10px] font-black shadow-[1px_1px_0px_0px_#1b263b] transition-all"
+                                  >
+                                    Từ chối
+                                  </button>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

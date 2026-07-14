@@ -32,7 +32,7 @@ const AdminScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'users', 'exams'
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Mentor requests state
   const [requestsList, setRequestsList] = useState([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
@@ -124,7 +124,7 @@ const AdminScreen = ({ navigation }) => {
       setActionLoading(false);
     }
   };
-  
+
   // ── Users state ─────────────────────────────────────────
   const [usersList, setUsersList] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -154,7 +154,7 @@ const AdminScreen = ({ navigation }) => {
   }, [fetchUsers]);
 
   const filteredUsers = useMemo(() => {
-    return usersList.filter(u => 
+    return usersList.filter(u =>
       u.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.email?.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -169,7 +169,7 @@ const AdminScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={S.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
-      
+
       {/* ── App Bar ──────────────────────────────────── */}
       <View style={S.appBar}>
         <TouchableOpacity style={S.backBtn} onPress={() => navigation.goBack()}>
@@ -235,7 +235,7 @@ const AdminScreen = ({ navigation }) => {
       </View>
 
       <ScrollView style={S.scroll} contentContainerStyle={S.scrollContent} showsVerticalScrollIndicator={false}>
-        
+
         {/* ==================== DASHBOARD ==================== */}
         {activeTab === 'dashboard' && (
           <View>
@@ -282,7 +282,7 @@ const AdminScreen = ({ navigation }) => {
               leftIconName="search"
               containerStyle={{ marginBottom: SPACING.md }}
             />
-            
+
             {usersLoading ? (
               <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
             ) : (
@@ -340,7 +340,7 @@ const AdminScreen = ({ navigation }) => {
         {activeTab === 'mentor_requests' && (
           <View>
             <Text style={S.sectionTitle}>Yêu cầu nâng cấp Mentor đang chờ duyệt</Text>
-            
+
             {requestsLoading ? (
               <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
             ) : requestsList.length === 0 ? (
@@ -358,18 +358,18 @@ const AdminScreen = ({ navigation }) => {
                   </View>
                   <Text style={S.listCardSub}>Email: {req.user?.email}</Text>
                   <Text style={S.listCardSub}>SĐT: {req.user?.phone || 'Chưa cung cấp'}</Text>
-                  
+
                   <View style={{ marginTop: 10, padding: 10, backgroundColor: COLORS.background, borderRadius: RADIUS.md }}>
                     <Text style={{ fontSize: 13, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary }}>Chuyên môn:</Text>
                     <Text style={{ fontSize: 13, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary, marginTop: 2 }}>{req.expertise}</Text>
-                    
+
                     <Text style={{ fontSize: 13, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary, marginTop: 6 }}>Giới thiệu:</Text>
                     <Text style={{ fontSize: 13, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary, marginTop: 2 }}>{req.bio}</Text>
 
                     <Text style={{ fontSize: 13, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary, marginTop: 6 }}>Chứng chỉ đính kèm:</Text>
                     {req.certificates?.map((url, idx) => (
-                      <TouchableOpacity 
-                        key={idx} 
+                      <TouchableOpacity
+                        key={idx}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}
                         onPress={() => Linking.openURL(url)}
                       >
@@ -382,14 +382,14 @@ const AdminScreen = ({ navigation }) => {
                   </View>
 
                   <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-                    <TouchableOpacity 
-                      style={[S.actionBtn, { backgroundColor: COLORS.success }]} 
+                    <TouchableOpacity
+                      style={[S.actionBtn, { backgroundColor: COLORS.success }]}
                       onPress={() => handleApprove(req.id || req._id)}
                     >
                       <Text style={S.actionBtnText}>PHÊ DUYỆT</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[S.actionBtn, { backgroundColor: COLORS.danger }]} 
+                    <TouchableOpacity
+                      style={[S.actionBtn, { backgroundColor: COLORS.danger }]}
                       onPress={() => handleOpenReject(req)}
                     >
                       <Text style={S.actionBtnText}>TỪ CHỐI</Text>
@@ -400,7 +400,7 @@ const AdminScreen = ({ navigation }) => {
             )}
           </View>
         )}
-        
+
       </ScrollView>
 
       {/* Reject Modal */}
@@ -432,14 +432,14 @@ const AdminScreen = ({ navigation }) => {
               multiline
             />
             <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
-              <TouchableOpacity 
-                style={{ flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.borderLight, alignItems: 'center' }} 
+              <TouchableOpacity
+                style={{ flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.borderLight, alignItems: 'center' }}
                 onPress={() => setRejectModalVisible(false)}
               >
                 <Text style={{ fontFamily: TYPOGRAPHY.fontBold, fontSize: 13, color: COLORS.textPrimary }}>HỦY</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={{ flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, backgroundColor: COLORS.danger, alignItems: 'center' }} 
+              <TouchableOpacity
+                style={{ flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, backgroundColor: COLORS.danger, alignItems: 'center' }}
                 onPress={handleRejectSubmit}
               >
                 <Text style={{ fontFamily: TYPOGRAPHY.fontBold, fontSize: 13, color: '#fff' }}>GỬI TỪ CHỐI</Text>
@@ -466,7 +466,7 @@ const S = StyleSheet.create({
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   appBarTitle: { fontSize: TYPOGRAPHY.md, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary },
-  
+
   tabsContainer: {
     backgroundColor: COLORS.surface,
     padding: SPACING.sm,
