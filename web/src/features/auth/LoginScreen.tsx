@@ -4,8 +4,10 @@ import { loginStart, loginSuccess, loginFailure } from './authSlice';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiClient } from '../../services/api.client';
 import { DotLottiePlayer } from '@dotlottie/react-player';
+import { useModal } from '../shared/ModalProvider';
 
 export default function LoginScreen() {
+  const { showAlert } = useModal();
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -101,7 +103,7 @@ export default function LoginScreen() {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
-      alert('Vui lòng điền đầy đủ Tên tài khoản và Mật khẩu.');
+      await showAlert('Vui lòng điền đầy đủ Tên tài khoản và Mật khẩu.');
       return;
     }
 
@@ -136,7 +138,7 @@ export default function LoginScreen() {
   const handleVerify2FA = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpCode.trim()) {
-      alert('Vui lòng nhập mã xác thực.');
+      await showAlert('Vui lòng nhập mã xác thực.');
       return;
     }
     setOtpLoading(true);
@@ -166,7 +168,7 @@ export default function LoginScreen() {
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim() || !fullName.trim() || !email.trim() || !phone.trim()) {
-      alert('Vui lòng điền đầy đủ tất cả các trường.');
+      await showAlert('Vui lòng điền đầy đủ tất cả các trường.');
       return;
     }
 
@@ -180,7 +182,7 @@ export default function LoginScreen() {
         phone,
         role: 'STUDENT'
       });
-      alert('Đăng ký tài khoản thành công! Hãy thực hiện đăng nhập.');
+      await showAlert('Đăng ký tài khoản thành công! Hãy thực hiện đăng nhập.');
       setIsRegisterMode(false);
       setPassword('');
       dispatch(loginFailure(''));

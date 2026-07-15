@@ -4,12 +4,14 @@ import { useAppDispatch, useAppSelector } from '../../store/store';
 import { logout } from '../auth/authSlice';
 import { apiClient } from '../../services/api.client';
 import { socket } from '../../services/socket';
+import { useModal } from '../shared/ModalProvider';
 
 export default function PracticeWorkspace() {
   const { user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { showAlert, showConfirm } = useModal();
   
   // Tabs: 'speaking' | 'writing' | 'reading' | 'listening' | 'mentors' | 'tracker'
   const activeTab = searchParams.get('tab') || 'speaking';
@@ -372,7 +374,7 @@ export default function PracticeWorkspace() {
   };
 
   const handleCancelBooking = async (bookingId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy lịch học này?')) return;
+    if (!await showConfirm('Bạn có chắc chắn muốn hủy lịch học này?')) return;
     try {
       await apiClient.patch(`/bookings/${bookingId}/cancel`);
       setBookingSuccess('Hủy đặt lịch học thành công!');
@@ -423,7 +425,7 @@ export default function PracticeWorkspace() {
 
   const handleConfirmCreateSlot = async () => {
     if (!slotDate || !slotStartTime || !slotEndTime) {
-      alert('Vui lòng nhập đầy đủ Ngày, Giờ bắt đầu và Giờ kết thúc.');
+      await showAlert('Vui lòng nhập đầy đủ Ngày, Giờ bắt đầu và Giờ kết thúc.');
       return;
     }
     setIsSubmittingSlot(true);
@@ -434,19 +436,19 @@ export default function PracticeWorkspace() {
       const endDateTime = new Date(`${slotDate}T${slotEndTime}:00`);
 
       if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
-        alert('Ngày hoặc giờ không hợp lệ.');
+        await showAlert('Ngày hoặc giờ không hợp lệ.');
         setIsSubmittingSlot(false);
         return;
       }
 
       if (startDateTime <= new Date()) {
-        alert('Giờ bắt đầu phải ở tương lai.');
+        await showAlert('Giờ bắt đầu phải ở tương lai.');
         setIsSubmittingSlot(false);
         return;
       }
 
       if (endDateTime <= startDateTime) {
-        alert('Giờ kết thúc phải sau giờ bắt đầu.');
+        await showAlert('Giờ kết thúc phải sau giờ bắt đầu.');
         setIsSubmittingSlot(false);
         return;
       }
@@ -469,7 +471,7 @@ export default function PracticeWorkspace() {
   };
 
   const handleDeleteSlot = async (slotId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa khung giờ rảnh này?')) return;
+    if (!await showConfirm('Bạn có chắc chắn muốn xóa khung giờ rảnh này?')) return;
     try {
       await apiClient.delete(`/mentors/availabilities/${slotId}`);
       setBookingSuccess('Xóa khung giờ rảnh thành công!');
@@ -497,7 +499,7 @@ export default function PracticeWorkspace() {
       fetchMySlots();
     } catch (err: any) {
       console.error('Accept booking error:', err);
-      alert(err.response?.data?.message || 'Phê duyệt lịch đặt thất bại.');
+      await showAlert(err.response?.data?.message || 'Phê duyệt lịch đặt thất bại.');
     } finally {
       setIsAccepting(false);
     }
@@ -512,14 +514,14 @@ export default function PracticeWorkspace() {
       fetchMySlots();
     } catch (err: any) {
       console.error('Complete booking error:', err);
-      alert(err.response?.data?.message || 'Đánh dấu hoàn thành lịch học thất bại.');
+      await showAlert(err.response?.data?.message || 'Đánh dấu hoàn thành lịch học thất bại.');
     } finally {
       setIsCompleting(false);
     }
   };
 
   const handleCancelBookingByMentor = async (bookingId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy lịch hẹn học này?')) return;
+    if (!await showConfirm('Bạn có chắc chắn muốn hủy lịch hẹn học này?')) return;
     try {
       await apiClient.patch(`/bookings/${bookingId}/cancel`);
       setBookingSuccess('Hủy lịch hẹn thành công!');
@@ -527,14 +529,14 @@ export default function PracticeWorkspace() {
       fetchMySlots();
     } catch (err: any) {
       console.error('Cancel booking by mentor error:', err);
-      alert(err.response?.data?.message || 'Không thể hủy lịch học.');
+      await showAlert(err.response?.data?.message || 'Không thể hủy lịch học.');
     }
   };
 
   const handleConfirmCancelBookingWithReason = async () => {
     if (!selectedSlotForDetail || !selectedSlotForDetail.booking) return;
     if (!cancelReasonInput.trim()) {
-      alert('Vui lòng nhập lý do hủy lịch.');
+      await showAlert('Vui lòng nhập lý do hủy lịch.');
       return;
     }
     try {
@@ -546,7 +548,7 @@ export default function PracticeWorkspace() {
       fetchMySlots();
     } catch (err: any) {
       console.error('Cancel booking with reason error:', err);
-      alert(err.response?.data?.message || 'Không thể hủy lịch học.');
+      await showAlert(err.response?.data?.message || 'Không thể hủy lịch học.');
     }
   };
 
@@ -562,7 +564,7 @@ export default function PracticeWorkspace() {
       fetchMySlots();
     } catch (err: any) {
       console.error('Save notes error:', err);
-      alert(err.response?.data?.message || 'Không thể lưu nhận xét. Vui lòng thử lại.');
+      await showAlert(err.response?.data?.message || 'Không thể lưu nhận xét. Vui lòng thử lại.');
     } finally {
       setIsSavingNotes(false);
     }
@@ -606,7 +608,7 @@ export default function PracticeWorkspace() {
     if (!file || !selectedBookingForChat) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Tệp tin vượt quá dung lượng giới hạn 5MB.');
+      await showAlert('Tệp tin vượt quá dung lượng giới hạn 5MB.');
       return;
     }
 
@@ -631,13 +633,13 @@ export default function PracticeWorkspace() {
           }
         } catch (uploadErr: any) {
           console.error('Upload API error:', uploadErr);
-          alert(uploadErr.response?.data?.message || 'Không thể gửi tệp tin.');
+          await showAlert(uploadErr.response?.data?.message || 'Không thể gửi tệp tin.');
         } finally {
           setIsSendingChatMessage(false);
         }
       };
-      reader.onerror = () => {
-        alert('Không thể đọc tệp tin.');
+      reader.onerror = async () => {
+        await showAlert('Không thể đọc tệp tin.');
         setIsSendingChatMessage(false);
       };
       reader.readAsDataURL(file);

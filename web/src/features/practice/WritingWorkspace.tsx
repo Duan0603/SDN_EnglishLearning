@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAppSelector } from '../../store/store';
 import { apiClient } from '../../services/api.client';
+import { useModal } from '../shared/ModalProvider';
 
 export default function WritingWorkspace() {
   const { examId } = useParams<{ examId: string }>();
   const { user } = useAppSelector((state) => state.auth);
+  const { showAlert } = useModal();
 
   const [activeExam, setActiveExam] = useState<any | null>(null);
   const [activeSectionIdx, setActiveSectionIdx] = useState<number>(0);
@@ -56,7 +58,7 @@ export default function WritingWorkspace() {
     const minWords = isTask1 ? 50 : 100;
     
     if (wordCount < minWords) {
-      alert(`Bài viết quá ngắn. Vui lòng nhập tối thiểu ${minWords} từ để AI đánh giá.`);
+      await showAlert(`Bài viết quá ngắn. Vui lòng nhập tối thiểu ${minWords} từ để AI đánh giá.`);
       return;
     }
 
@@ -78,7 +80,7 @@ export default function WritingWorkspace() {
       }
     } catch (err) {
       console.error('Error evaluating writing:', err);
-      alert('Không thể đánh giá bài viết lúc này. Vui lòng thử lại sau.');
+      await showAlert('Không thể đánh giá bài viết lúc này. Vui lòng thử lại sau.');
     } finally {
       setWritingLoading(false);
     }

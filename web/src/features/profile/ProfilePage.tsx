@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../store/store';
-import { logout, loginSuccess } from '../auth/authSlice';
+import { logout, loginSuccess, updateUser } from '../auth/authSlice';
 import { apiClient } from '../../services/api.client';
+import { useModal } from '../shared/ModalProvider';
 
 export default function ProfilePage() {
   const { user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { showAlert } = useModal();
 
   // Active tab state matching real IELTS learning features: 'overview' | 'profile' | 'history' | 'achievements' | 'mentorRegister'
   const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'history' | 'achievements' | 'mentorRegister'>('overview');
@@ -48,14 +50,14 @@ export default function ProfilePage() {
   const [mentorReqCerts, setMentorReqCerts] = useState<{ filename: string; base64Data: string }[]>([]);
   const [mentorReqSubmitting, setMentorReqSubmitting] = useState(false);
 
-  const handleCertificatesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCertificatesSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach((file) => {
+    for (const file of Array.from(files)) {
       if (file.size > 10 * 1024 * 1024) {
-        alert(`File ${file.name} vượt quá dung lượng cho phép (tối đa 10MB)`);
-        return;
+        await showAlert(`File ${file.name} vượt quá dung lượng cho phép (tối đa 10MB)`);
+        continue;
       }
 
       const reader = new FileReader();
@@ -64,10 +66,10 @@ export default function ProfilePage() {
         const base64Data = reader.result as string;
         setMentorReqCerts((prev) => [...prev, { filename: file.name, base64Data }]);
       };
-      reader.onerror = () => {
-        alert(`Không thể đọc file: ${file.name}`);
+      reader.onerror = async () => {
+        await showAlert(`Không thể đọc file: ${file.name}`);
       };
-    });
+    }
   };
 
   const removeCertificateFile = (index: number) => {
@@ -77,7 +79,7 @@ export default function ProfilePage() {
   const handleMentorRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (mentorReqCerts.length === 0) {
-      alert('Vui lòng chọn ít nhất một chứng chỉ tiếng Anh!');
+      await showAlert('Vui lòng chọn ít nhất một chứng chỉ tiếng Anh!');
       return;
     }
 
@@ -90,17 +92,17 @@ export default function ProfilePage() {
       });
 
       if (res.data?.success) {
-        alert('Gửi yêu cầu đăng ký Mentor thành công!');
+        await showAlert('Gửi yêu cầu đăng ký Mentor thành công!');
         setMentorReqBio('');
         setMentorReqExpertise('');
         setMentorReqCerts([]);
         loadData(); // reload status
       } else {
-        alert('Gửi yêu cầu thất bại.');
+        await showAlert('Gửi yêu cầu thất bại.');
       }
     } catch (err: any) {
       console.error('Mentor register submit failed:', err);
-      alert('Lỗi: ' + (err.response?.data?.error?.message || err.response?.data?.message || err.message));
+      await showAlert('Lỗi: ' + (err.response?.data?.error?.message || err.response?.data?.message || err.message));
     } finally {
       setMentorReqSubmitting(false);
     }
@@ -141,6 +143,7 @@ export default function ProfilePage() {
       const profileRes = await apiClient.get('/auth/profile');
       const profile = profileRes.data.metadata || profileRes.data;
       if (profile) {
+        dispatch(updateUser(profile));
         setFormFullName(profile.fullName || '');
         setFormEmail(profile.email || '');
         setFormPhone(profile.phone || '');
@@ -200,7 +203,7 @@ export default function ProfilePage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("Kích thước ảnh phải nhỏ hơn 5MB");
+      await showAlert("Kích thước ảnh phải nhỏ hơn 5MB");
       return;
     }
 
@@ -237,17 +240,17 @@ export default function ProfilePage() {
           token 
         }));
         
-        alert("Cập nhật ảnh đại diện thành công!");
+        await showAlert("Cập nhật ảnh đại diện thành công!");
         loadData(); // Reload details
       } catch (err: any) {
         console.error("Avatar upload failed:", err);
-        alert("Lỗi khi tải ảnh đại diện lên: " + (err.response?.data?.error?.message || err.response?.data?.message || err.message));
+        await showAlert("Lỗi khi tải ảnh đại diện lên: " + (err.response?.data?.error?.message || err.response?.data?.message || err.message));
       } finally {
         setUploadingAvatar(false);
       }
     };
-    reader.onerror = () => {
-      alert("Không thể đọc tệp tin hình ảnh");
+    reader.onerror = async () => {
+      await showAlert("Không thể đọc tệp tin hình ảnh");
     };
   };
 
@@ -293,7 +296,7 @@ export default function ProfilePage() {
       loadData(); // reload stats and text
     } catch (err: any) {
       console.error("Save profile settings failed:", err);
-      alert("Lỗi khi lưu thông tin: " + (err.response?.data?.error?.message || err.response?.data?.message || err.message));
+      await showAlert("Lỗi khi lưu thông tin: " + (err.response?.data?.error?.message || err.response?.data?.message || err.message));
     }
   };
 
@@ -520,7 +523,7 @@ export default function ProfilePage() {
                 {/* Edit & Share buttons */}
                 <div className="flex gap-2 self-stretch md:self-auto pt-2 md:pt-8">
                   <button 
-                    onClick={() => alert("Link profile: " + window.location.href)}
+                    onClick={async () => await showAlert("Link profile: " + window.location.href)}
                     className="flex-1 md:flex-none bg-white border-2 border-[#1b263b] px-4 py-2 rounded-xl text-xs font-black hover:bg-gray-50 transition-all shadow-[2px_2px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span>🔗</span> Chia sẻ
@@ -707,7 +710,7 @@ export default function ProfilePage() {
                   </div>
 
                   <button 
-                    onClick={() => alert("Tính năng danh sách bạn bè đang được phát triển!")}
+                    onClick={async () => await showAlert("Tính năng danh sách bạn bè đang được phát triển!")}
                     className="w-full mt-4 pt-3 border-t border-[#1b263b]/10 text-center text-xs font-black text-[#b03030] hover:underline cursor-pointer block"
                   >
                     Xem tất cả bạn bè →
@@ -725,7 +728,7 @@ export default function ProfilePage() {
                     { id: 'profile', label: 'Hồ sơ' },
                     { id: 'history', label: 'Lịch sử làm bài' },
                     { id: 'achievements', label: 'Thành tích' },
-                    ...(user?.role === 'STUDENT' ? [{ id: 'mentorRegister', label: 'Đăng ký Mentor' }] : [])
+                    ...(user?.role === 'STUDENT' || user?.role === 'MENTOR' ? [{ id: 'mentorRegister', label: 'Đăng ký Mentor' }] : [])
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -990,7 +993,7 @@ export default function ProfilePage() {
                                     <p className="text-sm font-serif font-black text-[#1b263b]">69K<span className="text-xs text-gray-500">/tháng</span></p>
                                   </div>
                                   <button 
-                                    onClick={() => alert("Nâng cấp gói PRO! Cảm ơn bạn đã đồng hành cùng chúng tôi.")}
+                                    onClick={async () => await showAlert("Nâng cấp gói PRO! Cảm ơn bạn đã đồng hành cùng chúng tôi.")}
                                     className="bg-[#10b981] text-white border-2 border-[#1b263b] px-4 py-2 rounded-xl text-xs font-black hover:bg-[#0fa370] transition-all shadow-[2px_2px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] cursor-pointer"
                                   >
                                     Nâng cấp ngay
@@ -1345,7 +1348,23 @@ export default function ProfilePage() {
                         <p className="text-[10px] font-black text-gray-400 uppercase mt-0.5">Nâng cấp tài khoản của bạn để trở thành người hướng dẫn</p>
                       </div>
 
-                      {mentorRequest && mentorRequest.status === 'PENDING' ? (
+                      {user?.role === 'MENTOR' ? (
+                        <div className="bg-[#fdfbf6] border border-[#1b263b]/15 rounded-3xl p-6 text-left space-y-4">
+                          <div className="flex items-center gap-3 bg-emerald-500/10 border-2 border-emerald-500/40 text-emerald-800 p-4 rounded-2xl">
+                            <span className="text-2xl">✨</span>
+                            <div>
+                              <h5 className="font-bold text-sm text-emerald-800">Bạn đã được phê duyệt và đã trở thành Mentor rồi!</h5>
+                              <p className="text-xs text-emerald-700/80">Yêu cầu nâng cấp tài khoản của bạn đã thành công. Tài khoản của bạn hiện đã có đầy đủ các quyền của một Mentor trên hệ thống.</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3 pt-2 text-xs text-[#1b263b]/70 font-medium leading-relaxed">
+                            <p>
+                              Cảm ơn bạn đã đăng ký làm Người hướng dẫn (Mentor) của Apex IELTS. Bạn hiện có thể truy cập khu vực Luyện tập/Lịch trình học tập của mình để chấp nhận đặt lịch hẹn học, đánh giá phản hồi bài nói/bài viết của các học viên khác, và quản lý các lịch học trực tuyến.
+                            </p>
+                          </div>
+                        </div>
+                      ) : mentorRequest && mentorRequest.status === 'PENDING' ? (
                         <div className="bg-[#fdfbf6] border border-[#1b263b]/15 rounded-3xl p-6 text-left space-y-4">
                           <div className="flex items-center gap-3 bg-yellow-500/10 border-2 border-yellow-500/40 text-yellow-800 p-4 rounded-2xl">
                             <span className="text-2xl">⏳</span>

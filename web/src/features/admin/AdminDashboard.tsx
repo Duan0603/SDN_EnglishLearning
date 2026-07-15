@@ -3,6 +3,7 @@ import { useAppSelector, useAppDispatch } from '../../store/store'
 import { logout } from '../auth/authSlice'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '../../services/api.client'
+import { useModal } from '../shared/ModalProvider'
 
 // Interfaces
 interface User {
@@ -40,6 +41,7 @@ export default function AdminDashboard() {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth)
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+  const { showAlert, showConfirm, showPrompt } = useModal()
 
   // Tab State: 'dashboard' | 'users' | 'orders' | 'exams' | 'submissions' | 'mentorRequests'
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'orders' | 'exams' | 'submissions' | 'mentorRequests'>('dashboard')
@@ -250,38 +252,38 @@ export default function AdminDashboard() {
   }
 
   const handleApproveMentorRequest = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn phê duyệt học viên này lên Mentor?')) return
+    if (!await showConfirm('Bạn có chắc chắn muốn phê duyệt học viên này lên Mentor?')) return
     try {
       const res = await apiClient.patch(`/admin/mentor-requests/${id}/approve`)
       if (res.data?.success) {
-        alert('Phê duyệt tài khoản lên Mentor thành công!')
+        await showAlert('Phê duyệt tài khoản lên Mentor thành công!')
         fetchMentorRequests()
       } else {
-        alert('Phê duyệt thất bại.')
+        await showAlert('Phê duyệt thất bại.')
       }
     } catch (err: any) {
-      alert('Lỗi phê duyệt: ' + (err.response?.data?.message || err.message))
+      await showAlert('Lỗi phê duyệt: ' + (err.response?.data?.message || err.message))
     }
   }
 
   const handleRejectMentorRequest = async (id: string) => {
-    const reason = prompt('Nhập lý do từ chối yêu cầu đăng ký Mentor:')
+    const reason = await showPrompt('Nhập lý do từ chối yêu cầu đăng ký Mentor:')
     if (reason === null) return; // cancelled
     if (!reason.trim()) {
-      alert('Vui lòng nhập lý do từ chối!')
+      await showAlert('Vui lòng nhập lý do từ chối!')
       return
     }
 
     try {
       const res = await apiClient.patch(`/admin/mentor-requests/${id}/reject`, { reason })
       if (res.data?.success) {
-        alert('Đã từ chối yêu cầu nâng cấp Mentor.')
+        await showAlert('Đã từ chối yêu cầu nâng cấp Mentor.')
         fetchMentorRequests()
       } else {
-        alert('Từ chối thất bại.')
+        await showAlert('Từ chối thất bại.')
       }
     } catch (err: any) {
-      alert('Lỗi từ chối: ' + (err.response?.data?.message || err.message))
+      await showAlert('Lỗi từ chối: ' + (err.response?.data?.message || err.message))
     }
   }
 
@@ -416,14 +418,14 @@ export default function AdminDashboard() {
   }
 
   const handleDeleteSubmission = async (item: any) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa kết quả làm bài của học viên "${item.student?.fullName || 'Học viên'}"?`)) return
+    if (!await showConfirm(`Bạn có chắc chắn muốn xóa kết quả làm bài của học viên "${item.student?.fullName || 'Học viên'}"?`)) return
     try {
       await apiClient.delete(`/admin/submissions/${item.id}?type=${item.type}`)
       setSubmissionsList((prev) => prev.filter((s) => s.id !== item.id))
-      alert('Xóa kết quả thành công!')
+      await showAlert('Xóa kết quả thành công!')
     } catch (err: any) {
       setSubmissionsList((prev) => prev.filter((s) => s.id !== item.id))
-      alert('Đã xóa (mô phỏng cục bộ)')
+      await showAlert('Đã xóa (mô phỏng cục bộ)')
     }
   }
 
@@ -463,7 +465,7 @@ export default function AdminDashboard() {
   const handleCreateUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!createUserForm.fullName || !createUserForm.username || !createUserForm.email || !createUserForm.password) {
-      alert('Vui lòng điền đầy đủ các thông tin bắt buộc.')
+      await showAlert('Vui lòng điền đầy đủ các thông tin bắt buộc.')
       return
     }
 
@@ -482,7 +484,7 @@ export default function AdminDashboard() {
         phone: '',
         identityNumber: '',
       })
-      alert('Tạo người dùng thành công!')
+      await showAlert('Tạo người dùng thành công!')
     } catch (err: any) {
       // Fallback local add
       const mockNew: User = {
@@ -498,7 +500,7 @@ export default function AdminDashboard() {
       }
       setUsersList((prev) => [mockNew, ...prev])
       setShowCreateUserModal(false)
-      alert('Đã tạo thành công người dùng (mô phỏng cục bộ do không kết nối được backend API)')
+      await showAlert('Đã tạo thành công người dùng (mô phỏng cục bộ do không kết nối được backend API)')
     }
   }
 
@@ -528,28 +530,28 @@ export default function AdminDashboard() {
       const res = await apiClient.patch(`/admin/users/${editTargetId}`, payload)
       const updated = res.data?.metadata || res.data
       setUsersList((prev) =>
-        prev.map((u) => (u.id === editTargetId ? { ...u, ...updated } : u))
+          prev.map((u) => (u.id === editTargetId ? { ...u, ...updated } : u))
       )
       setShowEditUserModal(false)
-      alert('Cập nhật thông tin thành công!')
+      await showAlert('Cập nhật thông tin thành công!')
     } catch (err) {
       setUsersList((prev) =>
-        prev.map((u) => (u.id === editTargetId ? { ...u, ...editUserForm } : u))
+          prev.map((u) => (u.id === editTargetId ? { ...u, ...editUserForm } : u))
       )
       setShowEditUserModal(false)
-      alert('Đã cập nhật (mô phỏng cục bộ)')
+      await showAlert('Đã cập nhật (mô phỏng cục bộ)')
     }
   }
 
   const handleDeleteUser = async (item: User) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn người dùng "${item.fullName}"?`)) return
+    if (!await showConfirm(`Bạn có chắc chắn muốn xóa vĩnh viễn người dùng "${item.fullName}"?`)) return
     try {
       await apiClient.delete(`/admin/users/${item.id}`)
       setUsersList((prev) => prev.filter((u) => u.id !== item.id))
-      alert('Xóa người dùng thành công!')
+      await showAlert('Xóa người dùng thành công!')
     } catch (err) {
       setUsersList((prev) => prev.filter((u) => u.id !== item.id))
-      alert('Đã xóa (mô phỏng cục bộ)')
+      await showAlert('Đã xóa (mô phỏng cục bộ)')
     }
   }
 
@@ -557,14 +559,14 @@ export default function AdminDashboard() {
     try {
       await apiClient.patch(`/admin/users/${item.id}/approve-mentor`)
       setUsersList((prev) =>
-        prev.map((u) => (u.id === item.id ? { ...u, status: 'active' } : u))
+          prev.map((u) => (u.id === item.id ? { ...u, status: 'active' } : u))
       )
-      alert(`Đã phê duyệt hồ sơ Mentor của ${item.fullName}!`)
+      await showAlert(`Đã phê duyệt hồ sơ Mentor của ${item.fullName}!`)
     } catch (err) {
       setUsersList((prev) =>
-        prev.map((u) => (u.id === item.id ? { ...u, status: 'active' } : u))
+          prev.map((u) => (u.id === item.id ? { ...u, status: 'active' } : u))
       )
-      alert(`Đã phê duyệt Mentor (mô phỏng cục bộ)`)
+      await showAlert(`Đã phê duyệt Mentor (mô phỏng cục bộ)`)
     }
   }
 
@@ -575,24 +577,26 @@ export default function AdminDashboard() {
     try {
       await apiClient.patch(`/admin/bookings/${id}/confirm`)
       setBookingsList((prev) =>
-        prev.map((bk) => (bk.id === id ? { ...bk, status: 'Confirmed' } : bk))
+          prev.map((bk) => (bk.id === id ? { ...bk, status: 'Confirmed' } : bk))
       )
-      alert('Xác nhận lịch học thành công!')
+      await showAlert('Xác nhận lịch học thành công!')
     } catch (err: any) {
-      alert('Lỗi xác nhận lịch học: ' + (err.response?.data?.message || err.message))
+      await showAlert('Lỗi xác nhận lịch học: ' + (err.response?.data?.message || err.message))
     }
   }
 
   const handleBookingCancel = async (id: string) => {
-    const reason = prompt('Nhập lý do hủy lịch học (nếu có):') || 'Hủy bởi Admin'
+    const reason = await showPrompt('Nhập lý do hủy lịch học (nếu có):')
+    if (reason === null) return
+    const finalReason = reason.trim() || 'Hủy bởi Admin'
     try {
-      await apiClient.patch(`/admin/bookings/${id}/cancel`, { cancelReason: reason })
+      await apiClient.patch(`/admin/bookings/${id}/cancel`, { cancelReason: finalReason })
       setBookingsList((prev) =>
-        prev.map((bk) => (bk.id === id ? { ...bk, status: 'Cancelled' } : bk))
+          prev.map((bk) => (bk.id === id ? { ...bk, status: 'Cancelled' } : bk))
       )
-      alert('Đã hủy lịch học thành công!')
+      await showAlert('Đã hủy lịch học thành công!')
     } catch (err: any) {
-      alert('Lỗi hủy lịch học: ' + (err.response?.data?.message || err.message))
+      await showAlert('Lỗi hủy lịch học: ' + (err.response?.data?.message || err.message))
     }
   }
 
@@ -603,7 +607,7 @@ export default function AdminDashboard() {
     e.preventDefault()
     if (examStep === 1) {
       if (!newExamTitle.trim()) {
-        alert('Tiêu đề đề thi không được trống')
+        await showAlert('Tiêu đề đề thi không được trống')
         return
       }
 
@@ -739,10 +743,10 @@ export default function AdminDashboard() {
     try {
       if (editingExamId) {
         await apiClient.put(`/exams/${editingExamId}`, payload)
-        alert('Cập nhật đề thi IELTS thành công!')
+        await showAlert('Cập nhật đề thi IELTS thành công!')
       } else {
         await apiClient.post('/exams', payload)
-        alert('Khởi tạo đề thi IELTS thành công!')
+        await showAlert('Khởi tạo đề thi IELTS thành công!')
       }
       setShowCreateExamModal(false)
       setEditingExamId(null)
@@ -752,7 +756,7 @@ export default function AdminDashboard() {
       fetchExams()
     } catch (err: any) {
       console.error(err)
-      alert('Lỗi lưu đề thi: ' + (err.response?.data?.message || err.message))
+      await showAlert('Lỗi lưu đề thi: ' + (err.response?.data?.message || err.message))
     }
   }
 
@@ -761,7 +765,7 @@ export default function AdminDashboard() {
     if (!file) return;
 
     if (!file.type.startsWith('audio/') && !file.type.startsWith('video/') && !file.name.endsWith('.mp3')) {
-      alert('Vui lòng chỉ tải lên các file định dạng âm thanh/video (.mp3, .wav, .m4a, .mp4, ...)');
+      await showAlert('Vui lòng chỉ tải lên các file định dạng âm thanh/video (.mp3, .wav, .m4a, .mp4, ...)');
       return;
     }
 
@@ -783,20 +787,20 @@ export default function AdminDashboard() {
           const fresh = [...modalSections];
           fresh[sectionIdx].audioUrl = finalUrl;
           setModalSections(fresh);
-          alert('Tải lên file audio thành công!');
+          await showAlert('Tải lên file audio thành công!');
         } else {
-          alert('Tải file thất bại: Phản hồi từ server không hợp lệ.');
+          await showAlert('Tải file thất bại: Phản hồi từ server không hợp lệ.');
         }
       } catch (err: any) {
         console.error(err);
         const reset = [...modalSections];
         reset[sectionIdx].audioUrl = '';
         setModalSections(reset);
-        alert('Lỗi tải file lên server: ' + (err.response?.data?.message || err.message));
+        await showAlert('Lỗi tải file lên server: ' + (err.response?.data?.message || err.message));
       }
     };
-    reader.onerror = () => {
-      alert('Không đọc được file từ máy tính.');
+    reader.onerror = async () => {
+      await showAlert('Không đọc được file từ máy tính.');
     };
     reader.readAsDataURL(file);
   };
@@ -827,10 +831,10 @@ export default function AdminDashboard() {
         setExamStep(1)
         setShowCreateExamModal(true)
       } else {
-        alert('Không lấy được chi tiết đề thi.')
+        await showAlert('Không lấy được chi tiết đề thi.')
       }
     } catch (err: any) {
-      alert('Lỗi kết nối khi lấy chi tiết đề thi: ' + err.message)
+      await showAlert('Lỗi kết nối khi lấy chi tiết đề thi: ' + err.message)
     }
   }
 
@@ -845,12 +849,12 @@ export default function AdminDashboard() {
       }))
       
       await apiClient.post('/exams/bulk-import', { exams: normalizedExams })
-      alert('Import thành công dữ liệu đề thi JSON!')
+      await showAlert('Import thành công dữ liệu đề thi JSON!')
       setShowBulkImportModal(false)
       setBulkJsonPayload('')
       fetchExams()
     } catch (err: any) {
-      alert('Lỗi import dữ liệu: ' + (err.response?.data?.message || err.message))
+      await showAlert('Lỗi import dữ liệu: ' + (err.response?.data?.message || err.message))
     }
   }
 
@@ -1719,13 +1723,13 @@ export default function AdminDashboard() {
                       </button>
                       <button
                         onClick={async () => {
-                          if (confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn đề thi "${ex.title}"?`)) {
+                          if (await showConfirm(`Bạn có chắc chắn muốn xóa vĩnh viễn đề thi "${ex.title}"?`)) {
                             try {
                               await apiClient.delete(`/exams/${ex.id}`)
                               setExamsList((prev) => prev.filter((e) => e.id !== ex.id))
-                              alert('Xóa đề thi thành công!')
+                              await showAlert('Xóa đề thi thành công!')
                             } catch (err: any) {
-                              alert('Lỗi xóa đề thi: ' + (err.response?.data?.message || err.message))
+                              await showAlert('Lỗi xóa đề thi: ' + (err.response?.data?.message || err.message))
                             }
                           }
                         }}
