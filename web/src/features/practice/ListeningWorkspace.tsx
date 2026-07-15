@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAppSelector } from '../../store/store';
 import { apiClient } from '../../services/api.client';
+import { useModal } from '../shared/ModalProvider';
 
 export default function ListeningWorkspace() {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
+  const { showAlert, showConfirm } = useModal();
 
   const [activeExam, setActiveExam] = useState<any | null>(null);
   const [activeSectionIdx, setActiveSectionIdx] = useState<number>(0);
@@ -136,8 +138,8 @@ export default function ListeningWorkspace() {
     setAudioCurrentTime(seekTime);
   };
 
-  const handleAutoSubmit = () => {
-    alert('Hết giờ làm bài! Bài thi sẽ tự động được nộp.');
+  const handleAutoSubmit = async () => {
+    await showAlert('Hết giờ làm bài! Bài thi sẽ tự động được nộp.');
     submitListeningExam();
   };
 
@@ -163,15 +165,15 @@ export default function ListeningWorkspace() {
       }
     } catch (err) {
       console.error('Error submitting exam:', err);
-      alert('Không thể nộp bài thi. Vui lòng thử lại sau.');
+      await showAlert('Không thể nộp bài thi. Vui lòng thử lại sau.');
     } finally {
       setSubmittingExam(false);
     }
   };
 
-  const handleSubmitListening = (e: React.FormEvent) => {
+  const handleSubmitListening = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (window.confirm('Bạn có chắc chắn muốn nộp bài thi không?')) {
+    if (await showConfirm('Bạn có chắc chắn muốn nộp bài thi không?')) {
       submitListeningExam();
     }
   };

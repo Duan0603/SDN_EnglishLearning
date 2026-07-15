@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '../../store/store';
 import { logout, loginSuccess } from '../auth/authSlice';
 import { apiClient } from '../../services/api.client';
+import { useModal } from '../shared/ModalProvider';
 
 // Dynamic translations for instant localized testing
 const translations = {
@@ -179,6 +180,7 @@ const translations = {
 export default function SettingsPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { showAlert, showConfirm } = useModal();
 
   // Active settings sidebar section
   const [activeSection, setActiveSection] = useState<'account' | 'notifications' | 'appearance' | 'security' | 'terms'>('account');
@@ -330,7 +332,7 @@ export default function SettingsPage() {
       loadProfile();
     } catch (err: any) {
       console.error("Save settings profile failed:", err);
-      alert("Lỗi khi lưu thông tin: " + (err.response?.data?.error?.message || err.response?.data?.message || err.message));
+      await showAlert("Lỗi khi lưu thông tin: " + (err.response?.data?.error?.message || err.response?.data?.message || err.message));
     }
   };
 
@@ -886,9 +888,9 @@ export default function SettingsPage() {
                       <span className="text-[10px] font-black text-red-500 uppercase tracking-wider block mb-2">{t.terms.dangerZone}</span>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (confirm("CẢNH BÁO: Hành động này là vĩnh viễn và không thể khôi phục. Tất cả dữ liệu bài làm, streak và danh hiệu của bạn sẽ bị xoá vĩnh viễn. Bạn có chắc chắn muốn xoá tài khoản?")) {
-                            alert("Yêu cầu xoá tài khoản đã được ghi nhận. Vui lòng liên hệ Admin để được hỗ trợ xoá tài khoản chính thức.");
+                        onClick={async () => {
+                          if (await showConfirm("CẢNH BÁO: Hành động này là vĩnh viễn và không thể khôi phục. Tất cả dữ liệu bài làm, streak và danh hiệu của bạn sẽ bị xoá vĩnh viễn. Bạn có chắc chắn muốn xoá tài khoản?")) {
+                            await showAlert("Yêu cầu xoá tài khoản đã được ghi nhận. Vui lòng liên hệ Admin để được hỗ trợ xoá tài khoản chính thức.");
                           }
                         }}
                         className="bg-[#fecaca] text-[#dc2626] border-2 border-[#dc2626]/40 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-[#fee2e2] transition-all cursor-pointer"

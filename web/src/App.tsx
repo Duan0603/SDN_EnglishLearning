@@ -13,6 +13,12 @@ import ListeningWorkspace from './features/practice/ListeningWorkspace'
 import WritingWorkspace from './features/practice/WritingWorkspace'
 import SpeakingWorkspace from './features/practice/SpeakingWorkspace'
 import StreakModal from './features/profile/StreakModal'
+import { ModalProvider } from './features/shared/ModalProvider'
+
+// Protected Route Guard
+// ... (rest of guards) ...
+// (We just replace around line 70-85 below)
+
 
 // Protected Route Guard
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -75,79 +81,81 @@ function App() {
   }, [dispatch])
 
   return (
-    <BrowserRouter>
-      <StreakModal />
-      <Routes>
-        <Route path="/" element={<HomeNewTests />} />
-        <Route path="/login" element={<LoginScreen />} />
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/practice"
-          element={
-            <ProtectedRoute>
-              <PracticeWorkspace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/practice/reading/:examId"
-          element={
-            <ProtectedRoute>
-              <ReadingWorkspace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/practice/listening/:examId"
-          element={
-            <ProtectedRoute>
-              <ListeningWorkspace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/practice/writing/:examId"
-          element={
-            <ProtectedRoute>
-              <WritingWorkspace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/practice/speaking/:examId"
-          element={
-            <ProtectedRoute>
-              <SpeakingWorkspace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <ProfilePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <SettingsPage />
-            </ProtectedRoute>
-          }
-        />
-        {/* Fallback routing */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <ModalProvider>
+      <BrowserRouter>
+        <StreakModal />
+        <Routes>
+          <Route path="/" element={<HomeNewTests />} />
+          <Route path="/login" element={<LoginScreen />} />
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/practice"
+            element={
+              <ProtectedRoute>
+                <PracticeWorkspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/practice/reading/:examId"
+            element={
+              <ProtectedRoute>
+                <ReadingWorkspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/practice/listening/:examId"
+            element={
+              <ProtectedRoute>
+                <ListeningWorkspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/practice/writing/:examId"
+            element={
+              <ProtectedRoute>
+                <WritingWorkspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/practice/speaking/:examId"
+            element={
+              <ProtectedRoute>
+                <SpeakingWorkspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Fallback routing */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ModalProvider>
   )
 }
 
