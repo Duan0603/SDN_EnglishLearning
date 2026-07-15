@@ -10,8 +10,8 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Active tab state matching real IELTS learning features: 'overview' | 'profile' | 'history' | 'achievements'
-  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'history' | 'achievements'>('overview');
+  // Active tab state matching real IELTS learning features: 'overview' | 'profile' | 'history' | 'achievements' | 'mentorRegister'
+  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'history' | 'achievements' | 'mentorRegister'>('overview');
   const [isEditing, setIsEditing] = useState(false);
   const [results, setResults] = useState<any[]>([]);
 
@@ -40,6 +40,71 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Mentor request states
+  const [mentorRequest, setMentorRequest] = useState<any>(null);
+  const [mentorReqBio, setMentorReqBio] = useState('');
+  const [mentorReqExpertise, setMentorReqExpertise] = useState('');
+  const [mentorReqCerts, setMentorReqCerts] = useState<{ filename: string; base64Data: string }[]>([]);
+  const [mentorReqSubmitting, setMentorReqSubmitting] = useState(false);
+
+  const handleCertificatesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File ${file.name} vượt quá dung lượng cho phép (tối đa 10MB)`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64Data = reader.result as string;
+        setMentorReqCerts((prev) => [...prev, { filename: file.name, base64Data }]);
+      };
+      reader.onerror = () => {
+        alert(`Không thể đọc file: ${file.name}`);
+      };
+    });
+  };
+
+  const removeCertificateFile = (index: number) => {
+    setMentorReqCerts((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleMentorRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mentorReqCerts.length === 0) {
+      alert('Vui lòng chọn ít nhất một chứng chỉ tiếng Anh!');
+      return;
+    }
+
+    setMentorReqSubmitting(true);
+    try {
+      const res = await apiClient.post('/users/me/mentor-request', {
+        bio: mentorReqBio,
+        expertise: mentorReqExpertise,
+        certificates: mentorReqCerts
+      });
+
+      if (res.data?.success) {
+        alert('Gửi yêu cầu đăng ký Mentor thành công!');
+        setMentorReqBio('');
+        setMentorReqExpertise('');
+        setMentorReqCerts([]);
+        loadData(); // reload status
+      } else {
+        alert('Gửi yêu cầu thất bại.');
+      }
+    } catch (err: any) {
+      console.error('Mentor register submit failed:', err);
+      alert('Lỗi: ' + (err.response?.data?.error?.message || err.response?.data?.message || err.message));
+    } finally {
+      setMentorReqSubmitting(false);
+    }
+  };
 
   // Interactive Tasks list inside the Checklist Card
   const [tasks, setTasks] = useState([
@@ -93,6 +158,16 @@ export default function ProfilePage() {
       // 3. Fetch Completed Exam History
       const resultsRes = await apiClient.get('/users/me/results');
       setResults(resultsRes.data?.data?.results || []);
+
+      // 4. Fetch Mentor Request status if student
+      if (profile && (profile.role === 'STUDENT' || user?.role === 'STUDENT')) {
+        try {
+          const reqRes = await apiClient.get('/users/me/mentor-request');
+          setMentorRequest(reqRes.data?.data || null);
+        } catch (e) {
+          console.error('Failed to load mentor request status:', e);
+        }
+      }
     } catch (err) {
       console.error('Failed to load profile data:', err);
     } finally {
@@ -113,6 +188,8 @@ export default function ProfilePage() {
       setActiveTab('history');
     } else if (tabParam === 'achievements') {
       setActiveTab('achievements');
+    } else if (tabParam === 'mentorRegister') {
+      setActiveTab('mentorRegister');
     } else {
       setActiveTab('overview');
     }
@@ -647,7 +724,8 @@ export default function ProfilePage() {
                     { id: 'overview', label: 'Tổng quan' },
                     { id: 'profile', label: 'Hồ sơ' },
                     { id: 'history', label: 'Lịch sử làm bài' },
-                    { id: 'achievements', label: 'Thành tích' }
+                    { id: 'achievements', label: 'Thành tích' },
+                    ...(user?.role === 'STUDENT' ? [{ id: 'mentorRegister', label: 'Đăng ký Mentor' }] : [])
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -1259,6 +1337,137 @@ export default function ProfilePage() {
                     </div>
                   )}
 
+                  {/* MENTOR REGISTER TAB */}
+                  {activeTab === 'mentorRegister' && (
+                    <div className="space-y-6">
+                      <div className="border-b border-[#1b263b]/10 pb-4 text-left">
+                        <h4 className="font-serif font-black text-lg text-[#1b263b]">✍️ Đăng ký làm Mentor</h4>
+                        <p className="text-[10px] font-black text-gray-400 uppercase mt-0.5">Nâng cấp tài khoản của bạn để trở thành người hướng dẫn</p>
+                      </div>
+
+                      {mentorRequest && mentorRequest.status === 'PENDING' ? (
+                        <div className="bg-[#fdfbf6] border border-[#1b263b]/15 rounded-3xl p-6 text-left space-y-4">
+                          <div className="flex items-center gap-3 bg-yellow-500/10 border-2 border-yellow-500/40 text-yellow-800 p-4 rounded-2xl">
+                            <span className="text-2xl">⏳</span>
+                            <div>
+                              <h5 className="font-bold text-sm">Yêu cầu nâng cấp đang chờ phê duyệt</h5>
+                              <p className="text-xs text-yellow-700/80">Chúng tôi đang kiểm duyệt chứng chỉ và thông tin của bạn. Vui lòng quay lại sau.</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3 pt-2 text-xs">
+                            <div className="grid grid-cols-3 border-b border-[#1b263b]/5 pb-2.5">
+                              <span className="font-black text-gray-400 uppercase text-[10px]">Chuyên môn</span>
+                              <span className="col-span-2 font-bold text-[#1b263b]">{mentorRequest.expertise || 'Không có'}</span>
+                            </div>
+                            <div className="grid grid-cols-3 border-b border-[#1b263b]/5 pb-2.5">
+                              <span className="font-black text-gray-400 uppercase text-[10px]">Giới thiệu ngắn</span>
+                              <span className="col-span-2 font-bold text-[#1b263b]">{mentorRequest.bio || 'Không có'}</span>
+                            </div>
+                            <div className="grid grid-cols-3">
+                              <span className="font-black text-gray-400 uppercase text-[10px]">Chứng chỉ đính kèm</span>
+                              <div className="col-span-2 space-y-1">
+                                {mentorRequest.certificates?.map((cert: string, idx: number) => (
+                                  <a key={idx} href={cert} target="_blank" rel="noreferrer" className="text-blue-600 font-bold hover:underline block truncate">
+                                    📄 Chứng chỉ {idx + 1}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-[#fdfbf6] border border-[#1b263b]/15 rounded-3xl p-6 text-left">
+                          {mentorRequest && mentorRequest.status === 'REJECTED' && (
+                            <div className="mb-6 flex items-start gap-3 bg-red-50 border-2 border-red-200 text-red-800 p-4 rounded-2xl">
+                              <span className="text-2xl">❌</span>
+                              <div>
+                                <h5 className="font-bold text-sm">Yêu cầu trước đó bị từ chối</h5>
+                                <p className="text-xs text-red-700/80 mt-1">Lý do từ chối: <strong className="text-red-900">{mentorRequest.adminComment || 'Không có lý do chi tiết.'}</strong></p>
+                                <p className="text-xs text-red-700/50 mt-0.5">Vui lòng cập nhật thông tin chính xác và gửi lại yêu cầu mới.</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <form onSubmit={handleMentorRegisterSubmit} className="space-y-4">
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider">Lĩnh vực chuyên môn / Bằng cấp nổi bật</label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="Ví dụ: IELTS 8.0 overall, 2 năm kinh nghiệm giảng dạy..."
+                                value={mentorReqExpertise}
+                                onChange={(e) => setMentorReqExpertise(e.target.value)}
+                                className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs font-bold text-[#1b263b] outline-none"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider">Tiểu sử ngắn (Giới thiệu bản thân)</label>
+                              <textarea
+                                required
+                                placeholder="Hãy chia sẻ ngắn gọn về phương pháp giảng dạy hoặc mục tiêu của bạn khi làm mentor..."
+                                value={mentorReqBio}
+                                onChange={(e) => setMentorReqBio(e.target.value)}
+                                rows={3}
+                                className="w-full bg-white border-2 border-[#1b263b] rounded-xl px-4 py-2.5 text-xs font-bold text-[#1b263b] outline-none resize-none"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-black uppercase text-gray-500 tracking-wider block">Tải lên chứng chỉ tiếng Anh (File ảnh hoặc PDF)</label>
+                              
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => document.getElementById('cert-upload-input')?.click()}
+                                  className="bg-white border-2 border-[#1b263b] px-4 py-2 rounded-xl text-xs font-black hover:bg-gray-50 transition-all shadow-[2px_2px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  📎 Chọn chứng chỉ
+                                </button>
+                                <input
+                                  type="file"
+                                  id="cert-upload-input"
+                                  multiple
+                                  accept="image/*,application/pdf"
+                                  className="hidden"
+                                  onChange={handleCertificatesSelect}
+                                />
+                                <span className="text-[10px] font-bold text-gray-400">Yêu cầu ít nhất 1 chứng chỉ để đăng ký.</span>
+                              </div>
+
+                              {mentorReqCerts.length > 0 && (
+                                <div className="mt-3 space-y-1.5 bg-[#f5f3dc]/30 border border-[#1b263b]/10 rounded-xl p-3">
+                                  {mentorReqCerts.map((cert, idx) => (
+                                    <div key={idx} className="flex items-center justify-between text-xs bg-white border border-[#1b263b]/15 px-3 py-1.5 rounded-lg">
+                                      <span className="font-bold text-[#1b263b] truncate max-w-[80%]">{cert.filename}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeCertificateFile(idx)}
+                                        className="text-[#c92a2a] hover:text-red-700 font-bold"
+                                      >
+                                        Xóa
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="pt-4 flex">
+                              <button
+                                type="submit"
+                                disabled={mentorReqSubmitting || mentorReqCerts.length === 0}
+                                className="flex-1 bg-[#a7f3d0] text-[#005c42] border-2 border-[#1b263b] py-2.5 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#91e8c1] disabled:opacity-50 transition-all shadow-[2px_2px_0px_0px_#1b263b] text-center cursor-pointer"
+                              >
+                                {mentorReqSubmitting ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu nâng cấp 🚀'}
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                 </div>
               </div>
