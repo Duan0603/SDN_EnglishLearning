@@ -247,6 +247,16 @@ const HomeScreen = ({ navigation }) => {
     // fetchStats already calls fetchNotifications internally — no need to call again
   }, [user]);
 
+  // Refresh stats whenever the home screen comes into focus (e.g. after returning from test screens)
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchStats();
+    });
+    return unsubscribe;
+  }, [navigation, user]);
+
+
   // Connect socket and listen for real-time booking updates
   useEffect(() => {
     if (user) {
@@ -719,7 +729,7 @@ const HomeScreen = ({ navigation }) => {
               tutor="Whisper & Gemini" 
               bg="#fcfbf7" 
               color="#c92a2a" 
-              progress={stats?.speakingBand ? Math.min(100, Math.round((stats.speakingBand / 9) * 100)) : 0}
+              progress={stats?.speakingProgress !== undefined ? stats.speakingProgress : (stats?.speakingBand ? Math.min(100, Math.round((stats.speakingBand / 9) * 100)) : 0)}
               onPress={() => navigate(user ? 'Practice' : 'Login', user ? { initialTab: 'SPEAKING' } : undefined)} 
             />
             <ModuleCard 
@@ -727,7 +737,7 @@ const HomeScreen = ({ navigation }) => {
               tutor="Criteria Grader" 
               bg="#fcfbf7" 
               color="#d97706" 
-              progress={stats?.writingBand ? Math.min(100, Math.round((stats.writingBand / 9) * 100)) : 0}
+              progress={stats?.writingProgress !== undefined ? stats.writingProgress : (stats?.writingBand ? Math.min(100, Math.round((stats.writingBand / 9) * 100)) : 0)}
               onPress={() => navigate(user ? 'Practice' : 'Login', user ? { initialTab: 'WRITING' } : undefined)} 
             />
             <ModuleCard 
@@ -735,7 +745,7 @@ const HomeScreen = ({ navigation }) => {
               tutor="Cambridge Pool" 
               bg="#fcfbf7" 
               color="#4682b4" 
-              progress={stats?.readingBand ? Math.min(100, Math.round((stats.readingBand / 9) * 100)) : 0}
+              progress={stats?.readingProgress !== undefined ? stats.readingProgress : (stats?.readingBand ? Math.min(100, Math.round((stats.readingBand / 9) * 100)) : 0)}
               onPress={() => navigate(user ? 'Practice' : 'Login', user ? { initialTab: 'READING' } : undefined)} 
             />
             <ModuleCard 
@@ -743,7 +753,7 @@ const HomeScreen = ({ navigation }) => {
               tutor="Audio Stream" 
               bg="#fcfbf7" 
               color="#005c42" 
-              progress={stats?.listeningBand ? Math.min(100, Math.round((stats.listeningBand / 9) * 100)) : 0}
+              progress={stats?.listeningProgress !== undefined ? stats.listeningProgress : (stats?.listeningBand ? Math.min(100, Math.round((stats.listeningBand / 9) * 100)) : 0)}
               onPress={() => navigate(user ? 'Practice' : 'Login', user ? { initialTab: 'LISTENING' } : undefined)} 
             />
           </View>
