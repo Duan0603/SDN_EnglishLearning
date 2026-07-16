@@ -156,23 +156,37 @@ export const getUserStats = async (req, res, next) => {
       weeksActive = Math.ceil(diffDays / 7) || 1;
     }
 
-    // Fetch all results for this user
-    const [results, writingSubmissions, speakingSubmissions] = await Promise.all([
+    // Fetch all results for this user and total test counts
+    const [results, writingSubmissions, speakingSubmissions, totalReading, totalListening, totalWriting, totalSpeaking] = await Promise.all([
       prisma.testResult.findMany({
         where: { userId },
         include: { test: { select: { type: true } } },
       }),
       prisma.writingSubmission.findMany({
         where: { userId },
-        select: { bandScore: true, createdAt: true }
+        select: { testId: true, bandScore: true, createdAt: true }
       }),
       prisma.speakingSubmission.findMany({
         where: { userId },
-        select: { bandScore: true, createdAt: true }
-      })
+        select: { testId: true, bandScore: true, createdAt: true }
+      }),
+      prisma.test.count({ where: { type: 'READING' } }),
+      prisma.test.count({ where: { type: 'LISTENING' } }),
+      prisma.test.count({ where: { type: 'WRITING' } }),
+      prisma.test.count({ where: { type: 'SPEAKING' } }),
     ]);
 
     const totalTestsCount = results.length + writingSubmissions.length + speakingSubmissions.length;
+
+    const completedReadingCount = new Set(results.filter(r => r.test?.type === 'READING').map(r => r.testId)).size;
+    const completedListeningCount = new Set(results.filter(r => r.test?.type === 'LISTENING').map(r => r.testId)).size;
+    const completedWritingCount = new Set(writingSubmissions.filter(w => w.testId).map(w => w.testId)).size;
+    const completedSpeakingCount = new Set(speakingSubmissions.filter(s => s.testId).map(s => s.testId)).size;
+
+    const readingProgress = totalReading > 0 ? Math.min(100, Math.round((completedReadingCount / totalReading) * 100)) : 0;
+    const listeningProgress = totalListening > 0 ? Math.min(100, Math.round((completedListeningCount / totalListening) * 100)) : 0;
+    const writingProgress = totalWriting > 0 ? Math.min(100, Math.round((completedWritingCount / totalWriting) * 100)) : 0;
+    const speakingProgress = totalSpeaking > 0 ? Math.min(100, Math.round((completedSpeakingCount / totalSpeaking) * 100)) : 0;
 
     if (totalTestsCount === 0) {
       return res.status(200).json({
@@ -183,6 +197,10 @@ export const getUserStats = async (req, res, next) => {
           listeningBand: null,
           writingBand:   null,
           speakingBand:  null,
+          readingProgress:  0,
+          listeningProgress: 0,
+          writingProgress:   0,
+          speakingProgress:  0,
           totalTests:    0,
           topScore:      null,
           studyHours:    0,
@@ -244,8 +262,12 @@ export const getUserStats = async (req, res, next) => {
         readingBand:   readingBand   ? parseFloat(readingBand.toFixed(1))   : null,
         listeningBand: listeningBand ? parseFloat(listeningBand.toFixed(1)) : null,
         writingBand:   writingBand   ? parseFloat(writingBand.toFixed(1))   : null,
-        speakingBand:  speakingBand  ? parseFloat(speakingBand.toFixed(1))  : null,
-        totalTests:    results.length,
+        speakingBand:  speakingBand  ? parseFloat(speakingBand.toFixed(1))  :  null,
+        readingProgress,
+        listeningProgress,
+        writingProgress,
+        speakingProgress,
+        totalTests:    totalTestsCount,
         topScore:      parseFloat(topScore.toFixed(1)),
         studyHours,
         currentStreak,
