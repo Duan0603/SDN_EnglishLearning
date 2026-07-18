@@ -1,0 +1,67 @@
+@startuml
+title EL Practice - Use Case Diagram
+
+skinparam actorStyle stick
+skinparam usecase {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+    FontSize 12
+}
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+left to right direction
+
+actor "Student" as Student
+
+rectangle "EL Practice" {
+    usecase "View Exam List"           as UC01
+    usecase "Reading Practice"         as UC02
+    usecase "Listening Practice"       as UC03
+    usecase "Writing Practice"         as UC04
+    usecase "Speaking Practice"        as UC05
+
+    usecase "Start Exam\n(Countdown Timer)" as UC06
+    usecase "Auto-save Answer"         as UC07
+    usecase "Submit Exam"              as UC08
+    usecase "View Result & Band Score" as UC09
+    usecase "View Answer Explanation"  as UC10
+
+    usecase "Evaluate Writing\n(AI - GPT)"    as UC11
+    usecase "Evaluate Speaking\n(AI - Gemini)" as UC12
+}
+
+actor "AI System" as AI
+
+' === Student ===
+Student -- UC01
+Student -- UC02
+Student -- UC03
+Student -- UC04
+Student -- UC05
+
+' === AI System ===
+UC11 -- AI
+UC12 -- AI
+
+' === include / extend ===
+UC01 ..> UC02 : <<extend>>
+UC01 ..> UC03 : <<extend>>
+UC01 ..> UC04 : <<extend>>
+UC01 ..> UC05 : <<extend>>
+
+UC02 ..> UC06 : <<include>>
+UC03 ..> UC06 : <<include>>
+UC04 ..> UC06 : <<include>>
+UC05 ..> UC06 : <<include>>
+
+UC06 ..> UC07 : <<include>>
+UC06 ..> UC08 : <<include>>
+UC08 ..> UC09 : <<include>>
+UC09 ..> UC10 : <<include>>
+
+UC08 ..> UC11 : <<extend>>
+UC08 ..> UC12 : <<extend>>
+
+@enduml

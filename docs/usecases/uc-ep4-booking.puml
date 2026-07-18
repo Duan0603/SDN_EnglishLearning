@@ -1,0 +1,68 @@
+@startuml
+title Book Mentor - Use Case Diagram
+
+skinparam actorStyle stick
+skinparam usecase {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+    FontSize 12
+}
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+left to right direction
+
+actor "Student" as Student
+
+rectangle "Book Mentor" {
+    usecase "View Mentor List"          as UC01
+    usecase "View Mentor Detail"        as UC02
+    usecase "View Available Slots"      as UC03
+    usecase "Book a Slot"               as UC04
+    usecase "Cancel Booking"            as UC05
+    usecase "Rate Mentor"               as UC06
+    usecase "View My Bookings"          as UC07
+    usecase "Chat with Mentor"          as UC08
+    usecase "Upload File in Chat"       as UC09
+    usecase "Apply to be Mentor"        as UC10
+
+    usecase "Accept Booking"            as UC11
+    usecase "Complete Session"          as UC12
+    usecase "Add Session Notes"         as UC13
+    usecase "Manage Availability Slots" as UC14
+}
+
+actor "Mentor" as Mentor
+
+' === Student ===
+Student -- UC01
+Student -- UC02
+Student -- UC03
+Student -- UC04
+Student -- UC05
+Student -- UC06
+Student -- UC07
+Student -- UC08
+Student -- UC10
+
+' === Mentor ===
+UC11 -- Mentor
+UC12 -- Mentor
+UC13 -- Mentor
+UC14 -- Mentor
+UC08 -- Mentor
+UC09 -- Mentor
+
+' === include / extend ===
+UC01 ..> UC02 : <<include>>
+UC02 ..> UC03 : <<include>>
+UC03 ..> UC04 : <<include>>
+UC04 ..> UC11 : <<extend>>
+UC11 ..> UC12 : <<extend>>
+UC12 ..> UC13 : <<include>>
+UC04 ..> UC05 : <<extend>>
+UC12 ..> UC06 : <<extend>>
+UC08 ..> UC09 : <<extend>>
+
+@enduml

@@ -1,0 +1,74 @@
+@startuml
+title Admin Panel - Use Case Diagram
+
+skinparam actorStyle stick
+skinparam usecase {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+    FontSize 12
+}
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+left to right direction
+
+actor "Admin" as Admin
+
+rectangle "Admin Panel" {
+
+    usecase "View All Users"           as UC01
+    usecase "Create User"              as UC02
+    usecase "Update User"              as UC03
+    usecase "Delete User"              as UC04
+    usecase "Toggle User Status\n(Active / Inactive)" as UC05
+
+    usecase "View Mentor Requests"     as UC06
+    usecase "Approve Mentor Request"   as UC07
+    usecase "Reject Mentor Request"    as UC08
+
+    usecase "View All Submissions\n(Reading/Listening/Writing/Speaking)" as UC09
+    usecase "Delete Submission"        as UC10
+
+    usecase "View All Bookings"        as UC11
+    usecase "Confirm Booking"          as UC12
+    usecase "Cancel Booking"           as UC13
+
+    usecase "Manage Exams\n(Create / Update / Delete)" as UC14
+    usecase "Bulk Import Exams"        as UC15
+}
+
+' === Admin associations ===
+Admin -- UC01
+Admin -- UC02
+Admin -- UC03
+Admin -- UC04
+Admin -- UC05
+Admin -- UC06
+Admin -- UC07
+Admin -- UC08
+Admin -- UC09
+Admin -- UC10
+Admin -- UC11
+Admin -- UC12
+Admin -- UC13
+Admin -- UC14
+Admin -- UC15
+
+' === include / extend ===
+UC01 ..> UC02 : <<extend>>
+UC01 ..> UC03 : <<extend>>
+UC01 ..> UC04 : <<extend>>
+UC01 ..> UC05 : <<extend>>
+
+UC06 ..> UC07 : <<extend>>
+UC06 ..> UC08 : <<extend>>
+
+UC09 ..> UC10 : <<extend>>
+
+UC11 ..> UC12 : <<extend>>
+UC11 ..> UC13 : <<extend>>
+
+UC14 ..> UC15 : <<extend>>
+
+@enduml

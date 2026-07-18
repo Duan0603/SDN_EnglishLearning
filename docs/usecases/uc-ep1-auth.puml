@@ -1,0 +1,55 @@
+@startuml
+title 3.1 USE CASE DIAGRAM\nAuthentication - Apex IELTS
+
+skinparam actorStyle stick
+skinparam usecase {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+    FontSize 13
+}
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+left to right direction
+
+' ── Actors ──────────────────────────────────
+actor "Guest" as Guest
+actor "Student" as Student
+actor "Mentor" as Mentor
+actor "Admin" as Admin
+
+actor "User" as User
+
+' Generalization: specific actors -> User
+Guest --|> User
+Student --|> User
+Mentor --|> User
+Admin --|> User
+
+' ── System Boundary ─────────────────────────
+rectangle "Authentication" {
+    usecase "Sign in" as UC_SignIn
+    usecase "Sign in via Google" as UC_Google
+    usecase "Sign up" as UC_SignUp
+    usecase "Verify 2FA" as UC_2FA
+    usecase "Forgot Password" as UC_Forgot
+    usecase "Reset Password" as UC_Reset
+    usecase "Logout" as UC_Logout
+    usecase "Manage Profile" as UC_Profile
+}
+
+' ── Associations ────────────────────────────
+User -- UC_SignIn
+User -- UC_SignUp
+User -- UC_Logout
+User -- UC_Forgot
+User -- UC_Profile
+
+' ── Include / Extend ────────────────────────
+UC_SignIn ..> UC_Google    : <<extend>>
+UC_SignIn ..> UC_2FA       : <<extend>>
+UC_SignIn ..> UC_SignUp    : <<include>>
+UC_Forgot ..> UC_Reset     : <<include>>
+
+@enduml
