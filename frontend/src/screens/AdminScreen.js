@@ -37,6 +37,181 @@ const BrutalistShadow = ({ children, style, offset = 4 }) => (
   </View>
 );
 
+const createExamTemplate = (type) => {
+  const t = type.toUpperCase();
+  if (t === 'LISTENING') {
+    return Array.from({ length: 4 }, (_, i) => ({
+      sectionOrder: i + 1,
+      title: `Section ${i + 1}`,
+      audioUrl: '',
+      passageText: '',
+      images: [],
+      questions: Array.from({ length: 10 }, (_, qIdx) => ({
+        questionNumber: i * 10 + qIdx + 1,
+        type: 'FILL_IN_BLANKS',
+        content: `Điền vào chỗ trống câu hỏi số ${i * 10 + qIdx + 1}`,
+        options: '',
+        answer: '',
+        explanation: ''
+      }))
+    }));
+  } else if (t === 'READING') {
+    return Array.from({ length: 3 }, (_, i) => {
+      const qCount = i === 2 ? 14 : 13;
+      const qStart = i === 0 ? 1 : (i === 1 ? 14 : 27);
+      return {
+        sectionOrder: i + 1,
+        title: `Passage ${i + 1}`,
+        audioUrl: '',
+        passageText: `Nội dung bài đọc cho Passage ${i + 1}...`,
+        images: [],
+        questions: Array.from({ length: qCount }, (_, qIdx) => ({
+          questionNumber: qStart + qIdx,
+          type: 'TRUE_FALSE_NOT_GIVEN',
+          content: `Nhận định số ${qStart + qIdx}`,
+          options: '',
+          answer: 'TRUE',
+          explanation: ''
+        }))
+      };
+    });
+  } else if (t === 'WRITING') {
+    return [
+      {
+        sectionOrder: 1,
+        title: 'Writing Task 1',
+        passageText: 'The graph below shows the changes in...',
+        audioUrl: '',
+        images: [],
+        questions: []
+      },
+      {
+        sectionOrder: 2,
+        title: 'Writing Task 2',
+        passageText: 'Some people argue that computers are more useful than books. To what extent do you agree?',
+        audioUrl: '',
+        images: [],
+        questions: []
+      }
+    ];
+  } else if (t === 'SPEAKING') {
+    return [
+      {
+        sectionOrder: 1,
+        title: 'Part 1 - Introduction and Interview',
+        passageText: 'Let\'s talk about your hometown. What do you like about it?',
+        audioUrl: '',
+        images: [],
+        questions: [
+          { questionNumber: 1, type: 'SHORT_ANSWER', content: 'What is your hometown?', answer: 'N/A', explanation: '' },
+          { questionNumber: 2, type: 'SHORT_ANSWER', content: 'How long have you lived there?', answer: 'N/A', explanation: '' }
+        ]
+      },
+      {
+        sectionOrder: 2,
+        title: 'Part 2 - Cue Card',
+        passageText: 'Describe a beautiful park you visited. You should say: where it is, when you went there, and explain why you liked it.',
+        audioUrl: '',
+        images: [],
+        questions: [
+          { questionNumber: 3, type: 'SHORT_ANSWER', content: 'Talk about a beautiful park you visited.', answer: 'N/A', explanation: '' }
+        ]
+      },
+      {
+        sectionOrder: 3,
+        title: 'Part 3 - Discussion',
+        passageText: 'Let\'s discuss parks and green spaces in cities. Do you think cities need more parks?',
+        audioUrl: '',
+        images: [],
+        questions: [
+          { questionNumber: 4, type: 'SHORT_ANSWER', content: 'Why are green spaces important in urban areas?', answer: 'N/A', explanation: '' }
+        ]
+      }
+    ];
+  }
+  return [];
+};
+
+const QuestionEditCard = ({ question, onChange }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <View style={styles.qCard}>
+      <TouchableOpacity 
+        style={styles.qCardHeader}
+        onPress={() => setExpanded(!expanded)}
+      >
+        <Text style={styles.qCardTitle}>
+          Câu {question.questionNumber}: {question.content ? question.content.substring(0, 40) + (question.content.length > 40 ? '...' : '') : '(Chưa nhập nội dung)'}
+        </Text>
+        <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color="#1b263b" />
+      </TouchableOpacity>
+
+      {expanded && (
+        <View style={styles.qCardBody}>
+          <Text style={styles.inputLabel}>Nội dung câu hỏi *</Text>
+          <TextInput
+            style={styles.modalInput}
+            value={question.content}
+            onChangeText={(val) => onChange('content', val)}
+            placeholder="Nhập câu hỏi..."
+          />
+
+          <Text style={styles.inputLabel}>Loại câu hỏi / Question Type</Text>
+          <View style={styles.typeSelectorRow}>
+            {['FILL_IN_BLANKS', 'TRUE_FALSE_NOT_GIVEN', 'MULTIPLE_CHOICE', 'SHORT_ANSWER'].map((t) => (
+              <TouchableOpacity
+                key={t}
+                style={[
+                  styles.qTypeBtn,
+                  question.type === t && styles.qTypeBtnActive
+                ]}
+                onPress={() => onChange('type', t)}
+              >
+                <Text style={[
+                  styles.qTypeBtnText,
+                  question.type === t && styles.qTypeBtnActiveText
+                ]}>
+                  {t.replace(/_/g, ' ')}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {question.type === 'MULTIPLE_CHOICE' && (
+            <View>
+              <Text style={styles.inputLabel}>Lựa chọn (Cách nhau bởi dấu phẩy)</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={question.options}
+                onChangeText={(val) => onChange('options', val)}
+                placeholder="A, B, C, D"
+              />
+            </View>
+          )}
+
+          <Text style={styles.inputLabel}>Đáp án đúng *</Text>
+          <TextInput
+            style={styles.modalInput}
+            value={question.answer}
+            onChangeText={(val) => onChange('answer', val)}
+            placeholder="Ví dụ: TRUE, A, hoặc từ cần điền..."
+          />
+
+          <Text style={styles.inputLabel}>Giải thích đáp án</Text>
+          <TextInput
+            style={[styles.modalInput, { height: 60, textAlignVertical: 'top' }]}
+            value={question.explanation}
+            onChangeText={(val) => onChange('explanation', val)}
+            placeholder="Nhập giải thích chi tiết..."
+            multiline
+          />
+        </View>
+      )}
+    </View>
+  );
+};
+
 const AdminScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'users', 'mentor_requests', 'submissions', 'exams', 'bookings'
@@ -72,6 +247,9 @@ const AdminScreen = ({ navigation }) => {
     duration: '60',
     questionsCount: '40'
   });
+  const [examStep, setExamStep] = useState(1); // 1: Info, 2: Sections & Questions
+  const [modalSections, setModalSections] = useState([]);
+  const [selectedSectionIdx, setSelectedSectionIdx] = useState(0);
 
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -304,44 +482,117 @@ const AdminScreen = ({ navigation }) => {
   const handleOpenCreateExam = () => {
     setEditingExam(null);
     setExamForm({ title: '', type: 'READING', duration: '60', questionsCount: '40' });
+    setModalSections([]);
+    setSelectedSectionIdx(0);
+    setExamStep(1);
     setExamModalVisible(true);
   };
 
-  const handleOpenEditExam = (exam) => {
-    setEditingExam(exam);
-    setExamForm({
-      title: exam.title || '',
-      type: exam.type || 'READING',
-      duration: exam.duration?.toString() || '60',
-      questionsCount: exam.questionsCount?.toString() || '40'
-    });
-    setExamModalVisible(true);
+  const handleOpenEditExam = async (exam) => {
+    try {
+      setIsLoading(true);
+      const res = await examService.getById(exam.id || exam._id);
+      const fullExam = res.data?.data;
+      if (!fullExam) {
+        Alert.alert('Lỗi', 'Không thể tải chi tiết đề thi.');
+        return;
+      }
+      setEditingExam(fullExam);
+      setExamForm({
+        title: fullExam.title || '',
+        type: fullExam.type || 'READING',
+        duration: fullExam.duration?.toString() || '60',
+        questionsCount: fullExam.questionsCount?.toString() || '40'
+      });
+      // Standardize sections & questions
+      const formatted = (fullExam.sections || []).map(sec => ({
+        sectionOrder: sec.sectionOrder,
+        title: sec.title || '',
+        passageText: sec.passageText || '',
+        audioUrl: sec.audioUrl || '',
+        images: sec.images || [],
+        questions: (sec.questions || []).map(q => ({
+          questionNumber: q.questionNumber,
+          type: q.type || 'FILL_IN_BLANKS',
+          content: q.content || '',
+          options: q.options ? q.options.join(', ') : '',
+          answer: q.answer || '',
+          explanation: q.explanation || ''
+        }))
+      }));
+      setModalSections(formatted);
+      setSelectedSectionIdx(0);
+      setExamStep(1);
+      setExamModalVisible(true);
+    } catch (err) {
+      console.log('Error opening edit exam:', err);
+      Alert.alert('Lỗi', 'Không thể kết nối máy chủ.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSaveExam = async () => {
-    const { title, type, duration, questionsCount } = examForm;
-    if (!title) {
+  const handleNextExamStep = () => {
+    const { title, type } = examForm;
+    if (!title.trim()) {
       Alert.alert('Lỗi', 'Vui lòng nhập tiêu đề đề thi!');
       return;
     }
-    const examData = {
+    if (modalSections.length === 0) {
+      const templates = createExamTemplate(type);
+      setModalSections(templates);
+    }
+    setSelectedSectionIdx(0);
+    setExamStep(2);
+  };
+
+  const handleSaveExam = async () => {
+    const { title, type, duration } = examForm;
+    if (!title.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập tiêu đề đề thi!');
+      return;
+    }
+
+    // Save Section/Questions to database
+    const formattedSections = modalSections.map(sec => ({
+      sectionOrder: sec.sectionOrder,
+      title: sec.title,
+      passageText: sec.passageText || null,
+      audioUrl: sec.audioUrl || null,
+      images: sec.images || [],
+      questions: (sec.questions || []).map((q) => ({
+        questionNumber: parseInt(q.questionNumber, 10),
+        type: q.type,
+        content: q.content,
+        options: q.options && typeof q.options === 'string'
+          ? q.options.split(',').map((o) => o.trim()).filter(Boolean)
+          : Array.isArray(q.options)
+          ? q.options
+          : null,
+        answer: q.answer,
+        explanation: q.explanation || null
+      }))
+    }));
+
+    const payload = {
       title,
-      type,
+      description: `Exam for IELTS ${type}`,
+      type: type.toUpperCase(),
       duration: parseInt(duration, 10) || 60,
-      questionsCount: parseInt(questionsCount, 10) || 40
+      sections: formattedSections
     };
 
     try {
       setIsLoading(true);
       if (editingExam) {
-        const res = await examService.update(editingExam.id || editingExam._id, examData);
+        const res = await examService.update(editingExam.id || editingExam._id, payload);
         if (res.data?.success) {
           Toast.show({ type: 'success', text1: 'Thành công', text2: 'Cập nhật đề thi thành công!' });
           setExamModalVisible(false);
           fetchAllData(true);
         }
       } else {
-        const res = await examService.create(examData);
+        const res = await examService.create(payload);
         if (res.data?.success) {
           Toast.show({ type: 'success', text1: 'Thành công', text2: 'Tạo đề thi mới thành công!' });
           setExamModalVisible(false);
@@ -349,6 +600,7 @@ const AdminScreen = ({ navigation }) => {
         }
       }
     } catch (err) {
+      console.log('Error saving exam:', err);
       Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể lưu đề thi.' });
     } finally {
       setIsLoading(false);
@@ -1217,70 +1469,190 @@ const AdminScreen = ({ navigation }) => {
           <BrutalistShadow style={styles.modalContainer} offset={6}>
             <View style={styles.modalInner}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>{editingExam ? 'Sửa Đề Thi' : 'Tạo Đề Thi Mới'}</Text>
+                <Text style={styles.modalTitle}>
+                  {editingExam ? 'Sửa Đề Thi' : 'Tạo Đề Thi Mới'} {examStep === 2 ? '(Bước 2/2)' : '(Bước 1/2)'}
+                </Text>
                 <TouchableOpacity onPress={() => setExamModalVisible(false)}>
                   <Ionicons name="close" size={24} color="#1b263b" />
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={{ maxHeight: 400 }}>
-                <Text style={styles.inputLabel}>Tiêu đề đề thi *</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={examForm.title}
-                  onChangeText={(val) => setExamForm({ ...examForm, title: val })}
-                  placeholder="Ví dụ: Cambridge 18 - Reading Test 1"
-                />
-
-                <Text style={styles.inputLabel}>Kỹ năng / Skill Type</Text>
-                <View style={styles.rolePickerRow}>
-                  {['READING', 'LISTENING', 'WRITING', 'SPEAKING'].map((t) => (
-                    <TouchableOpacity
-                      key={t}
-                      style={[styles.roleSelectBtn, examForm.type === t && styles.roleSelectBtnActive]}
-                      onPress={() => setExamForm({ ...examForm, type: t })}
-                    >
-                      <Text style={[styles.roleSelectText, examForm.type === t && styles.roleSelectTextActive]}>
-                        {t}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <Text style={styles.inputLabel}>Thời gian làm bài (Phút)</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={examForm.duration}
-                  onChangeText={(val) => setExamForm({ ...examForm, duration: val })}
-                  placeholder="60"
-                  keyboardType="number-pad"
-                />
-
-                {(examForm.type === 'READING' || examForm.type === 'LISTENING') && (
-                  <View>
-                    <Text style={styles.inputLabel}>Số câu hỏi</Text>
+              {examStep === 1 ? (
+                <View>
+                  <ScrollView style={{ maxHeight: 380 }}>
+                    <Text style={styles.inputLabel}>Tiêu đề đề thi *</Text>
                     <TextInput
                       style={styles.modalInput}
-                      value={examForm.questionsCount}
-                      onChangeText={(val) => setExamForm({ ...examForm, questionsCount: val })}
-                      placeholder="40"
+                      value={examForm.title}
+                      onChangeText={(val) => setExamForm({ ...examForm, title: val })}
+                      placeholder="Ví dụ: Cambridge 18 - Reading Test 1"
+                    />
+
+                    <Text style={styles.inputLabel}>Kỹ năng / Skill Type</Text>
+                    <View style={styles.rolePickerRow}>
+                      {['READING', 'LISTENING', 'WRITING', 'SPEAKING'].map((t) => (
+                        <TouchableOpacity
+                          key={t}
+                          style={[styles.roleSelectBtn, examForm.type === t && styles.roleSelectBtnActive]}
+                          onPress={() => setExamForm({ ...examForm, type: t })}
+                        >
+                          <Text style={[styles.roleSelectText, examForm.type === t && styles.roleSelectTextActive]}>
+                            {t}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    <Text style={styles.inputLabel}>Thời gian làm bài (Phút)</Text>
+                    <TextInput
+                      style={styles.modalInput}
+                      value={examForm.duration}
+                      onChangeText={(val) => setExamForm({ ...examForm, duration: val })}
+                      placeholder="60"
                       keyboardType="number-pad"
                     />
-                  </View>
-                )}
-              </ScrollView>
+                  </ScrollView>
 
-              <TouchableOpacity 
-                activeOpacity={0.8}
-                style={styles.modalSaveBtnContainer}
-                onPress={handleSaveExam}
-              >
-                <BrutalistShadow style={styles.modalSaveBtn} offset={3}>
-                  <View style={styles.modalSaveBtnInner}>
-                    <Text style={styles.modalSaveBtnText}>LƯU ĐỀ THI</Text>
+                  <TouchableOpacity 
+                    activeOpacity={0.8}
+                    style={styles.modalSaveBtnContainer}
+                    onPress={handleNextExamStep}
+                  >
+                    <BrutalistShadow style={styles.modalSaveBtn} offset={3}>
+                      <View style={styles.modalSaveBtnInner}>
+                        <Text style={styles.modalSaveBtnText}>TIẾP TỤC (CẤU HÌNH ĐỀ)</Text>
+                      </View>
+                    </BrutalistShadow>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View>
+                  {/* Step 2: Section / Questions Wizard */}
+                  <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+                    {/* Section Horizontal tabs */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionTabsScroll}>
+                      {modalSections.map((sec, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          style={[
+                            styles.sectionTabBtn,
+                            selectedSectionIdx === idx && styles.sectionTabBtnActive
+                          ]}
+                          onPress={() => setSelectedSectionIdx(idx)}
+                        >
+                          <Text style={[
+                            styles.sectionTabBtnText,
+                            selectedSectionIdx === idx && styles.sectionTabBtnActiveText
+                          ]}>
+                            {sec.title || `Phần ${idx + 1}`}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+
+                    {modalSections[selectedSectionIdx] && (
+                      <View style={styles.sectionEditArea}>
+                        <Text style={styles.inputLabel}>Tiêu đề phần / Section Title</Text>
+                        <TextInput
+                          style={styles.modalInput}
+                          value={modalSections[selectedSectionIdx].title}
+                          onChangeText={(val) => {
+                            const updated = [...modalSections];
+                            updated[selectedSectionIdx].title = val;
+                            setModalSections(updated);
+                          }}
+                          placeholder="Nhập tiêu đề phần..."
+                        />
+
+                        {/* Section Audio URL (Listening only) */}
+                        {examForm.type === 'LISTENING' && (
+                          <View>
+                            <Text style={styles.inputLabel}>Audio URL (File .mp3)</Text>
+                            <TextInput
+                              style={styles.modalInput}
+                              value={modalSections[selectedSectionIdx].audioUrl || ''}
+                              onChangeText={(val) => {
+                                const updated = [...modalSections];
+                                updated[selectedSectionIdx].audioUrl = val;
+                                setModalSections(updated);
+                              }}
+                              placeholder="Nhập link file âm thanh..."
+                            />
+                          </View>
+                        )}
+
+                        {/* Section Passage Text (Reading, Writing, Speaking) */}
+                        {examForm.type !== 'LISTENING' && (
+                          <View>
+                            <Text style={styles.inputLabel}>
+                              {examForm.type === 'READING' ? 'Bài đọc / Passage Text' :
+                               examForm.type === 'WRITING' ? 'Mô tả đề bài / Task Prompt' :
+                               'Gợi ý phần nói / Part Prompt'}
+                            </Text>
+                            <TextInput
+                              style={[styles.modalInput, { height: 120, textAlignVertical: 'top' }]}
+                              value={modalSections[selectedSectionIdx].passageText || ''}
+                              onChangeText={(val) => {
+                                const updated = [...modalSections];
+                                updated[selectedSectionIdx].passageText = val;
+                                setModalSections(updated);
+                              }}
+                              placeholder="Nhập nội dung văn bản..."
+                              multiline
+                            />
+                          </View>
+                        )}
+
+                        {/* Questions List (Listening, Reading, Speaking only) */}
+                        {examForm.type !== 'WRITING' && (
+                          <View style={{ marginTop: 15 }}>
+                            <Text style={[styles.inputLabel, { fontSize: 13, marginBottom: 8, fontFamily: 'Outfit_700Bold' }]}>
+                              Danh sách câu hỏi ({modalSections[selectedSectionIdx].questions?.length || 0})
+                            </Text>
+                            {(modalSections[selectedSectionIdx].questions || []).map((q, qIdx) => (
+                              <QuestionEditCard
+                                key={qIdx}
+                                question={q}
+                                onChange={(field, val) => {
+                                  const updated = [...modalSections];
+                                  updated[selectedSectionIdx].questions[qIdx][field] = val;
+                                  setModalSections(updated);
+                                }}
+                              />
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </ScrollView>
+
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                    <TouchableOpacity 
+                      activeOpacity={0.8}
+                      style={{ flex: 1 }}
+                      onPress={() => setExamStep(1)}
+                    >
+                      <BrutalistShadow style={[styles.modalSaveBtn, { backgroundColor: '#e5e7eb' }]} offset={2}>
+                        <View style={styles.modalSaveBtnInner}>
+                          <Text style={[styles.modalSaveBtnText, { color: '#1b263b' }]}>QUAY LẠI</Text>
+                        </View>
+                      </BrutalistShadow>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      activeOpacity={0.8}
+                      style={{ flex: 1.5 }}
+                      onPress={handleSaveExam}
+                    >
+                      <BrutalistShadow style={styles.modalSaveBtn} offset={2}>
+                        <View style={styles.modalSaveBtnInner}>
+                          <Text style={styles.modalSaveBtnText}>LƯU ĐỀ THI</Text>
+                        </View>
+                      </BrutalistShadow>
+                    </TouchableOpacity>
                   </View>
-                </BrutalistShadow>
-              </TouchableOpacity>
+                </View>
+              )}
             </View>
           </BrutalistShadow>
         </View>
@@ -1707,6 +2079,51 @@ const styles = StyleSheet.create({
   },
   scoreDetailVal: { fontSize: 18, fontFamily: 'Outfit_900Black', color: '#1b263b' },
   scoreDetailLbl: { fontSize: 8, fontFamily: 'Outfit_900Black', color: '#666', marginTop: 2, textAlign: 'center' },
+
+  // Exam Wizard Styles
+  sectionTabsScroll: { marginBottom: 12, paddingBottom: 6 },
+  sectionTabBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1.5,
+    borderColor: '#1b263b',
+    backgroundColor: '#fff',
+    marginRight: 6,
+    borderRadius: 6
+  },
+  sectionTabBtnActive: { backgroundColor: '#ffd54f' },
+  sectionTabBtnText: { fontFamily: 'Outfit_700Bold', color: '#1b263b', fontSize: 10 },
+  sectionTabBtnActiveText: { color: '#1b263b' },
+  sectionEditArea: { marginTop: 4 },
+  qCard: {
+    borderWidth: 1.5,
+    borderColor: '#1b263b',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    marginBottom: 8,
+    overflow: 'hidden'
+  },
+  qCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: '#f5f3dc'
+  },
+  qCardTitle: { fontFamily: 'Outfit_700Bold', color: '#1b263b', fontSize: 11, flex: 1 },
+  qCardBody: { padding: 10, borderTopWidth: 1.5, borderTopColor: '#1b263b' },
+  typeSelectorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 8, marginTop: 4 },
+  qTypeBtn: {
+    borderWidth: 1,
+    borderColor: '#1b263b',
+    borderRadius: 5,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    backgroundColor: '#fff'
+  },
+  qTypeBtnActive: { backgroundColor: '#1b263b' },
+  qTypeBtnText: { fontFamily: 'Outfit_700Bold', color: '#1b263b', fontSize: 9 },
+  qTypeBtnActiveText: { color: '#fff' },
 
   feedbackSection: {
     borderWidth: 1.5,
