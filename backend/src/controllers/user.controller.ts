@@ -117,10 +117,7 @@ export const getUserStats = async (req, res, next) => {
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
     // Fetch user for streak stats
-    const userRecord = await (prisma.user as any).findUnique({
-      where: { id: userId },
-      select: { currentStreak: true, lastCheckIn: true, createdAt: true }
-    });
+    const userRecord = await UserModel.findById(userId).select('currentStreak lastCheckIn createdAt');
 
     const checkIsToday = (date) => {
       if (!date) return false;
@@ -284,17 +281,19 @@ export const getUserStats = async (req, res, next) => {
  * POST /api/v1/users/me/checkin
  * Checks in the authenticated user and increments their streak.
  */
+import UserModel from '../models/user.model';
+
 export const checkInUser = async (req, res, next) => {
   try {
     const userId = req.user?.userId || req.user?.id;
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    const userRecord = await (prisma.user as any).findUnique({
-      where: { id: userId },
-      select: { currentStreak: true, lastCheckIn: true }
-    });
+    const userRecord = await UserModel.findById(userId);
 
-    if (!userRecord) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!userRecord) {
+      console.log(`[checkInUser] User not found for ID: ${userId}`);
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
 
     const lastCheckIn = userRecord.lastCheckIn;
     const today = new Date();
@@ -333,13 +332,23 @@ export const checkInUser = async (req, res, next) => {
       }
     }
 
-    await (prisma.user as any).update({
-      where: { id: userId },
-      data: {
-        currentStreak: newStreak,
-        lastCheckIn: today
-      }
+    await UserModel.findByIdAndUpdate(userId, {
+      currentStreak: newStreak,
+      lastCheckIn: today
     });
+
+    // Also update in Prisma if needed (fire and forget)
+    try {
+      await (prisma.user as any).update({
+        where: { id: userId },
+        data: {
+          currentStreak: newStreak,
+          lastCheckIn: today
+        }
+      });
+    } catch (e) {
+      console.log('[checkInUser] Prisma update ignored');
+    }
 
     return res.status(200).json({
       success: true,

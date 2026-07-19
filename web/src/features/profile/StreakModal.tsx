@@ -31,12 +31,22 @@ export default function StreakModal() {
   // Active days grid cells calculation (6 weeks = 42 cells)
   const totalDays = 42;
   const currentStreakVal = currentStreak;
+  const hasCheckedIn = checkedIn || stats?.hasCheckedInToday;
+  
+  // Compute today's index in the 42-cell grid (last row, column based on day of week)
+  const todayDayOfWeek = (new Date().getDay() + 6) % 7; // Monday = 0, ..., Sunday = 6
+  const todayIndex = 35 + todayDayOfWeek; // Last row starts at index 35
+  
   const gridCells = Array.from({ length: totalDays }).map((_, idx) => {
-    // Determine cell index active state based on streak value
-    const isCurrentStreak = idx >= totalDays - currentStreakVal;
-    const isHistoricalActive = idx < totalDays - 7 && (idx % 3 === 0 || idx % 7 === 2);
-    const isActive = isCurrentStreak || isHistoricalActive;
-    return { isActive, isCurrentStreak };
+    // If not checked in today, the streak ended yesterday.
+    const streakEndIndex = hasCheckedIn ? todayIndex : todayIndex - 1;
+    const streakStartIndex = streakEndIndex - currentStreakVal + 1;
+    
+    // Cell is active if it falls within the current streak range
+    const isActive = idx >= streakStartIndex && idx <= streakEndIndex && currentStreakVal > 0;
+    
+    // Future days or days before the streak shouldn't be active
+    return { isActive, isCurrentStreak: isActive, isToday: idx === todayIndex };
   });
 
   const handleCheckIn = async () => {
@@ -91,9 +101,11 @@ export default function StreakModal() {
                   className={`w-[26px] h-[26px] rounded-full flex items-center justify-center transition-all ${
                     cell.isActive 
                       ? 'bg-gradient-to-br from-[#ffd54f] to-[#f97316] border border-[#1b263b] shadow-inner text-white' 
-                      : 'bg-gray-100 border border-gray-200 text-transparent'
+                      : cell.isToday
+                        ? 'bg-orange-100 border-2 border-orange-400 text-transparent'
+                        : 'bg-gray-100 border border-gray-200 text-transparent'
                   }`}
-                  title={cell.isActive ? "Học tập tích cực" : "Chưa học"}
+                  title={cell.isActive ? "Học tập tích cực" : cell.isToday ? "Hôm nay" : "Chưa học"}
                 >
                   {cell.isActive && <span className="text-[11px] select-none">🔥</span>}
                 </div>

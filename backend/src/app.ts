@@ -22,17 +22,31 @@ export const createApp = (): Application => {
   app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
   }));
+  const ALLOWED_ORIGINS = [
+    // Local development
+    'http://localhost:8081',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:8081',
+    'http://10.0.2.2:8081',
+    // Deployed frontend(s) — add your Render URL here
+    'https://sdn-englishlearning-frontend.onrender.com',
+    'https://sdn-englishlearning-qnnw.onrender.com',
+    // Custom FRONTEND_URL from env (optional override)
+    ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+  ];
+
   app.use(cors({
-    origin: config.nodeEnv === 'development' 
-      ? (origin, callback) => {
-          // Allow requests with no origin (like mobile apps) or from localhost/10.0.2.2
-          if (!origin || origin.match(/^http:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:\d+)?$/)) {
-            callback(null, true);
-          } else {
-            callback(new Error('Not allowed by CORS'));
-          }
-        }
-      : process.env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      if (ALLOWED_ORIGINS.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`[CORS] Blocked request from origin: ${origin}`);
+        callback(new Error(`Not allowed by CORS: ${origin}`));
+      }
+    },
     credentials: true,
   }));
 
