@@ -29,3 +29,15 @@ apiRouter.use('/api/v1/mentors', mentorRouter);
 apiRouter.use('/api/v1/bookings', bookingRouter);
 apiRouter.use('/api/v1/users', userRouter);
 apiRouter.use('/api/v1/upload', uploadRouter);
+
+// ─── Alias routes without /api/v1 prefix ────────────────────────────────────
+// Allows frontend to work even if VITE_API_URL is set without /api/v1
+apiRouter.use('/auth', accessRouter);
+apiRouter.use('/access', accessRouter);
+apiRouter.use('/exams', examRouter);
+apiRouter.use('/admin', adminRouter);
+apiRouter.use('/mentors', mentorRouter);
+apiRouter.use('/bookings', bookingRouter);
+apiRouter.use('/users', userRouter);
+apiRouter.use('/upload', uploadRouter);
+

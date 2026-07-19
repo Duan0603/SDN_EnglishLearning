@@ -1,0 +1,40 @@
+services:
+  # ─── Backend (Node/TS) ───────────────────────────────────────────────────────
+  - type: web
+    name: sdn-englishlearning-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # ⚠️ Set the following in Render Dashboard → Environment (do NOT commit secrets):
+      # DATABASE_URL, MONGOOSE_URL, JWT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+      # OPENROUTER_API_KEY, GEMINI_API_KEY, MAIL_USER, MAIL_PASS
+      # CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+      - key: GOOGLE_CALLBACK_URL
+        value: https://sdn-englishlearning-backend.onrender.com/api/auth/google/callback
+      - key: FRONTEND_URL
+        value: https://sdn-englishlearning-frontend.onrender.com
+
+  # ─── Web Frontend (Vite/React) ───────────────────────────────────────────────
+  - type: web
+    name: sdn-englishlearning-frontend
+    runtime: static
+    rootDir: web
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://sdn-englishlearning-backend.onrender.com/api/v1
