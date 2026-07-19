@@ -873,49 +873,6 @@ export default function ProfilePage() {
                             </div>
                           </div>
 
-                          <div className="bg-[#fdfbf6] border border-[#1b263b]/15 rounded-3xl p-6 text-left">
-                            <h4 className="font-serif font-black text-lg text-[#1b263b] mb-4">🏆 Trạng thái tài khoản</h4>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] rounded-2xl p-5 text-white flex flex-col justify-between min-h-[160px] border border-[#1b263b]/10">
-                                <div>
-                                  <p className="text-[10px] font-black uppercase tracking-widest text-violet-200">Gói hiện tại</p>
-                                  <h5 className="text-3xl font-serif font-black mt-2">Miễn phí</h5>
-                                  <p className="text-xs font-bold text-violet-100 mt-1">Cơ bản</p>
-                                </div>
-                                <span className="text-[10px] font-black bg-white/10 px-2.5 py-1 rounded-full w-max">Active</span>
-                              </div>
-
-                              <div className="bg-white border border-[#1b263b]/10 rounded-2xl p-5 flex flex-col justify-between min-h-[160px]">
-                                <div className="space-y-2">
-                                  <div className="flex justify-between items-center">
-                                    <h6 className="font-serif font-black text-[#1b263b] text-base">Nâng cấp PRO</h6>
-                                    <span className="bg-[#ffd54f] border border-[#1b263b] text-[#1b263b] text-[8px] font-black px-2 py-0.5 rounded uppercase">Đề xuất</span>
-                                  </div>
-                                  
-                                  <ul className="text-[10px] font-bold text-gray-500 space-y-1">
-                                    <li className="flex items-center gap-1.5">✓ Không giới hạn bộ thẻ flashcard</li>
-                                    <li className="flex items-center gap-1.5">✓ Phân tích học tập nâng cao</li>
-                                    <li className="flex items-center gap-1.5">✓ Tải xuống nội dung offline</li>
-                                    <li className="flex items-center gap-1.5">✓ Ưu tiên hỗ trợ 24/7</li>
-                                  </ul>
-                                </div>
-
-                                <div className="flex justify-between items-center gap-4 pt-3 border-t border-[#1b263b]/5">
-                                  <div>
-                                    <span className="text-[9px] text-gray-400 line-through">Giá gốc: 99K</span>
-                                    <p className="text-sm font-serif font-black text-[#1b263b]">69K<span className="text-xs text-gray-500">/tháng</span></p>
-                                  </div>
-                                  <button 
-                                    onClick={async () => await showAlert("Nâng cấp gói PRO! Cảm ơn bạn đã đồng hành cùng chúng tôi.")}
-                                    className="bg-[#10b981] text-white border-2 border-[#1b263b] px-4 py-2 rounded-xl text-xs font-black hover:bg-[#0fa370] transition-all shadow-[2px_2px_0px_0px_#1b263b] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#1b263b] cursor-pointer"
-                                  >
-                                    Nâng cấp ngay
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
                         </>
                       ) : (
                         <div className="bg-[#fdfbf6] border border-[#1b263b]/15 rounded-3xl p-6 text-left">
