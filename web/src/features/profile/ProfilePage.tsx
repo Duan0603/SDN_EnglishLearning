@@ -674,48 +674,6 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 </div>
-
-                {/* FRIENDS */}
-                <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-5 shadow-[4px_4px_0px_0px_#1b263b] text-left">
-                  <div className="flex items-center justify-between border-b border-[#1b263b]/10 pb-3 mb-4">
-                    <h3 className="font-serif font-black text-sm text-[#1b263b] flex items-center gap-1.5">
-                      👥 Bạn bè học cùng
-                    </h3>
-                    <span className="bg-gray-100 border border-[#1b263b]/10 text-gray-500 text-[10px] font-black px-2 py-0.5 rounded-full">
-                      4 bạn
-                    </span>
-                  </div>
-
-                  <div className="space-y-3.5">
-                    {friends.map((friend) => (
-                      <div key={friend.id} className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          {friend.image ? (
-                            <img src={friend.image} alt={friend.name} className="w-9 h-9 rounded-full object-cover border border-[#1b263b]/20" />
-                          ) : (
-                            <div className="w-9 h-9 rounded-full bg-gray-200 border border-[#1b263b]/20 flex items-center justify-center font-bold text-[#1b263b] text-xs">
-                              {friend.initials}
-                            </div>
-                          )}
-                          <div className="space-y-0.5 text-left">
-                            <p className="text-xs font-bold text-[#1b263b] leading-tight">{friend.name}</p>
-                            <p className="text-[9px] text-gray-400 font-semibold">{friend.school}</p>
-                          </div>
-                        </div>
-                        <span className="text-[10px] text-[#b03030] font-black bg-red-50 border border-red-200/50 px-2.5 py-0.5 rounded-full">
-                          🔥 {friend.streak} ngày
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <button 
-                    onClick={async () => await showAlert("Tính năng danh sách bạn bè đang được phát triển!")}
-                    className="w-full mt-4 pt-3 border-t border-[#1b263b]/10 text-center text-xs font-black text-[#b03030] hover:underline cursor-pointer block"
-                  >
-                    Xem tất cả bạn bè →
-                  </button>
-                </div>
               </div>
 
               {/* RIGHT COLUMN */}
@@ -839,50 +797,6 @@ export default function ProfilePage() {
                             <p className="text-lg font-serif font-black text-[#1b263b]">Thứ 2 (14 ph)</p>
                             <p className="text-[9px] font-black text-gray-400 uppercase mt-0.5 leading-none">Nhiều nhất</p>
                           </div>
-                        </div>
-                      </div>
-
-                      {/* TODAY'S TASK CHECKLIST */}
-                      <div className="space-y-3 pt-2">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-serif font-black text-lg text-[#1b263b] flex items-center gap-1.5">
-                            💡 Nhiệm vụ hôm nay
-                          </h4>
-                          <span className="bg-[#eefcf3] border border-emerald-500/20 text-[#005c42] text-[10px] font-black px-2.5 py-0.5 rounded-full">
-                            {completedTasksCount}/4 hoàn thành
-                          </span>
-                        </div>
-
-                        <div className="bg-white border border-[#1b263b]/15 rounded-2xl overflow-hidden divide-y divide-[#1b263b]/10">
-                          {tasks.map((task) => (
-                            <div 
-                              key={task.id} 
-                              onClick={() => toggleTask(task.id)}
-                              className="flex items-center justify-between p-3.5 hover:bg-gray-50/50 cursor-pointer select-none transition-colors"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className={`w-5 h-5 rounded border-2 border-[#1b263b] flex items-center justify-center transition-all ${
-                                  task.done ? 'bg-[#10b981] border-[#10b981]' : 'bg-transparent'
-                                }`}>
-                                  {task.done && (
-                                    <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  )}
-                                </div>
-                                <span className={`text-xs font-bold transition-all text-left ${
-                                  task.done ? 'line-through text-gray-400' : 'text-[#1b263b]'
-                                }`}>
-                                  {task.text}
-                                </span>
-                              </div>
-                              <span className={`text-[11px] font-black px-2 py-0.5 rounded ${
-                                task.done ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' : 'bg-gray-100 text-gray-400'
-                              }`}>
-                                {task.progress}
-                              </span>
-                            </div>
-                          ))}
                         </div>
                       </div>
 
