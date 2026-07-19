@@ -32,12 +32,19 @@ export default function LoginScreen() {
       const res = await apiClient.post('/auth/google-login', { idToken });
       const metadata = res.data?.metadata || res.data;
       
-      const user = metadata.user;
+      const user = metadata.user || {};
       const token = metadata.tokens?.accessToken || metadata.accessToken || 'mock-token';
+
+      if (!user.id && user._id) {
+        user.id = user._id;
+      }
+      if (!user._id && user.id) {
+        user._id = user.id;
+      }
 
       dispatch(loginSuccess({ user, token }));
       
-      if (user.role === 'ADMIN') {
+      if (user?.role === 'ADMIN') {
         navigate('/admin');
       } else {
         navigate('/');

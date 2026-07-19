@@ -203,7 +203,7 @@ export class AccessService {
         let user = await userModel.findOne({ email }).lean();
         if (!user) {
             const hashedPassword = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
-            user = await userModel.create({
+            const createdDoc = await userModel.create({
                 username: email.split('@')[0] + '_' + sub.substring(0, 5),
                 fullName: name || '',
                 email: email,
@@ -211,6 +211,7 @@ export class AccessService {
                 role: Role.STUDENT,
                 avatar: picture || ''
             });
+            user = createdDoc.toObject();
         }
 
         // 3. Create tokens
