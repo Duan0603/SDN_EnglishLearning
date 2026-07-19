@@ -787,7 +787,7 @@ const AdminScreen = ({ navigation }) => {
         >
           <Ionicons name="arrow-back" size={24} color="#1b263b" />
         </TouchableOpacity>
-        <Text style={styles.appBarTitle}>CONTROL PANEL</Text>
+        <Text style={styles.appBarTitle}>ADMIN PANEL</Text>
         <TouchableOpacity 
           style={styles.appBarBtn} 
           onPress={() => {

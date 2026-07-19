@@ -687,7 +687,7 @@ const HomeScreen = ({ navigation }) => {
                   paddingHorizontal: 16,
                 }}
               >
-                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#005c42' }}>Control Panel 🛠️</Text>
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#005c42' }}>Admin Panel 🛠️</Text>
               </TouchableOpacity>
             )}
 

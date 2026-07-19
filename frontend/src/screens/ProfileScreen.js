@@ -585,7 +585,7 @@ const ProfileScreen = ({ navigation }) => {
                     style={[styles.logoutBtn, { marginTop: 20, borderColor: '#005c42', backgroundColor: '#e8f5e9' }]} 
                     onPress={() => navigation.navigate('Admin')}
                   >
-                    <Text style={[styles.logoutBtnText, { color: '#005c42' }]}>ADMIN CONTROL PANEL 🛠️</Text>
+                    <Text style={[styles.logoutBtnText, { color: '#005c42' }]}>ADMIN PANEL 🛠️</Text>
                   </TouchableOpacity>
                 )}
 
