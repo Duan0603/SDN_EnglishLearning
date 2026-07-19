@@ -6,14 +6,25 @@ import { BookingService } from '../services/booking.service';
 let ioInstance: Server | null = null;
 
 export const initSockets = (httpServer: HttpServer) => {
+  const allowedOrigins = [
+    'http://localhost:8081',
+    'http://localhost:3000',
+    'http://127.0.0.1:8081',
+    'http://127.0.0.1:3000'
+  ];
+
+  if (process.env.FRONTEND_URL) {
+    const envOrigins = process.env.FRONTEND_URL.split(',').map(url => url.trim());
+    envOrigins.forEach(origin => {
+      if (!allowedOrigins.includes(origin)) {
+        allowedOrigins.push(origin);
+      }
+    });
+  }
+
   const io = new Server(httpServer, {
     cors: {
-      origin: [
-        'http://localhost:8081',
-        'http://localhost:3000',
-        'http://127.0.0.1:8081',
-        'http://127.0.0.1:3000'
-      ],
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true,
     },

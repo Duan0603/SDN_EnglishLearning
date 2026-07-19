@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 
 const getSocketURL = () => {
   if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
+    return process.env.EXPO_PUBLIC_API_URL.replace(/\/api(\/v1)?\/?$/, '');
   }
   if (__DEV__) {
     if (Platform.OS === 'web') {
