@@ -67,21 +67,34 @@ client.interceptors.response.use(
   },
   (error) => {
     // Global Error Handling
-    if (!error.config?.hideToast) {
-      const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại sau.';
+    const isLogout = error.config?.url?.includes('/auth/logout');
+    
+    // Auto logout on 401 Unauthorized (e.g. expired session or keyStore not found)
+    if (error.response?.status === 401) {
+      try {
+        const useAuthStore = require('../store/useAuthStore').default;
+        useAuthStore.getState().clearSession();
+      } catch (err) {
+        storage.deleteItem('userToken');
+        storage.deleteItem('userId');
+      }
+    }
+
+    if (!error.config?.hideToast && !isLogout) {
+      let errorMessage = error.response?.data?.error?.message 
+        || error.response?.data?.message 
+        || 'Có lỗi xảy ra, vui lòng thử lại sau.';
       
+      if (errorMessage.toLowerCase().includes('keystore')) {
+        errorMessage = 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.';
+      }
+
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
+        text1: 'Thông báo',
         text2: errorMessage,
         position: 'top'
       });
-    }
-
-    // Handle 401 Unauthorized globally if needed
-    if (error.response?.status === 401) {
-      // Optional: Dispatch logout event or clear token
-      // storage.deleteItem('userToken');
     }
 
     return Promise.reject(error);
