@@ -117,7 +117,7 @@ export const getUserStats = async (req, res, next) => {
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
     // Fetch user for streak stats
-    const userRecord = await UserModel.findById(userId).select('currentStreak lastCheckIn createdAt');
+    const userRecord: any = await UserModel.findById(userId).select('currentStreak lastCheckIn createdAt');
 
     const checkIsToday = (date) => {
       if (!date) return false;
@@ -288,7 +288,7 @@ export const checkInUser = async (req, res, next) => {
     const userId = req.user?.userId || req.user?.id;
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    const userRecord = await UserModel.findById(userId);
+    const userRecord: any = await UserModel.findById(userId);
 
     if (!userRecord) {
       console.log(`[checkInUser] User not found for ID: ${userId}`);

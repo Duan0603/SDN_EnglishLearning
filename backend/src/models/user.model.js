@@ -58,6 +58,14 @@ const userSchema = new mongoose.Schema({
     isTwoFactorEnabled: {
         type: Boolean,
         default: false
+    },
+    currentStreak: {
+        type: Number,
+        default: 0
+    },
+    lastCheckIn: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true,
