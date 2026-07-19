@@ -10,7 +10,8 @@ import {
   Modal,
   TextInput,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
@@ -45,6 +46,9 @@ const profileSchema = z.object({
   email: z.string().email('Email không hợp lệ'),
   phone: z.string().regex(/^(0|\+84)[3|5|7|8|9][0-9]{8}$/, 'Số điện thoại không hợp lệ'),
   birthDate: z.string().min(1, 'Vui lòng nhập ngày sinh'),
+  identityNumber: z.string().optional().or(z.literal('')),
+  bio: z.string().optional().or(z.literal('')),
+  expertise: z.string().optional().or(z.literal('')),
 });
 
 const ProfileScreen = ({ navigation }) => {
@@ -58,8 +62,9 @@ const ProfileScreen = ({ navigation }) => {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [avatarLoading, setAvatarLoading] = useState(false);
 
   // Password state
   const [oldPassword, setOldPassword] = useState('');
@@ -120,6 +125,64 @@ const ProfileScreen = ({ navigation }) => {
       Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể chọn tệp.' });
     }
   };
+
+  const handlePickAvatar = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'image/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        setAvatarLoading(true);
+
+        let base64Data = '';
+        if (Platform.OS === 'web') {
+          const response = await fetch(file.uri);
+          const blob = await response.blob();
+          base64Data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const result = reader.result;
+              const base64 = result.split(',')[1] || '';
+              resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } else {
+          base64Data = await FileSystem.readAsStringAsync(file.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+        }
+
+        const mimeType = file.mimeType || 'image/jpeg';
+        const base64Image = `data:${mimeType};base64,${base64Data}`;
+
+        const res = await client.post('/auth/upload-avatar', { image: base64Image });
+        if (res.data?.success || res.data?.metadata) {
+          const newAvatar = res.data.metadata?.avatar || res.data.data?.avatar;
+          if (newAvatar) {
+            useAuthStore.setState((state) => ({
+              user: { ...state.user, avatar: newAvatar }
+            }));
+            Toast.show({ type: 'success', text1: 'Thành công', text2: 'Cập nhật ảnh đại diện thành công!' });
+          }
+        }
+      }
+    } catch (err) {
+      console.log('Error updating avatar:', err);
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: err.response?.data?.error?.message || err.message || 'Không thể cập nhật ảnh đại diện.'
+      });
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
   const handleSubmittingUpgrade = async () => {
     if (!selectedFile) {
       Alert.alert('Lỗi', 'Vui lòng chọn ít nhất một chứng chỉ tiếng Anh!');
@@ -184,10 +247,13 @@ const ProfileScreen = ({ navigation }) => {
   const { control, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      fullName: profileName,
-      email: profileEmail,
-      phone: profilePhone,
-      birthDate: profileBirthDate,
+      fullName: user?.fullName || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      birthDate: user?.birthday || user?.dateOfBirth || '',
+      identityNumber: user?.identityNumber || '',
+      bio: user?.bio || '',
+      expertise: user?.expertise || '',
     },
   });
 
@@ -197,6 +263,9 @@ const ProfileScreen = ({ navigation }) => {
       email: user?.email || '',
       phone: user?.phone || '',
       birthDate: user?.birthday || user?.dateOfBirth || '',
+      identityNumber: user?.identityNumber || '',
+      bio: user?.bio || '',
+      expertise: user?.expertise || '',
     });
   }, [user, reset]);
 
@@ -214,7 +283,7 @@ const ProfileScreen = ({ navigation }) => {
       try {
         const [statsRes, resultsRes] = await Promise.all([
           client.get('/users/me/stats', { hideToast: true }),
-          client.get('/users/me/results?limit=4', { hideToast: true })
+          client.get('/users/me/results?limit=50', { hideToast: true })
         ]);
         
         if (statsRes.data?.success) {
@@ -259,11 +328,13 @@ const ProfileScreen = ({ navigation }) => {
 
   const tabs = useMemo(() => {
     const list = [
-      { key: 'overview', label: 'OVERVIEW' },
-      { key: 'settings', label: 'SETTINGS' },
+      { key: 'overview', label: 'TỔNG QUAN' },
+      { key: 'profile', label: 'HỒ SƠ' },
+      { key: 'history', label: 'LỊCH SỬ' },
+      { key: 'achievements', label: 'THÀNH TÍCH' },
     ];
     if (user?.role === 'STUDENT') {
-      list.push({ key: 'become_mentor', label: 'BECOME MENTOR' });
+      list.push({ key: 'become_mentor', label: 'ĐĂNG KÝ MENTOR' });
     }
     return list;
   }, [user]);
@@ -273,13 +344,16 @@ const ProfileScreen = ({ navigation }) => {
       const apiData = {
         fullName: data.fullName,
         phone: data.phone,
-        birthday: data.birthDate
+        birthday: data.birthDate,
+        identityNumber: data.identityNumber,
+        bio: data.bio,
+        expertise: data.expertise,
       };
       await updateProfile(apiData);
-      setSuccessMessage('Your profile has been updated successfully!');
-      setShowEditProfileModal(false);
+      setSuccessMessage('Hồ sơ của bạn đã được cập nhật thành công!');
+      setIsEditing(false);
     } catch (error) {
-      Toast.show({ type: 'error', text1: 'Error', text2: error.message || 'Failed to update profile.' });
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: error.message || 'Cập nhật thất bại.' });
     }
   };
 
@@ -306,11 +380,40 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
+  const handleUpdate2FA = async (value) => {
+    setForm2FA(value);
+    try {
+      await client.patch('/auth/profile', { isTwoFactorEnabled: value });
+      Toast.show({ type: 'success', text1: 'Thành công', text2: `Đã ${value ? 'bật' : 'tắt'} xác thực 2 bước qua Email.` });
+      // Update store
+      useAuthStore.setState((state) => ({
+        user: { ...state.user, isTwoFactorEnabled: value }
+      }));
+    } catch (err) {
+      console.log('Update 2FA failed:', err);
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể cập nhật 2FA.' });
+      setForm2FA(!value);
+    }
+  };
+
   const confirmLogout = () => {
     setShowLogoutModal(false);
     logout();
     navigation.replace('Login');
   };
+
+  // Achievements dynamic list
+  const achievements = useMemo(() => {
+    return [
+      { id: 1, title: 'Kỷ Luật Thép', desc: 'Đạt chuỗi streak học tập liên tiếp 5 ngày', earned: currentStreak >= 5, icon: 'flame', color: '#f97316' },
+      { id: 2, title: 'Chiến Binh IELTS', desc: 'Hoàn thành bài thi thử đầu tiên', earned: totalTests >= 1, icon: 'shield-checkmark', color: '#3b82f6' },
+      { id: 3, title: 'Chuyên Gia Luyện Đề', desc: 'Hoàn thành từ 5 bài thi trở lên', earned: totalTests >= 5, icon: 'trophy', color: '#eab308' },
+      { id: 4, title: 'Vượt Ải Reading', desc: 'Đạt điểm Reading đầu tiên', earned: readingBand > 0, icon: 'book', color: '#10b981' },
+      { id: 5, title: 'Vượt Ải Listening', desc: 'Đạt điểm Listening đầu tiên', earned: listeningBand > 0, icon: 'headset', color: '#a855f7' },
+      { id: 6, title: 'Nhà Văn IELTS', desc: 'Hoàn thành bài thi Writing đầu tiên', earned: writingBand > 0, icon: 'create', color: '#ec4899' },
+      { id: 7, title: 'Diễn Giả Tiếng Anh', desc: 'Hoàn thành bài thi Speaking đầu tiên', earned: speakingBand > 0, icon: 'mic', color: '#ef4444' },
+    ];
+  }, [currentStreak, totalTests, readingBand, listeningBand, writingBand, speakingBand]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -321,7 +424,7 @@ const ProfileScreen = ({ navigation }) => {
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backBtnText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.appBarTitle}>STUDENT PROFILE</Text>
+        <Text style={styles.appBarTitle}>HỒ SƠ CÁ NHÂN</Text>
         <View style={styles.backBtn} />
       </View>
 
@@ -345,14 +448,20 @@ const ProfileScreen = ({ navigation }) => {
           <BrutalistShadow style={styles.profileCard} offset={6}>
             <View style={styles.profileCardInner}>
               <View style={styles.avatarRow}>
-                <View style={styles.avatarWrap}>
+                <TouchableOpacity style={styles.avatarWrap} onPress={handlePickAvatar} disabled={avatarLoading}>
                   <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{initials}</Text>
+                    {avatarLoading ? (
+                      <ActivityIndicator size="small" color="#005c42" />
+                    ) : user?.avatar ? (
+                      <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+                    ) : (
+                      <Text style={styles.avatarText}>{initials}</Text>
+                    )}
                   </View>
-                  <TouchableOpacity style={styles.cameraBtn} onPress={() => setShowEditProfileModal(true)}>
-                    <Ionicons name="pencil" size={12} color="#fff" />
-                  </TouchableOpacity>
-                </View>
+                  <View style={styles.cameraBtn}>
+                    <Ionicons name="camera" size={12} color="#fff" />
+                  </View>
+                </TouchableOpacity>
 
                 <View style={styles.infoWrap}>
                   <Text style={styles.nameText}>{profileName}</Text>
@@ -394,23 +503,28 @@ const ProfileScreen = ({ navigation }) => {
 
           {/* Tabs */}
           <View style={styles.tabsContainer}>
-            {tabs.map((tab) => {
-              const isActive = tab.key === activeTab;
-              return (
-                <TouchableOpacity
-                  key={tab.key}
-                  onPress={() => setActiveTab(tab.key)}
-                  style={[styles.tabItem, isActive && styles.tabItemActive]}
-                >
-                  <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 4 }}>
+              {tabs.map((tab) => {
+                const isActive = tab.key === activeTab;
+                return (
+                  <TouchableOpacity
+                    key={tab.key}
+                    onPress={() => {
+                      setActiveTab(tab.key);
+                      if (tab.key !== 'profile') setIsEditing(false);
+                    }}
+                    style={[styles.tabItem, isActive && styles.tabItemActive]}
+                  >
+                    <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
 
-              {/* Overview Tab */}
+          {/* Overview Tab */}
           {activeTab === 'overview' && (
             <View style={styles.overviewContainer}>
               
@@ -436,36 +550,7 @@ const ProfileScreen = ({ navigation }) => {
                 </View>
               </View>
 
-              {/* Recent Activities */}
-              <BrutalistShadow style={styles.plannerCard} offset={4}>
-                <View style={styles.plannerCardInner}>
-                  <Text style={styles.sectionTitle}>Recent Activities</Text>
-                  
-                  {recentActivities.length > 0 ? recentActivities.map((item, index) => (
-                    <View key={item.id || index} style={styles.plannerItem}>
-                      <Ionicons 
-                        name="checkmark-circle" 
-                        size={18} 
-                        color="#005c42" 
-                      />
-                      <Text style={[styles.plannerItemText, { flex: 1 }]} numberOfLines={1}>
-                        Completed {item.title || `${item.type} Test`}
-                      </Text>
-                      {item.bandScore > 0 && (
-                        <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 11, color: '#c92a2a' }}>
-                          Band {item.bandScore}
-                        </Text>
-                      )}
-                    </View>
-                  )) : (
-                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#666', textAlign: 'center', marginVertical: 10 }}>
-                      No recent activities found. Start practicing now!
-                    </Text>
-                  )}
-                </View>
-              </BrutalistShadow>
-
-              {/* Score Summary Card */}
+              {/* Detailed Skill Breakdown */}
               <BrutalistShadow style={styles.scoreCard} offset={4}>
                 <View style={styles.scoreCardInner}>
                   <Text style={styles.sectionTitle}>Detailed Skill Breakdown</Text>
@@ -491,107 +576,339 @@ const ProfileScreen = ({ navigation }) => {
                   ))}
                 </View>
               </BrutalistShadow>
-
-
             </View>
           )}
 
-          {/* Settings Tab */}
-          {activeTab === 'settings' && (
+          {/* Profile Tab */}
+          {activeTab === 'profile' && (
+            <View style={{ gap: 20 }}>
+              {isEditing ? (
+                // Edit profile details form
+                <BrutalistShadow style={styles.settingsCard} offset={4}>
+                  <View style={styles.settingsCardInner}>
+                    <Text style={styles.sectionTitle}>Chỉnh Sửa Hồ Sơ</Text>
+
+                    <Controller
+                      control={control}
+                      name="fullName"
+                      render={({ field: { onChange, value } }) => (
+                        <View style={styles.inputGroup}>
+                          <Text style={styles.label}>FULL NAME</Text>
+                          <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="Full name" placeholderTextColor="#999" />
+                          {errors.fullName && <Text style={styles.errorText}>{errors.fullName.message}</Text>}
+                        </View>
+                      )}
+                    />
+
+                    <Controller
+                      control={control}
+                      name="phone"
+                      render={({ field: { onChange, value } }) => (
+                        <View style={styles.inputGroup}>
+                          <Text style={styles.label}>PHONE NUMBER</Text>
+                          <TextInput style={styles.input} value={value} onChangeText={onChange} keyboardType="phone-pad" placeholder="Phone number" placeholderTextColor="#999" />
+                          {errors.phone && <Text style={styles.errorText}>{errors.phone.message}</Text>}
+                        </View>
+                      )}
+                    />
+
+                    <Controller
+                      control={control}
+                      name="birthDate"
+                      render={({ field: { onChange, value } }) => (
+                        <View style={styles.inputGroup}>
+                          <Text style={styles.label}>DATE OF BIRTH</Text>
+                          <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="DD/MM/YYYY" placeholderTextColor="#999" />
+                          {errors.birthDate && <Text style={styles.errorText}>{errors.birthDate.message}</Text>}
+                        </View>
+                      )}
+                    />
+
+                    <Controller
+                      control={control}
+                      name="identityNumber"
+                      render={({ field: { onChange, value } }) => (
+                        <View style={styles.inputGroup}>
+                          <Text style={styles.label}>IDENTITY NUMBER / CCCD</Text>
+                          <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="CCCD hoặc CMND..." placeholderTextColor="#999" />
+                        </View>
+                      )}
+                    />
+
+                    <Controller
+                      control={control}
+                      name="expertise"
+                      render={({ field: { onChange, value } }) => (
+                        <View style={styles.inputGroup}>
+                          <Text style={styles.label}>TEACHING EXPERTISE</Text>
+                          <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="e.g. IELTS 8.0, IELTS Speaking Expert" placeholderTextColor="#999" />
+                        </View>
+                      )}
+                    />
+
+                    <Controller
+                      control={control}
+                      name="bio"
+                      render={({ field: { onChange, value } }) => (
+                        <View style={styles.inputGroup}>
+                          <Text style={styles.label}>INTRODUCTION / BIO</Text>
+                          <TextInput 
+                            style={[styles.input, { height: 80, textAlignVertical: 'top' }]} 
+                            value={value} 
+                            onChangeText={onChange} 
+                            placeholder="Giới thiệu bản thân và kinh nghiệm..." 
+                            placeholderTextColor="#999" 
+                            multiline 
+                            numberOfLines={3} 
+                          />
+                        </View>
+                      )}
+                    />
+
+                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                      <TouchableOpacity style={[styles.saveBtn, { flex: 1, backgroundColor: '#fcd34d' }]} onPress={handleSubmit(onSubmit)}>
+                        <Text style={styles.saveBtnText}>LƯU THAY ĐỔI</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.logoutBtn, { flex: 1, height: 48, justifyContent: 'center' }]} onPress={() => setIsEditing(false)}>
+                        <Text style={[styles.logoutBtnText, { color: '#1b263b' }]}>HỦY</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </BrutalistShadow>
+              ) : (
+                // Read-only profile details
+                <BrutalistShadow style={styles.settingsCard} offset={4}>
+                  <View style={styles.settingsCardInner}>
+                    <Text style={styles.sectionTitle}>Thông Tin Tài Khoản</Text>
+
+                    <View style={styles.infoFieldItem}>
+                      <Text style={styles.infoFieldLabel}>HỌ TÊN</Text>
+                      <Text style={styles.infoFieldValue}>{user?.fullName || '—'}</Text>
+                    </View>
+
+                    <View style={styles.infoFieldItem}>
+                      <Text style={styles.infoFieldLabel}>EMAIL (TÊN ĐĂNG NHẬP)</Text>
+                      <Text style={[styles.infoFieldValue, { color: '#666' }]}>{user?.email || '—'}</Text>
+                    </View>
+
+                    <View style={styles.infoFieldItem}>
+                      <Text style={styles.infoFieldLabel}>SỐ ĐIỆN THOẠI</Text>
+                      <Text style={styles.infoFieldValue}>{user?.phone || '—'}</Text>
+                    </View>
+
+                    <View style={styles.infoFieldItem}>
+                      <Text style={styles.infoFieldLabel}>NGÀY SINH</Text>
+                      <Text style={styles.infoFieldValue}>{user?.birthday || user?.dateOfBirth || '—'}</Text>
+                    </View>
+
+                    <View style={styles.infoFieldItem}>
+                      <Text style={styles.infoFieldLabel}>IDENTITY NUMBER / CCCD</Text>
+                      <Text style={styles.infoFieldValue}>{user?.identityNumber || '—'}</Text>
+                    </View>
+
+                    <View style={styles.infoFieldItem}>
+                      <Text style={styles.infoFieldLabel}>CHUYÊN MÔN</Text>
+                      <Text style={styles.infoFieldValue}>{user?.expertise || '—'}</Text>
+                    </View>
+
+                    <View style={styles.infoFieldItem}>
+                      <Text style={styles.infoFieldLabel}>GIỚI THIỆU / BIO</Text>
+                      <Text style={styles.infoFieldValue}>{user?.bio || '—'}</Text>
+                    </View>
+
+                    <TouchableOpacity 
+                      style={[styles.saveBtn, { backgroundColor: '#a7f3d0', marginTop: 12 }]} 
+                      onPress={() => setIsEditing(true)}
+                    >
+                      <Text style={styles.saveBtnText}>CHỈNH SỬA THÔNG TIN ✏️</Text>
+                    </TouchableOpacity>
+                  </View>
+                </BrutalistShadow>
+              )}
+
+              {/* Password & Security Card */}
+              <BrutalistShadow style={styles.settingsCard} offset={4}>
+                <View style={styles.settingsCardInner}>
+                  <Text style={styles.sectionTitle}>Đổi Mật Khẩu</Text>
+                  
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>CURRENT PASSWORD</Text>
+                    <TextInput 
+                      style={styles.input} 
+                      value={oldPassword} 
+                      onChangeText={setOldPassword} 
+                      placeholder="Enter current password" 
+                      placeholderTextColor="#999" 
+                      secureTextEntry
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>NEW PASSWORD</Text>
+                    <TextInput 
+                      style={styles.input} 
+                      value={newPassword} 
+                      onChangeText={setNewPassword} 
+                      placeholder="Enter new password" 
+                      placeholderTextColor="#999" 
+                      secureTextEntry
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>CONFIRM NEW PASSWORD</Text>
+                    <TextInput 
+                      style={styles.input} 
+                      value={confirmPassword} 
+                      onChangeText={setConfirmPassword} 
+                      placeholder="Confirm new password" 
+                      placeholderTextColor="#999" 
+                      secureTextEntry
+                    />
+                  </View>
+
+                  <TouchableOpacity 
+                    style={[styles.saveBtn, { backgroundColor: '#fbcfe8', borderColor: '#1b263b' }]} 
+                    onPress={handleChangePassword}
+                    disabled={passwordLoading}
+                  >
+                    {passwordLoading ? (
+                      <ActivityIndicator size="small" color="#c92a2a" />
+                    ) : (
+                      <Text style={[styles.saveBtnText, { color: '#c92a2a' }]}>CHANGE PASSWORD 🔑</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  <View style={{ height: 1, backgroundColor: '#1b263b', opacity: 0.2, marginVertical: 20 }} />
+
+                  <Text style={styles.sectionTitle}>Xác Thực 2 Bước (2FA)</Text>
+                  <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#666', marginBottom: 12 }}>
+                    Nhận mã xác thực qua Email mỗi khi bạn đăng nhập tài khoản.
+                  </Text>
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                      padding: 12, backgroundColor: '#fdfaf2', borderWidth: 2, borderColor: '#1b263b',
+                      borderRadius: 12
+                    }}
+                    onPress={() => handleUpdate2FA(!form2FA)}
+                  >
+                    <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#1b263b' }}>Enable 2FA</Text>
+                    <View style={{
+                      width: 44, height: 24, borderRadius: 12, backgroundColor: form2FA ? '#00cc99' : '#eae6ca',
+                      borderWidth: 2, borderColor: '#1b263b', justifyContent: 'center', paddingHorizontal: 2
+                    }}>
+                      <View style={{
+                        width: 16, height: 16, borderRadius: 8, backgroundColor: '#fff',
+                        borderWidth: 1, borderColor: '#1b263b',
+                        transform: [{ translateX: form2FA ? 20 : 0 }]
+                      }} />
+                    </View>
+                  </TouchableOpacity>
+                  
+                  {user?.role === 'ADMIN' && (
+                    <TouchableOpacity 
+                      style={[styles.logoutBtn, { marginTop: 20, borderColor: '#005c42', backgroundColor: '#e8f5e9' }]} 
+                      onPress={() => navigation.navigate('Admin')}
+                    >
+                      <Text style={[styles.logoutBtnText, { color: '#005c42' }]}>ADMIN PANEL 🛠️</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <TouchableOpacity style={[styles.logoutBtn, { marginTop: 20 }]} onPress={() => setShowLogoutModal(true)}>
+                    <Text style={styles.logoutBtnText}>LOG OUT</Text>
+                  </TouchableOpacity>
+                </View>
+              </BrutalistShadow>
+            </View>
+          )}
+
+          {/* History Tab */}
+          {activeTab === 'history' && (
             <BrutalistShadow style={styles.settingsCard} offset={4}>
               <View style={styles.settingsCardInner}>
-                <Text style={styles.sectionTitle}>Change Password</Text>
-                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#666', marginBottom: 20 }}>
-                  Update a new password for your account.
-                </Text>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>CURRENT PASSWORD</Text>
-                  <TextInput 
-                    style={styles.input} 
-                    value={oldPassword} 
-                    onChangeText={setOldPassword} 
-                    placeholder="Enter current password" 
-                    placeholderTextColor="#999" 
-                    secureTextEntry
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>NEW PASSWORD</Text>
-                  <TextInput 
-                    style={styles.input} 
-                    value={newPassword} 
-                    onChangeText={setNewPassword} 
-                    placeholder="Enter new password" 
-                    placeholderTextColor="#999" 
-                    secureTextEntry
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>CONFIRM NEW PASSWORD</Text>
-                  <TextInput 
-                    style={styles.input} 
-                    value={confirmPassword} 
-                    onChangeText={setConfirmPassword} 
-                    placeholder="Confirm new password" 
-                    placeholderTextColor="#999" 
-                    secureTextEntry
-                  />
-                </View>
-
-                <TouchableOpacity 
-                  style={[styles.saveBtn, { backgroundColor: '#fbcfe8', borderColor: '#1b263b' }]} 
-                  onPress={handleChangePassword}
-                  disabled={passwordLoading}
-                >
-                  {passwordLoading ? (
-                    <ActivityIndicator size="small" color="#c92a2a" />
-                  ) : (
-                    <Text style={[styles.saveBtnText, { color: '#c92a2a' }]}>CHANGE PASSWORD 🔑</Text>
-                  )}
-                </TouchableOpacity>
-
-                <View style={{ height: 1, backgroundColor: '#1b263b', opacity: 0.2, marginVertical: 20 }} />
-
-                <Text style={styles.sectionTitle}>Two-Factor Authentication (2FA)</Text>
-                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#666', marginBottom: 12 }}>
-                  Receive an authentication code via email whenever you log in.
-                </Text>
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                    padding: 12, backgroundColor: '#fdfaf2', borderWidth: 2, borderColor: '#1b263b',
-                    borderRadius: 12
-                  }}
-                  onPress={() => setForm2FA(!form2FA)}
-                >
-                  <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#1b263b' }}>Enable 2FA</Text>
-                  <View style={{
-                    width: 44, height: 24, borderRadius: 12, backgroundColor: form2FA ? '#00cc99' : '#eae6ca',
-                    borderWidth: 2, borderColor: '#1b263b', justifyContent: 'center', paddingHorizontal: 2
-                  }}>
-                    <View style={{
-                      width: 16, height: 16, borderRadius: 8, backgroundColor: '#fff',
-                      borderWidth: 1, borderColor: '#1b263b',
-                      transform: [{ translateX: form2FA ? 20 : 0 }]
-                    }} />
-                  </View>
-                </TouchableOpacity>
+                <Text style={styles.sectionTitle}>Lịch Sử Làm Bài</Text>
                 
-                {user?.role === 'ADMIN' && (
-                  <TouchableOpacity 
-                    style={[styles.logoutBtn, { marginTop: 20, borderColor: '#005c42', backgroundColor: '#e8f5e9' }]} 
-                    onPress={() => navigation.navigate('Admin')}
-                  >
-                    <Text style={[styles.logoutBtnText, { color: '#005c42' }]}>ADMIN PANEL 🛠️</Text>
-                  </TouchableOpacity>
-                )}
+                {recentActivities.length > 0 ? (
+                  recentActivities.map((item, index) => {
+                    const iconMap = {
+                      'READING': 'book',
+                      'LISTENING': 'headset',
+                      'WRITING': 'create',
+                      'SPEAKING': 'mic',
+                    };
+                    const colorMap = {
+                      'READING': '#4682b4',
+                      'LISTENING': '#005c42',
+                      'WRITING': '#d97706',
+                      'SPEAKING': '#c92a2a',
+                    };
+                    const typeIcon = iconMap[item.type] || 'document-text';
+                    const typeColor = colorMap[item.type] || '#1b263b';
+                    const itemDate = item.createdAt 
+                      ? new Date(item.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      : '—';
 
-                <TouchableOpacity style={[styles.logoutBtn, { marginTop: 20 }]} onPress={() => setShowLogoutModal(true)}>
-                  <Text style={styles.logoutBtnText}>LOG OUT</Text>
-                </TouchableOpacity>
+                    return (
+                      <View key={item.id || index} style={styles.historyRow}>
+                        <View style={[styles.historyIconBox, { borderColor: typeColor, backgroundColor: typeColor + '15' }]}>
+                          <Ionicons name={typeIcon} size={18} color={typeColor} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.historyTitle} numberOfLines={1}>
+                            {item.title || `${item.type} practice test`}
+                          </Text>
+                          <Text style={styles.historyTime}>
+                            {itemDate}
+                          </Text>
+                        </View>
+                        {item.bandScore > 0 && (
+                          <View style={[styles.historyScoreBadge, { borderColor: typeColor }]}>
+                            <Text style={[styles.historyScoreText, { color: typeColor }]}>
+                              {item.bandScore.toFixed(1)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })
+                ) : (
+                  <View style={{ py: 20, alignItems: 'center' }}>
+                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#666', textAlign: 'center' }}>
+                      Bạn chưa thực hiện bài thi thử nào trên thiết bị này.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </BrutalistShadow>
+          )}
+
+          {/* Achievements Tab */}
+          {activeTab === 'achievements' && (
+            <BrutalistShadow style={styles.settingsCard} offset={4}>
+              <View style={styles.settingsCardInner}>
+                <Text style={styles.sectionTitle}>Thành Tích Đạt Được</Text>
+                
+                <View style={styles.achieveGrid}>
+                  {achievements.map((item) => (
+                    <View key={item.id} style={[styles.achieveCard, { borderColor: item.earned ? item.color : '#ccc', backgroundColor: item.earned ? item.color + '0a' : '#f9f9f9' }]}>
+                      <View style={[styles.achieveIconWrap, { backgroundColor: item.earned ? item.color + '18' : '#e0e0e0', borderColor: item.earned ? item.color : '#999' }]}>
+                        <Ionicons name={item.earned ? item.icon : 'lock-closed'} size={24} color={item.earned ? item.color : '#777'} />
+                      </View>
+                      <Text style={[styles.achieveTitle, { color: item.earned ? '#1b263b' : '#777' }]}>
+                        {item.title}
+                      </Text>
+                      <Text style={styles.achieveDesc}>
+                        {item.desc}
+                      </Text>
+                      {item.earned && (
+                        <View style={[styles.achieveTag, { backgroundColor: item.color }]}>
+                          <Text style={styles.achieveTagText}>ĐÃ ĐẠT</Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
               </View>
             </BrutalistShadow>
           )}
@@ -754,85 +1071,6 @@ const ProfileScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Edit Profile Modal */}
-      <Modal visible={showEditProfileModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <BrutalistShadow style={{ borderRadius: 16, width: '95%', maxWidth: 400, maxHeight: '80%' }} offset={6}>
-            <View style={[styles.modalContainer, { padding: 20 }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 16 }}>
-                <Text style={styles.modalTitle}>Edit Profile</Text>
-                <TouchableOpacity onPress={() => setShowEditProfileModal(false)}>
-                  <Ionicons name="close" size={24} color="#1b263b" />
-                </TouchableOpacity>
-              </View>
-              
-              <ScrollView style={{ width: '100%' }} showsVerticalScrollIndicator={false}>
-                <Controller
-                  control={control}
-                  name="fullName"
-                  render={({ field: { onChange, value } }) => (
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>FULL NAME</Text>
-                      <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="Full name" placeholderTextColor="#999" />
-                      {errors.fullName && <Text style={styles.errorText}>{errors.fullName.message}</Text>}
-                    </View>
-                  )}
-                />
-
-                <Controller
-                  control={control}
-                  name="email"
-                  render={({ field: { onChange, value } }) => (
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>EMAIL</Text>
-                      <TextInput 
-                        style={[styles.input, { backgroundColor: '#e5e7eb', color: '#6b7280' }]} 
-                        value={value} 
-                        onChangeText={onChange} 
-                        keyboardType="email-address" 
-                        autoCapitalize="none" 
-                        placeholder="Email" 
-                        placeholderTextColor="#999" 
-                        editable={false}
-                      />
-                      {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
-                    </View>
-                  )}
-                />
-
-                <Controller
-                  control={control}
-                  name="phone"
-                  render={({ field: { onChange, value } }) => (
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>PHONE NUMBER</Text>
-                      <TextInput style={styles.input} value={value} onChangeText={onChange} keyboardType="phone-pad" placeholder="Phone number" placeholderTextColor="#999" />
-                      {errors.phone && <Text style={styles.errorText}>{errors.phone.message}</Text>}
-                    </View>
-                  )}
-                />
-
-                <Controller
-                  control={control}
-                  name="birthDate"
-                  render={({ field: { onChange, value } }) => (
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>DATE OF BIRTH</Text>
-                      <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="DD/MM/YYYY" placeholderTextColor="#999" />
-                      {errors.birthDate && <Text style={styles.errorText}>{errors.birthDate.message}</Text>}
-                    </View>
-                  )}
-                />
-
-                <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit(onSubmit)}>
-                  <Text style={styles.saveBtnText}>SAVE CHANGES</Text>
-                </TouchableOpacity>
-              </ScrollView>
-            </View>
-          </BrutalistShadow>
-        </View>
-      </Modal>
-
       {/* Success Modal */}
       <Modal visible={!!successMessage} transparent animationType="fade" onRequestClose={() => setSuccessMessage('')}>
         <View style={styles.modalOverlay}>
@@ -926,7 +1164,9 @@ const styles = StyleSheet.create({
   avatar: {
     width: 72, height: 72, borderRadius: 16, backgroundColor: '#a7f3d0',
     borderWidth: 2, borderColor: '#1b263b', alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: 28, fontFamily: 'Outfit_900Black', color: '#005c42' },
   cameraBtn: {
     position: 'absolute', bottom: -6, right: -6, width: 26, height: 26, borderRadius: 13,
@@ -978,9 +1218,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', backgroundColor: '#fcfbf7', borderRadius: 12,
     borderWidth: 2, borderColor: '#1b263b', padding: 4, marginBottom: 24,
   },
-  tabItem: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 8 },
+  tabItem: { paddingHorizontal: 16, alignItems: 'center', paddingVertical: 10, borderRadius: 8 },
   tabItemActive: { backgroundColor: '#1b263b' },
-  tabText: { fontSize: 12, fontFamily: 'Outfit_900Black', color: '#1b263b' },
+  tabText: { fontSize: 11, fontFamily: 'Outfit_900Black', color: '#1b263b' },
   tabTextActive: { color: '#fff' },
 
   // Overview Tab Styles
@@ -1036,24 +1276,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_900Black',
     fontSize: 9,
     color: 'rgba(27,38,59,0.5)',
-  },
-  
-  plannerCard: { borderRadius: 20, marginBottom: 20 },
-  plannerCardInner: { backgroundColor: '#fcfbf7', padding: 20 },
-  plannerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 10,
-  },
-  plannerItemText: {
-    fontFamily: 'Outfit_700Bold',
-    fontSize: 13,
-    color: '#1b263b',
-  },
-  plannerItemTextDone: {
-    textDecorationLine: 'line-through',
-    color: '#999',
   },
 
   scoreCard: { borderRadius: 20, marginBottom: 20 },
@@ -1120,6 +1342,117 @@ const styles = StyleSheet.create({
   modalBtnCancelText: { fontFamily: 'Outfit_900Black', fontSize: 11, color: '#1b263b' },
   modalBtnDanger: { flex: 1, backgroundColor: '#c92a2a', borderWidth: 2, borderColor: '#1b263b', borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   modalBtnDangerText: { fontFamily: 'Outfit_900Black', fontSize: 11, color: '#fff' },
+
+  // Read-only Info List Styles
+  infoFieldItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(27,38,59,0.1)',
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  infoFieldLabel: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 9,
+    color: '#888',
+    marginBottom: 4,
+  },
+  infoFieldValue: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 14,
+    color: '#1b263b',
+  },
+
+  // History Tab Styles
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#1b263b',
+    gap: 12,
+  },
+  historyIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historyTitle: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 14,
+    color: '#1b263b',
+    marginBottom: 2,
+  },
+  historyTime: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 11,
+    color: '#999',
+  },
+  historyScoreBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1.5,
+  },
+  historyScoreText: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 12,
+  },
+
+  // Achievements Tab Styles
+  achieveGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 10,
+  },
+  achieveCard: {
+    width: '48%',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 12,
+    alignItems: 'center',
+    position: 'relative',
+    marginBottom: 6,
+  },
+  achieveIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  achieveTitle: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  achieveDesc: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 9,
+    color: '#777',
+    textAlign: 'center',
+    lineHeight: 12,
+    marginBottom: 10,
+  },
+  achieveTag: {
+    position: 'absolute',
+    bottom: -8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  achieveTagText: {
+    fontFamily: 'Outfit_900Black',
+    fontSize: 7,
+    color: '#fff',
+  },
 });
 
 export default ProfileScreen;
