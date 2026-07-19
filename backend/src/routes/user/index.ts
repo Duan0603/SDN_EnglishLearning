@@ -3,7 +3,7 @@ import {asyncHandler} from "../../auth/checkAuth";
 import {AccessController} from "../../controllers/access.controller";
 import {PasswordController} from "../../controllers/password.controller";
 import {authentication} from "../../auth/authUtils";
-import { getUserResults, getUserStats, checkInUser } from "../../controllers/user.controller";
+import { getUserResults, getUserStats, checkInUser, getTestResultDetail, getWritingSubmissionDetail, getSpeakingSubmissionDetail } from "../../controllers/user.controller";
 import { getMyMentorRequest, createMentorRequest } from "../../controllers/mentorRequest.controller";
 
 export const userRouter = express.Router();
@@ -35,3 +35,6 @@ userRouter.post('/me/test-streak', asyncHandler(async (req, res, next) => {
     const { updateTestStreak } = require("../../controllers/user.controller");
     await updateTestStreak(req, res, next);
 }))
+userRouter.get('/me/results/test/:id', asyncHandler(getTestResultDetail))
+userRouter.get('/me/results/writing/:id', asyncHandler(getWritingSubmissionDetail))
+userRouter.get('/me/results/speaking/:id', asyncHandler(getSpeakingSubmissionDetail))

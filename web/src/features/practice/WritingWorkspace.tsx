@@ -67,9 +67,10 @@ export default function WritingWorkspace() {
       const currentSection = activeExam.sections[activeSectionIdx];
       const response = await apiClient.post('/exams/evaluate-writing', {
         testId: activeExam.id,
-        prompt: currentSection.passageText,
-        essayText: currentEssay
-      });
+        prompt: currentSection.passageText || currentSection.title || 'IELTS Writing Test',
+        essayText: currentEssay,
+        partNumber: activeSectionIdx + 1,
+      }, { timeout: 60000 });
 
       if (response.data && response.data.success) {
         const result = response.data.data;

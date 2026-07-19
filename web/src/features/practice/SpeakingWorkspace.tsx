@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../store/store';
 import { apiClient } from '../../services/api.client';
 
 export default function SpeakingWorkspace() {
   const { examId } = useParams<{ examId: string }>();
+  const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
 
   const [activeExam, setActiveExam] = useState<any | null>(null);
@@ -16,7 +17,7 @@ export default function SpeakingWorkspace() {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordingInterval, setRecordingInterval] = useState<any | null>(null);
   const [speakingLoading, setSpeakingLoading] = useState(false);
-  const [speakingResult, setSpeakingResult] = useState<any | null>(null);
+  const [speakingResults, setSpeakingResults] = useState<{ [key: number]: any }>({});
 
   useEffect(() => {
     if (examId) {
@@ -27,7 +28,7 @@ export default function SpeakingWorkspace() {
           if (response.data && response.data.success) {
             setActiveExam(response.data.data);
             setActiveSectionIdx(0);
-            setSpeakingResult(null);
+            setSpeakingResults({});
             setIsRecording(false);
           }
         } catch (err) {
@@ -46,38 +47,98 @@ export default function SpeakingWorkspace() {
     };
   }, [recordingInterval]);
 
-  const handleToggleRecording = () => {
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<BlobPart[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioUriRef = useRef<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const handleToggleRecording = async () => {
     if (!isRecording) {
-      setIsRecording(true);
-      setRecordingSeconds(0);
-      const interval = setInterval(() => {
-        setRecordingSeconds((prev) => prev + 1);
-      }, 1000);
-      setRecordingInterval(interval);
+      // Bắt đầu ghi
+      audioChunksRef.current = [];
+      audioUriRef.current = null;
+      setSpeakingResults(prev => {
+        const newResults = { ...prev };
+        delete newResults[activeSectionIdx];
+        return newResults;
+      });
+      setErrorMessage('');
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+        const mr = new MediaRecorder(stream);
+        mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+        mr.onstop = () => {
+          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          audioUriRef.current = URL.createObjectURL(blob);
+        };
+        mr.start(500);
+        mediaRecorderRef.current = mr;
+
+        setIsRecording(true);
+        setRecordingSeconds(0);
+        const interval = setInterval(() => {
+          setRecordingSeconds((prev) => prev + 1);
+        }, 1000);
+        setRecordingInterval(interval);
+      } catch (err) {
+        console.error('Failed to start recording', err);
+        setErrorMessage('Không thể bắt đầu ghi âm. Vui lòng cấp quyền Microphone.');
+      }
     } else {
+      // Dừng ghi
       setIsRecording(false);
       if (recordingInterval) clearInterval(recordingInterval);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      streamRef.current?.getTracks().forEach(t => t.stop());
     }
   };
 
-  const handleEvaluateSpeaking = () => {
+  const handleEvaluateSpeaking = async () => {
+    if (!audioUriRef.current) {
+      setErrorMessage('Chưa có bài ghi âm. Vui lòng ghi âm trước khi nộp bài.');
+      return;
+    }
+
     setSpeakingLoading(true);
-    setTimeout(() => {
-      // Mock AI Evaluation response based on the active part
-      const partTitle = activeExam?.sections[activeSectionIdx]?.title || 'Part';
-      setSpeakingResult({
-        overall: 7.0,
-        criteria: {
-          fluency: 7.5,
-          vocabulary: 6.5,
-          grammar: 7.0,
-          pronunciation: 7.0,
-        },
-        feedback: `Phát âm rõ ràng trong ${partTitle}. Cần chú ý ngắt nghỉ tự nhiên hơn, tránh lặp từ và bổ sung thêm các cụm từ kết nối (linking words) nâng cao để đạt điểm Fluency cao hơn.`,
-        transcript: 'Honestly speaking, this is a topic that I am very passionate about. In my opinion, it is extremely crucial to develop this skill because it benefits our career in the long run.'
+    setErrorMessage('');
+    try {
+      // Đọc blob từ URL
+      const fetchRes = await fetch(audioUriRef.current);
+      const blob = await fetchRes.blob();
+      const base64Data: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1] || '');
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
       });
+
+      const activeSection = activeExam?.sections[activeSectionIdx] || {};
+      const response = await apiClient.post('/exams/evaluate-speaking', {
+        testId: examId,
+        prompt: activeSection.passageText || activeSection.title || 'IELTS Speaking Test',
+        audioBase64: base64Data,
+        mimeType: 'audio/webm',
+        durationSeconds: recordingSeconds,
+        partNumber: activeSectionIdx + 1,
+      }, { timeout: 60000 });
+
+      if (response.data && response.data.success) {
+        setSpeakingResults(prev => ({ ...prev, [activeSectionIdx]: response.data.data }));
+      } else {
+        setErrorMessage('Không thể chấm điểm, vui lòng thử lại.');
+      }
+    } catch (err: any) {
+      console.error('Submit audio error:', err);
+      const backendError = err.response?.data?.error?.message || err.response?.data?.message || err.message;
+      setErrorMessage(`Lỗi: ${backendError || 'Không thể gửi âm thanh'}`);
+    } finally {
       setSpeakingLoading(false);
-    }, 1800);
+    }
   };
 
   const formatTime = (secs: number) => {
@@ -88,11 +149,23 @@ export default function SpeakingWorkspace() {
 
   const handleSectionChange = (idx: number) => {
     setActiveSectionIdx(idx);
-    setSpeakingResult(null);
     setIsRecording(false);
     if (recordingInterval) clearInterval(recordingInterval);
     setRecordingSeconds(0);
   };
+
+  const handleRetry = () => {
+    setSpeakingResults(prev => {
+      const newResults = { ...prev };
+      delete newResults[activeSectionIdx];
+      return newResults;
+    });
+    setIsRecording(false);
+    if (recordingInterval) clearInterval(recordingInterval);
+    setRecordingSeconds(0);
+  };
+
+  const currentResult = speakingResults[activeSectionIdx];
 
   return (
     <div className="min-h-screen bg-[#f5f3dc] bg-notebook-paper bg-notebook bg-repeat text-[#1b263b] font-sans antialiased relative overflow-x-hidden custom-pencil-cursor">
@@ -232,37 +305,45 @@ export default function SpeakingWorkspace() {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleEvaluateSpeaking}
-                  disabled={speakingLoading || recordingSeconds === 0}
-                  className="w-full bg-[#c92a2a] disabled:bg-gray-300 disabled:cursor-not-allowed text-white border-2 border-[#1b263b] py-4 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-[#b01e1e] transition-all shadow-[3px_3px_0px_0px_#1b263b] flex items-center justify-center gap-2"
-                >
-                  {speakingLoading ? (
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    'Nộp Bài Để AI Chấm Điểm ✍️'
-                  )}
-                </button>
+                {errorMessage && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm font-semibold">
+                    {errorMessage}
+                  </div>
+                )}
 
-                {speakingResult && (
+                {!currentResult && (
+                  <button
+                    onClick={handleEvaluateSpeaking}
+                    disabled={speakingLoading || recordingSeconds === 0}
+                    className="w-full bg-[#c92a2a] disabled:bg-gray-300 disabled:cursor-not-allowed text-white border-2 border-[#1b263b] py-4 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-[#b01e1e] transition-all shadow-[3px_3px_0px_0px_#1b263b] flex items-center justify-center gap-2"
+                  >
+                    {speakingLoading ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      'Nộp Bài Để AI Chấm Điểm ✍️'
+                    )}
+                  </button>
+                )}
+
+                {currentResult && (
                   <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-6 shadow-[3px_3px_0px_0px_#1b263b] space-y-4 animate-fade-in">
                     <div className="flex items-center justify-between border-b-2 border-dashed border-gray-200 pb-3">
                       <h4 className="font-serif text-lg font-bold text-[#1b263b]">Kết Quả AI Đánh Giá</h4>
                       <div className="bg-[#ffd54f] border-2 border-[#1b263b] px-4 py-1.5 rounded-xl font-mono font-black text-lg">
-                        Band {speakingResult.overall}
+                        Band {currentResult.bandScore?.toFixed(1) || 0}
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {[
-                        { label: 'Fluency', score: speakingResult.criteria.fluency },
-                        { label: 'Vocabulary', score: speakingResult.criteria.vocabulary },
-                        { label: 'Grammar', score: speakingResult.criteria.grammar },
-                        { label: 'Pronunciation', score: speakingResult.criteria.pronunciation },
+                        { label: 'Fluency', score: currentResult.fluencyCoherence },
+                        { label: 'Vocabulary', score: currentResult.lexicalResource },
+                        { label: 'Grammar', score: currentResult.grammarAccuracy },
+                        { label: 'Pronunciation', score: currentResult.pronunciation },
                       ].map((item) => (
                         <div key={item.label} className="bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-center">
                           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{item.label}</p>
-                          <p className="text-lg font-mono font-black text-[#1b263b]">{item.score}</p>
+                          <p className="text-lg font-mono font-black text-[#1b263b]">{item.score?.toFixed(1) || 0}</p>
                         </div>
                       ))}
                     </div>
@@ -270,15 +351,68 @@ export default function SpeakingWorkspace() {
                     <div className="space-y-2 text-left">
                       <p className="text-[10px] font-black uppercase text-gray-400">Audio Transcript:</p>
                       <p className="text-xs text-gray-600 font-mono bg-gray-50 p-3.5 rounded-xl border border-gray-200 italic">
-                        "{speakingResult.transcript}"
+                        "{currentResult.transcription || 'Không nhận diện được giọng nói.'}"
                       </p>
                     </div>
 
                     <div className="space-y-2 text-left">
                       <p className="text-[10px] font-black uppercase text-gray-400">Phản hồi chi tiết:</p>
-                      <p className="text-xs text-gray-700 font-semibold leading-relaxed">
-                        {speakingResult.feedback}
-                      </p>
+                      {currentResult.aiFeedback?.general && (
+                        <p className="text-xs text-gray-700 font-semibold leading-relaxed font-serif">
+                          {currentResult.aiFeedback.general}
+                        </p>
+                      )}
+                      
+                      <div className="pt-2 space-y-2">
+                        {[
+                          { key: 'fluencyCoherence', label: '🗣 Trôi chảy & Mạch lạc' },
+                          { key: 'lexicalResource', label: '📚 Từ vựng' },
+                          { key: 'grammarAccuracy', label: '✏️ Ngữ pháp' },
+                          { key: 'pronunciation', label: '🔊 Phát âm' },
+                        ].map(({ key, label }) => currentResult.aiFeedback?.[key] && (
+                          <div key={key} className="text-xs">
+                            <span className="font-bold text-[#1b263b]">{label}: </span>
+                            <span className="text-gray-600">{currentResult.aiFeedback[key]}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {Array.isArray(currentResult.aiFeedback?.suggestions) && currentResult.aiFeedback.suggestions.length > 0 && (
+                        <div className="pt-2">
+                          <p className="text-[10px] font-black uppercase text-[#c92a2a] mb-1">💡 Gợi ý cải thiện</p>
+                          <ul className="list-disc pl-4 text-xs text-gray-700 space-y-1">
+                            {currentResult.aiFeedback.suggestions.map((s: string, i: number) => (
+                              <li key={i}>{s}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Hành động sau chấm điểm */}
+                    <div className="flex flex-col gap-3 pt-4 border-t-2 border-dashed border-gray-200 mt-4">
+                      <button
+                        onClick={handleRetry}
+                        className="w-full bg-white text-[#1b263b] border-2 border-[#1b263b] py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-gray-100 transition-all shadow-[2px_2px_0px_0px_#1b263b] flex items-center justify-center gap-2"
+                      >
+                        🔄 Luyện lại từ đầu
+                      </button>
+
+                      {activeSectionIdx < (activeExam?.sections?.length || 0) - 1 ? (
+                        <button
+                          onClick={() => handleSectionChange(activeSectionIdx + 1)}
+                          className="w-full bg-[#4682b4] text-white border-2 border-[#1b263b] py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-[#366890] transition-all shadow-[2px_2px_0px_0px_#1b263b] flex items-center justify-center gap-2"
+                        >
+                          Part Tiếp Theo →
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => navigate('/practice?tab=speaking')}
+                          className="w-full bg-[#005c42] text-white border-2 border-[#1b263b] py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-[#004732] transition-all shadow-[2px_2px_0px_0px_#1b263b] flex items-center justify-center gap-2"
+                        >
+                          ✅ Hoàn Thành Đề Thi
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}

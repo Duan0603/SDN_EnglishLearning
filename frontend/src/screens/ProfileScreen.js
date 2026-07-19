@@ -58,7 +58,15 @@ const ProfileScreen = ({ navigation }) => {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Password state
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [form2FA, setForm2FA] = useState(user?.is2FAEnabled || false);
 
   // Mentor Upgrade request state
   const [mentorRequest, setMentorRequest] = useState(null);
@@ -268,9 +276,33 @@ const ProfileScreen = ({ navigation }) => {
         birthday: data.birthDate
       };
       await updateProfile(apiData);
-      setSuccessMessage('Thông tin cá nhân của bạn đã được cập nhật thành công!');
+      setSuccessMessage('Your profile has been updated successfully!');
+      setShowEditProfileModal(false);
     } catch (error) {
-      Toast.show({ type: 'error', text1: 'Lỗi', text2: error.message || 'Cập nhật thông tin thất bại.' });
+      Toast.show({ type: 'error', text1: 'Error', text2: error.message || 'Failed to update profile.' });
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'New password and confirm password do not match!');
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      await client.post('/auth/change-password', {
+        oldPassword,
+        newPassword
+      });
+      Toast.show({ type: 'success', text1: 'Success', text2: 'Password changed successfully!' });
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      console.error("Change password failed:", err);
+      Alert.alert('Error', err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Error changing password!');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -317,8 +349,8 @@ const ProfileScreen = ({ navigation }) => {
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>{initials}</Text>
                   </View>
-                  <TouchableOpacity style={styles.cameraBtn}>
-                    <Ionicons name="camera" size={12} color="#fff" />
+                  <TouchableOpacity style={styles.cameraBtn} onPress={() => setShowEditProfileModal(true)}>
+                    <Ionicons name="pencil" size={12} color="#fff" />
                   </TouchableOpacity>
                 </View>
 
@@ -468,15 +500,271 @@ const ProfileScreen = ({ navigation }) => {
           {activeTab === 'settings' && (
             <BrutalistShadow style={styles.settingsCard} offset={4}>
               <View style={styles.settingsCardInner}>
-                <Text style={styles.sectionTitle}>Account Details</Text>
+                <Text style={styles.sectionTitle}>Change Password</Text>
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#666', marginBottom: 20 }}>
+                  Update a new password for your account.
+                </Text>
 
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>CURRENT PASSWORD</Text>
+                  <TextInput 
+                    style={styles.input} 
+                    value={oldPassword} 
+                    onChangeText={setOldPassword} 
+                    placeholder="Enter current password" 
+                    placeholderTextColor="#999" 
+                    secureTextEntry
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>NEW PASSWORD</Text>
+                  <TextInput 
+                    style={styles.input} 
+                    value={newPassword} 
+                    onChangeText={setNewPassword} 
+                    placeholder="Enter new password" 
+                    placeholderTextColor="#999" 
+                    secureTextEntry
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>CONFIRM NEW PASSWORD</Text>
+                  <TextInput 
+                    style={styles.input} 
+                    value={confirmPassword} 
+                    onChangeText={setConfirmPassword} 
+                    placeholder="Confirm new password" 
+                    placeholderTextColor="#999" 
+                    secureTextEntry
+                  />
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.saveBtn, { backgroundColor: '#fbcfe8', borderColor: '#1b263b' }]} 
+                  onPress={handleChangePassword}
+                  disabled={passwordLoading}
+                >
+                  {passwordLoading ? (
+                    <ActivityIndicator size="small" color="#c92a2a" />
+                  ) : (
+                    <Text style={[styles.saveBtnText, { color: '#c92a2a' }]}>CHANGE PASSWORD 🔑</Text>
+                  )}
+                </TouchableOpacity>
+
+                <View style={{ height: 1, backgroundColor: '#1b263b', opacity: 0.2, marginVertical: 20 }} />
+
+                <Text style={styles.sectionTitle}>Two-Factor Authentication (2FA)</Text>
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#666', marginBottom: 12 }}>
+                  Receive an authentication code via email whenever you log in.
+                </Text>
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                    padding: 12, backgroundColor: '#fdfaf2', borderWidth: 2, borderColor: '#1b263b',
+                    borderRadius: 12
+                  }}
+                  onPress={() => setForm2FA(!form2FA)}
+                >
+                  <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#1b263b' }}>Enable 2FA</Text>
+                  <View style={{
+                    width: 44, height: 24, borderRadius: 12, backgroundColor: form2FA ? '#00cc99' : '#eae6ca',
+                    borderWidth: 2, borderColor: '#1b263b', justifyContent: 'center', paddingHorizontal: 2
+                  }}>
+                    <View style={{
+                      width: 16, height: 16, borderRadius: 8, backgroundColor: '#fff',
+                      borderWidth: 1, borderColor: '#1b263b',
+                      transform: [{ translateX: form2FA ? 20 : 0 }]
+                    }} />
+                  </View>
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={[styles.logoutBtn, { marginTop: 20 }]} onPress={() => setShowLogoutModal(true)}>
+                  <Text style={styles.logoutBtnText}>LOG OUT</Text>
+                </TouchableOpacity>
+              </View>
+            </BrutalistShadow>
+          )}
+
+          {/* Become Mentor Tab */}
+          {activeTab === 'become_mentor' && (
+            <BrutalistShadow style={styles.settingsCard} offset={4}>
+              <View style={styles.settingsCardInner}>
+                <Text style={styles.sectionTitle}>Become a Mentor</Text>
+                
+                {fetchingRequest ? (
+                  <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color="#1b263b" />
+                  </View>
+                ) : mentorRequest?.status === 'PENDING' ? (
+                  <View style={{ gap: 16 }}>
+                    <View style={[styles.stickyNote, { backgroundColor: '#ffe082', rotate: '0deg', transform: [] }]}>
+                      <Text style={[styles.stickyTitle, { color: '#b58100' }]}>Application Pending ⏳</Text>
+                      <Text style={styles.stickyContent}>
+                        Your upgrade request has been submitted successfully and is currently under review.
+                        We will check your certificates and respond as soon as possible.
+                      </Text>
+                    </View>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>REGISTERED EXPERTISE</Text>
+                      <TextInput style={[styles.input, { backgroundColor: '#e5e7eb', color: '#6b7280' }]} value={expertiseInput} editable={false} />
+                    </View>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>INTRODUCTION / BIO</Text>
+                      <TextInput style={[styles.input, { backgroundColor: '#e5e7eb', color: '#6b7280' }]} value={bioInput} multiline numberOfLines={3} editable={false} />
+                    </View>
+                    {mentorRequest.certificates?.map((url, idx) => (
+                      <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                        <Ionicons name="document-text" size={16} color="#005c42" />
+                        <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, color: '#005c42', textDecorationLine: 'underline' }} numberOfLines={1}>
+                          Certificate {idx + 1}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : mentorRequest?.status === 'REJECTED' ? (
+                  <View style={{ gap: 16 }}>
+                    <View style={[styles.stickyNote, { backgroundColor: '#ffcdd2', rotate: '0deg', transform: [] }]}>
+                      <Text style={[styles.stickyTitle, { color: '#c62828' }]}>Application Rejected ❌</Text>
+                      <Text style={[styles.stickyContent, { color: '#c62828' }]}>
+                        Unfortunately, your account upgrade request has been rejected.
+                      </Text>
+                      <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#1b263b', marginTop: 8 }}>
+                        Reason from Admin:
+                      </Text>
+                      <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#333', marginTop: 4, fontStyle: 'italic' }}>
+                        "{mentorRequest.adminComment || 'No detailed reason provided.'}"
+                      </Text>
+                    </View>
+                    
+                    <TouchableOpacity style={styles.saveBtn} onPress={() => setMentorRequest(null)}>
+                      <Text style={styles.saveBtnText}>CREATE NEW REQUEST</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View>
+                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#666', marginBottom: 20 }}>
+                      Submit your English certificates (IELTS, TOEFL...) and a brief introduction. Admin will review and upgrade your account to Mentor.
+                    </Text>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>TEACHING EXPERTISE</Text>
+                      <TextInput 
+                        style={styles.input} 
+                        value={expertiseInput} 
+                        onChangeText={setExpertiseInput} 
+                        placeholder="e.g. IELTS 8.0, IELTS Speaking Expert" 
+                        placeholderTextColor="#999" 
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>INTRODUCTION / EXPERIENCE</Text>
+                      <TextInput 
+                        style={[styles.input, { height: 100, textAlignVertical: 'top' }]} 
+                        value={bioInput} 
+                        onChangeText={setBioInput} 
+                        placeholder="Briefly introduce yourself and your teaching experience..." 
+                        placeholderTextColor="#999" 
+                        multiline
+                        numberOfLines={4}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>ENGLISH CERTIFICATES (IMAGE OR PDF)</Text>
+                      
+                      {selectedFile ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 2, borderColor: '#1b263b', borderRadius: 12, padding: 12, backgroundColor: '#fcfbf7' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                            <Ionicons name="document-attach" size={20} color="#1b263b" />
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#1b263b' }} numberOfLines={1}>
+                                {selectedFile.name}
+                              </Text>
+                              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#666' }}>
+                                {selectedFile.size ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB` : ''}
+                              </Text>
+                            </View>
+                          </View>
+                          <TouchableOpacity onPress={() => setSelectedFile(null)}>
+                            <Ionicons name="trash-outline" size={20} color="#c92a2a" />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <TouchableOpacity style={[styles.logoutBtn, { borderStyle: 'dashed', backgroundColor: '#fff' }]} onPress={handlePickDocument}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Ionicons name="cloud-upload-outline" size={18} color="#1b263b" />
+                            <Text style={[styles.logoutBtnText, { color: '#1b263b' }]}>CHOOSE CERTIFICATE FILE</Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    <TouchableOpacity 
+                      style={[styles.saveBtn, { marginTop: 12, opacity: submittingRequest ? 0.7 : 1 }]} 
+                      onPress={handleSubmittingUpgrade}
+                      disabled={submittingRequest}
+                    >
+                      {submittingRequest ? (
+                        <ActivityIndicator size="small" color="#005c42" />
+                      ) : (
+                        <Text style={styles.saveBtnText}>SUBMIT REQUEST</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </BrutalistShadow>
+          )}
+        </ScrollView>
+      </View>
+
+      {/* Logout Modal */}
+      <Modal visible={showLogoutModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <BrutalistShadow style={{ borderRadius: 16, width: '90%', maxWidth: 400 }} offset={6}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalIconWrap}>
+                <Ionicons name="log-out" size={32} color="#c92a2a" />
+              </View>
+              <Text style={styles.modalTitle}>Sign Out?</Text>
+              <Text style={styles.modalDesc}>Are you sure you want to log out of your session?</Text>
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setShowLogoutModal(false)}>
+                  <Text style={styles.modalBtnCancelText}>CANCEL</Text>
+                </TouchableOpacity>
+                <View style={{ width: 12 }} />
+                <TouchableOpacity style={styles.modalBtnDanger} onPress={confirmLogout}>
+                  <Text style={styles.modalBtnDangerText}>SIGN OUT</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </BrutalistShadow>
+        </View>
+      </Modal>
+
+      {/* Edit Profile Modal */}
+      <Modal visible={showEditProfileModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <BrutalistShadow style={{ borderRadius: 16, width: '95%', maxWidth: 400, maxHeight: '80%' }} offset={6}>
+            <View style={[styles.modalContainer, { padding: 20 }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 16 }}>
+                <Text style={styles.modalTitle}>Edit Profile</Text>
+                <TouchableOpacity onPress={() => setShowEditProfileModal(false)}>
+                  <Ionicons name="close" size={24} color="#1b263b" />
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView style={{ width: '100%' }} showsVerticalScrollIndicator={false}>
                 <Controller
                   control={control}
                   name="fullName"
                   render={({ field: { onChange, value } }) => (
                     <View style={styles.inputGroup}>
-                      <Text style={styles.label}>HỌ TÊN</Text>
-                      <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="Họ và tên" placeholderTextColor="#999" />
+                      <Text style={styles.label}>FULL NAME</Text>
+                      <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="Full name" placeholderTextColor="#999" />
                       {errors.fullName && <Text style={styles.errorText}>{errors.fullName.message}</Text>}
                     </View>
                   )}
@@ -508,8 +796,8 @@ const ProfileScreen = ({ navigation }) => {
                   name="phone"
                   render={({ field: { onChange, value } }) => (
                     <View style={styles.inputGroup}>
-                      <Text style={styles.label}>SỐ ĐIỆN THOẠI</Text>
-                      <TextInput style={styles.input} value={value} onChangeText={onChange} keyboardType="phone-pad" placeholder="Số điện thoại" placeholderTextColor="#999" />
+                      <Text style={styles.label}>PHONE NUMBER</Text>
+                      <TextInput style={styles.input} value={value} onChangeText={onChange} keyboardType="phone-pad" placeholder="Phone number" placeholderTextColor="#999" />
                       {errors.phone && <Text style={styles.errorText}>{errors.phone.message}</Text>}
                     </View>
                   )}
@@ -520,8 +808,8 @@ const ProfileScreen = ({ navigation }) => {
                   name="birthDate"
                   render={({ field: { onChange, value } }) => (
                     <View style={styles.inputGroup}>
-                      <Text style={styles.label}>NGÀY SINH</Text>
-                      <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="Ngày/Tháng/Năm" placeholderTextColor="#999" />
+                      <Text style={styles.label}>DATE OF BIRTH</Text>
+                      <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="DD/MM/YYYY" placeholderTextColor="#999" />
                       {errors.birthDate && <Text style={styles.errorText}>{errors.birthDate.message}</Text>}
                     </View>
                   )}
@@ -530,167 +818,7 @@ const ProfileScreen = ({ navigation }) => {
                 <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit(onSubmit)}>
                   <Text style={styles.saveBtnText}>SAVE CHANGES</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.logoutBtn} onPress={() => setShowLogoutModal(true)}>
-                  <Text style={styles.logoutBtnText}>LOG OUT</Text>
-                </TouchableOpacity>
-              </View>
-            </BrutalistShadow>
-          )}
-
-          {/* Become Mentor Tab */}
-          {activeTab === 'become_mentor' && (
-            <BrutalistShadow style={styles.settingsCard} offset={4}>
-              <View style={styles.settingsCardInner}>
-                <Text style={styles.sectionTitle}>Become a Mentor</Text>
-                
-                {fetchingRequest ? (
-                  <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-                    <ActivityIndicator size="large" color="#1b263b" />
-                  </View>
-                ) : mentorRequest?.status === 'PENDING' ? (
-                  <View style={{ gap: 16 }}>
-                    <View style={[styles.stickyNote, { backgroundColor: '#ffe082', rotate: '0deg', transform: [] }]}>
-                      <Text style={[styles.stickyTitle, { color: '#b58100' }]}>Hồ Sơ Đang Chờ Duyệt ⏳</Text>
-                      <Text style={styles.stickyContent}>
-                        Yêu cầu nâng cấp của bạn đã được gửi thành công và đang trong quá trình thẩm định. 
-                        Chúng tôi sẽ kiểm tra chứng chỉ và phản hồi sớm nhất có thể.
-                      </Text>
-                    </View>
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>CHUYÊN MÔN ĐÃ ĐĂNG KÝ</Text>
-                      <TextInput style={[styles.input, { backgroundColor: '#e5e7eb', color: '#6b7280' }]} value={expertiseInput} editable={false} />
-                    </View>
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>GIỚI THIỆU BẢN THÂN</Text>
-                      <TextInput style={[styles.input, { backgroundColor: '#e5e7eb', color: '#6b7280' }]} value={bioInput} multiline numberOfLines={3} editable={false} />
-                    </View>
-                    {mentorRequest.certificates?.map((url, idx) => (
-                      <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                        <Ionicons name="document-text" size={16} color="#005c42" />
-                        <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, color: '#005c42', textDecorationLine: 'underline' }} numberOfLines={1}>
-                          Chứng chỉ {idx + 1}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : mentorRequest?.status === 'REJECTED' ? (
-                  <View style={{ gap: 16 }}>
-                    <View style={[styles.stickyNote, { backgroundColor: '#ffcdd2', rotate: '0deg', transform: [] }]}>
-                      <Text style={[styles.stickyTitle, { color: '#c62828' }]}>Yêu Cầu Bị Từ Chối ❌</Text>
-                      <Text style={[styles.stickyContent, { color: '#c62828' }]}>
-                        Rất tiếc, yêu cầu nâng cấp tài khoản của bạn đã bị từ chối.
-                      </Text>
-                      <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#1b263b', marginTop: 8 }}>
-                        Lý do từ Admin:
-                      </Text>
-                      <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#333', marginTop: 4, fontStyle: 'italic' }}>
-                        "{mentorRequest.adminComment || 'Không có lý do chi tiết.'}"
-                      </Text>
-                    </View>
-                    
-                    <TouchableOpacity style={styles.saveBtn} onPress={() => setMentorRequest(null)}>
-                      <Text style={styles.saveBtnText}>TẠO YÊU CẦU MỚI</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View>
-                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#666', marginBottom: 20 }}>
-                      Gửi chứng chỉ tiếng Anh (IELTS, TOEFL...) và thông tin giới thiệu của bạn. Admin sẽ xét duyệt và nâng cấp tài khoản của bạn lên Mentor.
-                    </Text>
-
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>CHUYÊN MÔN DẠY HỌC</Text>
-                      <TextInput 
-                        style={styles.input} 
-                        value={expertiseInput} 
-                        onChangeText={setExpertiseInput} 
-                        placeholder="Ví dụ: IELTS 8.0, Chuyên IELTS Speaking" 
-                        placeholderTextColor="#999" 
-                      />
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>GIỚI THIỆU BẢN THÂN / KINH NGHIỆM</Text>
-                      <TextInput 
-                        style={[styles.input, { height: 100, textAlignVertical: 'top' }]} 
-                        value={bioInput} 
-                        onChangeText={setBioInput} 
-                        placeholder="Hãy giới thiệu ngắn gọn về bản thân và kinh nghiệm giảng dạy của bạn..." 
-                        placeholderTextColor="#999" 
-                        multiline
-                        numberOfLines={4}
-                      />
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>CHỨNG CHỈ TIẾNG ANH (ẢNH HOẶC PDF)</Text>
-                      
-                      {selectedFile ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 2, borderColor: '#1b263b', borderRadius: 12, padding: 12, backgroundColor: '#fcfbf7' }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                            <Ionicons name="document-attach" size={20} color="#1b263b" />
-                            <View style={{ flex: 1 }}>
-                              <Text style={{ fontFamily: 'Outfit_900Black', fontSize: 13, color: '#1b263b' }} numberOfLines={1}>
-                                {selectedFile.name}
-                              </Text>
-                              <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#666' }}>
-                                {selectedFile.size ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB` : ''}
-                              </Text>
-                            </View>
-                          </View>
-                          <TouchableOpacity onPress={() => setSelectedFile(null)}>
-                            <Ionicons name="trash-outline" size={20} color="#c92a2a" />
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <TouchableOpacity style={[styles.logoutBtn, { borderStyle: 'dashed', backgroundColor: '#fff' }]} onPress={handlePickDocument}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <Ionicons name="cloud-upload-outline" size={18} color="#1b263b" />
-                            <Text style={[styles.logoutBtnText, { color: '#1b263b' }]}>CHỌN FILE CHỨNG CHỈ</Text>
-                          </View>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-
-                    <TouchableOpacity 
-                      style={[styles.saveBtn, { marginTop: 12, opacity: submittingRequest ? 0.7 : 1 }]} 
-                      onPress={handleSubmittingUpgrade}
-                      disabled={submittingRequest}
-                    >
-                      {submittingRequest ? (
-                        <ActivityIndicator size="small" color="#005c42" />
-                      ) : (
-                        <Text style={styles.saveBtnText}>GỬI YÊU CẦU DUYỆT</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            </BrutalistShadow>
-          )}
-        </ScrollView>
-      </View>
-
-      {/* Logout Modal */}
-      <Modal visible={showLogoutModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <BrutalistShadow style={{ borderRadius: 16, width: '90%', maxWidth: 400 }} offset={6}>
-            <View style={styles.modalContainer}>
-              <View style={styles.modalIconWrap}>
-                <Ionicons name="log-out" size={32} color="#c92a2a" />
-              </View>
-              <Text style={styles.modalTitle}>Sign Out?</Text>
-              <Text style={styles.modalDesc}>Are you sure you want to log out of your session?</Text>
-              <View style={styles.modalActions}>
-                <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setShowLogoutModal(false)}>
-                  <Text style={styles.modalBtnCancelText}>CANCEL</Text>
-                </TouchableOpacity>
-                <View style={{ width: 12 }} />
-                <TouchableOpacity style={styles.modalBtnDanger} onPress={confirmLogout}>
-                  <Text style={styles.modalBtnDangerText}>SIGN OUT</Text>
-                </TouchableOpacity>
-              </View>
+              </ScrollView>
             </View>
           </BrutalistShadow>
         </View>

@@ -5,6 +5,8 @@ import { logout } from '../auth/authSlice';
 import { apiClient } from '../../services/api.client';
 import { socket } from '../../services/socket';
 import { useModal } from '../shared/ModalProvider';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { ReviewModal } from './ReviewModal';
 
 export default function PracticeWorkspace() {
   const { user } = useAppSelector((state) => state.auth);
@@ -55,6 +57,11 @@ export default function PracticeWorkspace() {
   const [userResults, setUserResults] = useState<any[]>([]);
   const [trackerLoading, setTrackerLoading] = useState(false);
   const [trackerError, setTrackerError] = useState<string | null>(null);
+
+  // Review Modal State
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [selectedSubmissionType, setSelectedSubmissionType] = useState<string>('READING');
 
   // Mentor Create Slot Form State
   const [showCreateSlotModal, setShowCreateSlotModal] = useState(false);
@@ -233,34 +240,7 @@ export default function PracticeWorkspace() {
     }
   }, [activeTab, isMentor, activeStudentTab]);
 
-  // Fetch score tracker data when tab switches to tracker
-  useEffect(() => {
-    if (activeTab === 'tracker') {
-      const fetchTrackerData = async () => {
-        setTrackerLoading(true);
-        setTrackerError(null);
-        try {
-          const [statsRes, resultsRes] = await Promise.all([
-            apiClient.get('/users/me/stats'),
-            apiClient.get('/users/me/results?limit=10')
-          ]);
-          
-          if (statsRes.data?.success) {
-            setUserStats(statsRes.data.data);
-          }
-          if (resultsRes.data?.success) {
-            setUserResults(resultsRes.data.data.results || []);
-          }
-        } catch (err: any) {
-          console.error('Error fetching tracker stats:', err);
-          setTrackerError('Không thể tải dữ liệu tiến trình học tập từ máy chủ.');
-        } finally {
-          setTrackerLoading(false);
-        }
-      };
-      fetchTrackerData();
-    }
-  }, [activeTab]);
+  
 
   // Fetch availability slots when a mentor is selected
   useEffect(() => {
@@ -746,6 +726,8 @@ export default function PracticeWorkspace() {
                 <div key={i} className="w-5 h-5 rounded-full bg-[#f5f3dc] border-2 border-[#1b263b] shadow-inner" />
               ))}
             </div>
+
+            <ErrorBoundary>
 
             {/* TAB CONTENT: SPEAKING LIST */}
             {activeTab === 'speaking' && (
@@ -1327,133 +1309,6 @@ export default function PracticeWorkspace() {
               </div>
             )}
 
-            {/* TAB CONTENT: TRACKER */}
-            {activeTab === 'tracker' && (
-              <div className="space-y-6 animate-fade-in">
-                <div>
-                  <span className="text-xs uppercase tracking-widest text-[#4682b4] font-black">📊 performance tracking</span>
-                  <h2 className="text-3xl font-serif text-[#1b263b] font-black tracking-tight mt-1">Personal Band Score Tracker</h2>
-                  <p className="text-xs text-gray-500 font-semibold mt-1">Thống kê điểm số IELTS mô phỏng của bạn qua các bài kiểm tra gần nhất.</p>
-                </div>
-
-                {trackerLoading ? (
-                  <div className="flex flex-col items-center justify-center py-20 bg-white border-2 border-[#1b263b] rounded-3xl shadow-[3px_3px_0px_0px_#1b263b]">
-                    <div className="w-8 h-8 border-4 border-[#1b263b] border-t-transparent rounded-full animate-spin" />
-                    <p className="text-xs text-gray-500 font-bold uppercase mt-3">Đang tải dữ liệu tiến trình...</p>
-                  </div>
-                ) : trackerError ? (
-                  <div className="bg-rose-50 border-2 border-rose-500 text-rose-800 p-5 rounded-2xl text-xs font-bold shadow-[2px_2px_0px_0px_#1b263b] text-center">
-                    ⚠️ {trackerError}
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid md:grid-cols-3 gap-6">
-                      {/* Overall Band Card */}
-                      <div className="bg-white border-2 border-[#1b263b] rounded-2xl p-5 text-center shadow-md space-y-2 flex flex-col justify-center items-center min-h-[140px]">
-                        <span className="text-[10px] uppercase font-black text-gray-400">Current Average</span>
-                        <h3 className="text-5xl font-serif font-black text-[#c92a2a]">
-                          {userStats?.overallBand !== null && userStats?.overallBand !== undefined ? userStats.overallBand : '0.0'}
-                        </h3>
-                        <div className="bg-emerald-100 text-emerald-800 border border-[#1b263b] text-[9px] font-black px-2 py-0.5 rounded-full inline-block uppercase tracking-wider">
-                          {userStats?.overallBand && userStats.overallBand >= 7.0 ? 'Good User' : 'Keep practicing'}
-                        </div>
-                      </div>
-
-                      {/* Skills Grid */}
-                      <div className="md:col-span-2 bg-white border-2 border-[#1b263b] rounded-2xl p-5 shadow-md grid grid-cols-2 gap-4">
-                        {[
-                          { skill: 'Reading', score: userStats?.readingBand, color: 'bg-emerald-600' },
-                          { skill: 'Listening', score: userStats?.listeningBand, color: 'bg-emerald-600' },
-                          { skill: 'Writing', score: userStats?.writingBand, color: 'bg-amber-500' },
-                          { skill: 'Speaking', score: userStats?.speakingBand, color: 'bg-emerald-600' },
-                        ].map((item) => {
-                          const scoreVal = item.score !== null && item.score !== undefined ? parseFloat(item.score) : 0;
-                          const pct = Math.min(100, Math.max(0, (scoreVal / 9.0) * 100));
-                          return (
-                            <div key={item.skill} className="space-y-1">
-                              <div className="flex justify-between text-xs font-bold text-gray-700">
-                                <span>{item.skill}</span>
-                                <span>Band {item.score !== null && item.score !== undefined ? item.score : '0.0'}</span>
-                              </div>
-                              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden border border-gray-300">
-                                <div className={`${item.color} h-full transition-all duration-500`} style={{ width: `${pct}%` }} />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Checkin / Streak stats */}
-                    {userStats && (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-white border-2 border-[#1b263b] rounded-2xl p-4 text-center shadow-md">
-                          <p className="text-[9px] uppercase font-black text-gray-400">Streak Điểm Danh</p>
-                          <p className="text-xl font-black text-amber-500 mt-1">🔥 {userStats.currentStreak || 0} ngày</p>
-                        </div>
-                        <div className="bg-white border-2 border-[#1b263b] rounded-2xl p-4 text-center shadow-md">
-                          <p className="text-[9px] uppercase font-black text-gray-400">Tổng Bài Đã Làm</p>
-                          <p className="text-xl font-black text-[#1b263b] mt-1">📝 {userStats.totalTests || 0} bài</p>
-                        </div>
-                        <div className="bg-white border-2 border-[#1b263b] rounded-2xl p-4 text-center shadow-md">
-                          <p className="text-[9px] uppercase font-black text-gray-400">Điểm Lớn Nhất</p>
-                          <p className="text-xl font-black text-[#c92a2a] mt-1">🏆 Band {userStats.topScore || '0.0'}</p>
-                        </div>
-                        <div className="bg-white border-2 border-[#1b263b] rounded-2xl p-4 text-center shadow-md">
-                          <p className="text-[9px] uppercase font-black text-gray-400">Thời Gian Học</p>
-                          <p className="text-xl font-black text-sky-600 mt-1">⏱️ {userStats.studyHours || 0} giờ</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Live Practice History */}
-                    <div className="bg-white border-2 border-[#1b263b] rounded-2xl p-5 shadow-md space-y-3">
-                      <h3 className="font-serif font-black text-sm border-b border-gray-100 pb-2">Lịch sử bài thi & Chấm điểm</h3>
-                      
-                      <div className="space-y-3">
-                        {userResults.length === 0 ? (
-                          <div className="text-center py-8 text-xs font-bold text-gray-400">
-                            Bạn chưa tham gia bài thi/luyện tập nào. Hãy chọn kỹ năng ở menu bên trái để bắt đầu!
-                          </div>
-                        ) : (
-                          userResults.map((history, idx) => {
-                            const formattedDate = new Date(history.createdAt).toLocaleString('vi-VN', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric'
-                            });
-                            
-                            const skillNames = {
-                              READING: 'Reading 📖',
-                              LISTENING: 'Listening 🎧',
-                              WRITING: 'Writing ✍️',
-                              SPEAKING: 'Speaking 🗣️'
-                            };
-                            
-                            const displayType = skillNames[history.type as keyof typeof skillNames] || history.type;
-
-                            return (
-                              <div key={history.id || idx} className="flex items-center justify-between text-xs py-2 border-b border-gray-100 last:border-0">
-                                <div>
-                                  <p className="font-bold text-gray-800">{history.title}</p>
-                                  <p className="text-[10px] text-gray-400">{formattedDate} • Kỹ năng: {displayType}</p>
-                                </div>
-                                <div className="bg-[#ffd54f] border border-[#1b263b] px-2 py-0.5 rounded-lg font-mono font-bold text-[#1b263b]">
-                                  Band {history.bandScore !== null && history.bandScore !== undefined ? history.bandScore : '0.0'}
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-            {/* ======================================================== */}
             {/* MODALS SECTION */}
             {/* ======================================================== */}
 
@@ -1857,9 +1712,23 @@ export default function PracticeWorkspace() {
               </div>
             )}
 
+            {reviewModalOpen && selectedSubmissionId && (
+              <ReviewModal
+                isOpen={reviewModalOpen}
+                onClose={() => setReviewModalOpen(false)}
+                submissionId={selectedSubmissionId}
+                type={selectedSubmissionType}
+              />
+            )}
+
+          </ErrorBoundary>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
+
+
+
