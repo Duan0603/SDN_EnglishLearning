@@ -1,6 +1,6 @@
 // ============================================================
-// AdminScreen - Mobile First Dashboard
-// NO web layouts, NO nativewind
+// AdminScreen - Mobile First Dashboard with Brutalist Styling
+// Redesigned to match the Brutalist aesthetics of HomeScreen
 // ============================================================
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -10,82 +10,203 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  SafeAreaView,
   Modal,
   Alert,
   ActivityIndicator,
   StyleSheet,
   StatusBar,
   Platform,
-  Linking
+  Linking,
+  RefreshControl
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import AppIcon from '../shared/icons/AppIcon';
-import { AppButton, AppTextInput } from '../shared/components';
 import useAuthStore from '../store/useAuthStore';
 import adminUserService from '../api/adminUser.service';
+import examService from '../api/exam.service';
 import Toast from 'react-native-toast-message';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../theme';
+
+// Brutalist Shadow Wrapper matching HomeScreen / ProgressScreen
+const BrutalistShadow = ({ children, style, offset = 4 }) => (
+  <View style={[style, { position: 'relative' }]}>
+    <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#1b263b', borderRadius: style?.borderRadius || 0, top: offset, left: offset }]} />
+    <View style={{ backgroundColor: style?.backgroundColor || '#fff', borderWidth: 2, borderColor: '#1b263b', borderRadius: style?.borderRadius || 0, overflow: 'hidden' }}>
+      {children}
+    </View>
+  </View>
+);
 
 const AdminScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'users', 'exams'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'users', 'mentor_requests', 'submissions', 'exams', 'bookings'
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [activeSkillFilter, setActiveSkillFilter] = useState('ALL');
 
-  // Mentor requests state
+  // Lists State
+  const [usersList, setUsersList] = useState([]);
   const [requestsList, setRequestsList] = useState([]);
-  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [submissionsList, setSubmissionsList] = useState([]);
+  const [examsList, setExamsList] = useState([]);
+  const [bookingsList, setBookingsList] = useState([]);
+
+  // Modals state
+  const [userModalVisible, setUserModalVisible] = useState(false);
+  const [editingUser, setEditingUser] = useState(null); // null if creating, user object if editing
+  const [userForm, setUserForm] = useState({
+    username: '',
+    fullName: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'STUDENT'
+  });
+
+  const [examModalVisible, setExamModalVisible] = useState(false);
+  const [editingExam, setEditingExam] = useState(null); // null if creating, exam object if editing
+  const [examForm, setExamForm] = useState({
+    title: '',
+    type: 'READING',
+    duration: '60',
+    questionsCount: '40'
+  });
+
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchMentorRequests = useCallback(async () => {
-    setRequestsLoading(true);
+  const [submissionModalVisible, setSubmissionModalVisible] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
+
+  // Fetch all administrative data
+  const fetchAllData = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
-      const res = await adminUserService.getMentorRequests('PENDING');
-      const raw = res.data?.data || [];
-      setRequestsList(raw);
+      const [usersRes, requestsRes, subRes, examsRes, bookingsRes] = await Promise.allSettled([
+        adminUserService.getAll(),
+        adminUserService.getMentorRequests('PENDING'),
+        adminUserService.getSubmissions(),
+        examService.getAll(),
+        adminUserService.getAllBookings()
+      ]);
+
+      if (usersRes.status === 'fulfilled') {
+        setUsersList(usersRes.value.data?.metadata?.users || usersRes.value.data?.data?.users || []);
+      }
+      if (requestsRes.status === 'fulfilled') {
+        setRequestsList(requestsRes.value.data?.data || requestsRes.value.data?.metadata || []);
+      }
+      if (subRes.status === 'fulfilled') {
+        setSubmissionsList(subRes.value.data?.metadata?.submissions || subRes.value.data?.data?.submissions || []);
+      }
+      if (examsRes.status === 'fulfilled') {
+        // Handle paginated exams payload
+        const rawExams = examsRes.value.data?.data?.exams || examsRes.value.data?.data || [];
+        setExamsList(rawExams);
+      }
+      if (bookingsRes.status === 'fulfilled') {
+        setBookingsList(bookingsRes.value.data?.data || bookingsRes.value.data?.metadata || []);
+      }
     } catch (err) {
-      console.log('Error fetching mentor requests:', err);
-      setRequestsList([]);
+      console.log('Error loading administrative data:', err);
     } finally {
-      setRequestsLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'mentor_requests') {
-      fetchMentorRequests();
-    }
-  }, [activeTab, fetchMentorRequests]);
+    fetchAllData();
+  }, [fetchAllData]);
 
-  const handleApprove = async (id) => {
+  // Actions for Users
+  const handleOpenCreateUser = () => {
+    setEditingUser(null);
+    setUserForm({ username: '', fullName: '', email: '', phone: '', password: '', role: 'STUDENT' });
+    setUserModalVisible(true);
+  };
+
+  const handleOpenEditUser = (u) => {
+    setEditingUser(u);
+    setUserForm({
+      username: u.username || '',
+      fullName: u.fullName || '',
+      email: u.email || '',
+      phone: u.phone || '',
+      password: '', // leave empty to avoid changing
+      role: u.role || 'STUDENT'
+    });
+    setUserModalVisible(true);
+  };
+
+  const handleSaveUser = async () => {
+    const { username, fullName, email, phone, password, role } = userForm;
+    if (!username || !fullName || !email) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ Tên đăng nhập, Họ tên và Email!');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      if (editingUser) {
+        // Edit flow
+        const updateData = { username, fullName, email, phone, role };
+        if (password) updateData.password = password;
+        const res = await adminUserService.update(editingUser.id || editingUser._id, updateData);
+        if (res.data?.success) {
+          Toast.show({ type: 'success', text1: 'Thành công', text2: 'Cập nhật người dùng thành công!' });
+          setUserModalVisible(false);
+          fetchAllData(true);
+        }
+      } else {
+        // Create flow
+        if (!password) {
+          Alert.alert('Lỗi', 'Vui lòng nhập mật khẩu cho người dùng mới!');
+          setIsLoading(false);
+          return;
+        }
+        const res = await adminUserService.create({ username, fullName, email, phone, password, role });
+        if (res.data?.success) {
+          Toast.show({ type: 'success', text1: 'Thành công', text2: 'Tạo người dùng mới thành công!' });
+          setUserModalVisible(false);
+          fetchAllData(true);
+        }
+      }
+    } catch (err) {
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: err.response?.data?.error?.message || err.response?.data?.message || 'Không thể lưu người dùng.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleUserStatus = async (u) => {
+    const nextStatus = u.status === 'active' ? 'inactive' : 'active';
+    const actionLabel = nextStatus === 'active' ? 'mở khóa' : 'khóa';
+    
     Alert.alert(
-      'Xác nhận duyệt',
-      'Bạn có chắc chắn muốn phê duyệt tài khoản này làm Mentor?',
+      'Xác nhận',
+      `Bạn có muốn ${actionLabel} tài khoản ${u.fullName}?`,
       [
         { text: 'Hủy', style: 'cancel' },
         {
           text: 'Đồng ý',
           onPress: async () => {
             try {
-              setActionLoading(true);
-              const res = await adminUserService.approveMentorRequest(id);
+              setIsLoading(true);
+              const res = await adminUserService.toggleStatus(u.id || u._id, nextStatus);
               if (res.data?.success) {
-                Toast.show({ type: 'success', text1: 'Thành công', text2: 'Phê duyệt tài khoản làm Mentor thành công!' });
-                fetchMentorRequests();
+                Toast.show({ type: 'success', text1: 'Thành công', text2: `Đã ${actionLabel} tài khoản!` });
+                fetchAllData(true);
               }
             } catch (err) {
-              console.log('Error approving request:', err);
-              Toast.show({
-                type: 'error',
-                text1: 'Lỗi',
-                text2: err.response?.data?.error?.message || err.message || 'Phê duyệt thất bại.'
-              });
+              Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Thay đổi trạng thái thất bại.' });
             } finally {
-              setActionLoading(false);
+              setIsLoading(false);
             }
           }
         }
@@ -93,139 +214,363 @@ const AdminScreen = ({ navigation }) => {
     );
   };
 
-  const handleOpenReject = (request) => {
-    setSelectedRequest(request);
+  const handleDeleteUser = async (u) => {
+    Alert.alert(
+      'Cảnh báo xóa',
+      `Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản ${u.fullName}? Hành động này không thể hoàn tác.`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const res = await adminUserService.remove(u.id || u._id);
+              if (res.data?.success) {
+                Toast.show({ type: 'success', text1: 'Thành công', text2: 'Xóa tài khoản thành công!' });
+                fetchAllData(true);
+              }
+            } catch (err) {
+              Toast.show({
+                type: 'error',
+                text1: 'Lỗi',
+                text2: err.response?.data?.error?.message || err.response?.data?.message || 'Không thể xóa tài khoản.'
+              });
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Actions for Mentor Requests
+  const handleApproveRequest = async (id) => {
+    Alert.alert(
+      'Xác nhận duyệt',
+      'Bạn có chắc chắn phê duyệt tài khoản này làm Mentor?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Phê duyệt',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const res = await adminUserService.approveMentorRequest(id);
+              if (res.data?.success) {
+                Toast.show({ type: 'success', text1: 'Thành công', text2: 'Phê duyệt Mentor thành công!' });
+                fetchAllData(true);
+              }
+            } catch (err) {
+              Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Duyệt yêu cầu thất bại.' });
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleOpenRejectRequest = (req) => {
+    setSelectedRequest(req);
     setRejectReason('');
     setRejectModalVisible(true);
   };
 
-  const handleRejectSubmit = async () => {
+  const handleRejectRequestSubmit = async () => {
     if (!rejectReason.trim()) {
       Alert.alert('Lỗi', 'Vui lòng điền lý do từ chối!');
       return;
     }
-
     try {
-      setActionLoading(true);
+      setIsLoading(true);
       const res = await adminUserService.rejectMentorRequest(selectedRequest.id || selectedRequest._id, rejectReason);
       if (res.data?.success) {
-        Toast.show({ type: 'success', text1: 'Thành công', text2: 'Đã từ chối yêu cầu.' });
+        Toast.show({ type: 'success', text1: 'Thành công', text2: 'Đã từ chối yêu cầu thành công.' });
         setRejectModalVisible(false);
-        fetchMentorRequests();
+        fetchAllData(true);
       }
     } catch (err) {
-      console.log('Error rejecting request:', err);
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: err.response?.data?.error?.message || err.message || 'Từ chối thất bại.'
-      });
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Từ chối yêu cầu thất bại.' });
     } finally {
-      setActionLoading(false);
+      setIsLoading(false);
     }
   };
 
-  // ── Users state ─────────────────────────────────────────
-  const [usersList, setUsersList] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(false);
+  // Actions for Exams
+  const handleOpenCreateExam = () => {
+    setEditingExam(null);
+    setExamForm({ title: '', type: 'READING', duration: '60', questionsCount: '40' });
+    setExamModalVisible(true);
+  };
 
-  // Exams state
-  const [examsList, setExamsList] = useState([
-    { id: '1', title: 'IELTS Cambridge 18 - Test 1', type: 'Reading', duration: 60, questionsCount: 40 },
-    { id: '2', title: 'IELTS Cambridge 18 - Test 2', type: 'Listening', duration: 30, questionsCount: 40 },
-    { id: '3', title: 'IELTS Cambridge 17 - Test 1', type: 'Reading', duration: 60, questionsCount: 40 },
-  ]);
+  const handleOpenEditExam = (exam) => {
+    setEditingExam(exam);
+    setExamForm({
+      title: exam.title || '',
+      type: exam.type || 'READING',
+      duration: exam.duration?.toString() || '60',
+      questionsCount: exam.questionsCount?.toString() || '40'
+    });
+    setExamModalVisible(true);
+  };
 
-  const fetchUsers = useCallback(async () => {
-    setUsersLoading(true);
-    try {
-      const res = await adminUserService.getAll();
-      const raw = res.data?.metadata?.users || [];
-      setUsersList(raw.map(u => ({ ...u, id: u._id || u.id })));
-    } catch (err) {
-      setUsersList([]);
-    } finally {
-      setUsersLoading(false);
+  const handleSaveExam = async () => {
+    const { title, type, duration, questionsCount } = examForm;
+    if (!title) {
+      Alert.alert('Lỗi', 'Vui lòng nhập tiêu đề đề thi!');
+      return;
     }
-  }, []);
+    const examData = {
+      title,
+      type,
+      duration: parseInt(duration, 10) || 60,
+      questionsCount: parseInt(questionsCount, 10) || 40
+    };
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    try {
+      setIsLoading(true);
+      if (editingExam) {
+        const res = await examService.update(editingExam.id || editingExam._id, examData);
+        if (res.data?.success) {
+          Toast.show({ type: 'success', text1: 'Thành công', text2: 'Cập nhật đề thi thành công!' });
+          setExamModalVisible(false);
+          fetchAllData(true);
+        }
+      } else {
+        const res = await examService.create(examData);
+        if (res.data?.success) {
+          Toast.show({ type: 'success', text1: 'Thành công', text2: 'Tạo đề thi mới thành công!' });
+          setExamModalVisible(false);
+          fetchAllData(true);
+        }
+      }
+    } catch (err) {
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể lưu đề thi.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  const handleDeleteExam = async (exam) => {
+    Alert.alert(
+      'Cảnh báo xóa',
+      `Bạn có chắc muốn xóa đề thi: "${exam.title}"?`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const res = await examService.remove(exam.id || exam._id);
+              if (res.data?.success) {
+                Toast.show({ type: 'success', text1: 'Thành công', text2: 'Xóa đề thi thành công!' });
+                fetchAllData(true);
+              }
+            } catch (err) {
+              Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Xóa đề thi thất bại.' });
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Actions for Submissions (Grades)
+  const handleDeleteSubmission = async (sub) => {
+    Alert.alert(
+      'Xác nhận xóa',
+      'Xóa kết quả thi này khỏi bảng xếp hạng của học viên?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const type = sub.type || 'Reading';
+              const res = await adminUserService.deleteSubmission(sub.id, type);
+              if (res.data?.success) {
+                Toast.show({ type: 'success', text1: 'Thành công', text2: 'Xóa kết quả thi thành công!' });
+                fetchAllData(true);
+              }
+            } catch (err) {
+              Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Xóa kết quả thất bại.' });
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Actions for Bookings
+  const handleConfirmBooking = async (id) => {
+    try {
+      setIsLoading(true);
+      const res = await adminUserService.confirmBooking(id);
+      if (res.data?.success) {
+        Toast.show({ type: 'success', text1: 'Thành công', text2: 'Đã xác nhận buổi học!' });
+        fetchAllData(true);
+      }
+    } catch (err) {
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể xác nhận lịch học.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async (id) => {
+    Alert.alert(
+      'Hủy lịch học',
+      'Bạn có chắc chắn muốn hủy lịch học này?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Đồng ý hủy',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const res = await adminUserService.cancelBooking(id);
+              if (res.data?.success) {
+                Toast.show({ type: 'success', text1: 'Thành công', text2: 'Hủy lịch học thành công.' });
+                fetchAllData(true);
+              }
+            } catch (err) {
+              Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Hủy lịch thất bại.' });
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Memoized lists filtered by search and tabs
   const filteredUsers = useMemo(() => {
     return usersList.filter(u =>
       u.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.username?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [usersList, searchQuery]);
 
   const filteredExams = useMemo(() => {
-    return examsList.filter(e => e.title.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [examsList, searchQuery]);
+    let list = examsList;
+    if (activeSkillFilter !== 'ALL') {
+      list = list.filter(e => e.type?.toUpperCase() === activeSkillFilter);
+    }
+    return list.filter(e => e.title?.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [examsList, searchQuery, activeSkillFilter]);
 
-  const adminName = user?.fullName || 'Admin User';
+  const filteredSubmissions = useMemo(() => {
+    let list = submissionsList;
+    if (activeSkillFilter !== 'ALL') {
+      list = list.filter(s => s.type?.toUpperCase() === activeSkillFilter);
+    }
+    return list.filter(s =>
+      s.student?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.student?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.test?.title?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [submissionsList, searchQuery, activeSkillFilter]);
+
+  const filteredBookings = useMemo(() => {
+    return bookingsList.filter(b =>
+      b.student?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.mentor?.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [bookingsList, searchQuery]);
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—';
+    try {
+      return new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { return dateStr; }
+  };
+
+  const getRoleColor = (role) => {
+    if (role === 'ADMIN') return '#c92a2a';
+    if (role === 'MENTOR') return '#005c42';
+    return '#4682b4';
+  };
+
+  const getSkillColor = (type) => {
+    const t = type?.toUpperCase();
+    if (t === 'READING') return '#4682b4';
+    if (t === 'LISTENING') return '#005c42';
+    if (t === 'WRITING') return '#d97706';
+    if (t === 'SPEAKING') return '#c92a2a';
+    return '#1b263b';
+  };
+
+  const adminName = user?.fullName?.split(' ').slice(-1)[0] || 'Admin';
 
   return (
-    <SafeAreaView style={S.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fcfbf7" />
 
-      {/* ── App Bar ──────────────────────────────────── */}
-      <View style={S.appBar}>
-        <TouchableOpacity style={S.backBtn} onPress={() => navigation.goBack()}>
-          <AppIcon name="back" size={24} color={COLORS.textPrimary} />
+      {/* App Bar (Brutalist style matching HomeScreen) */}
+      <View style={styles.appBar}>
+        <TouchableOpacity style={styles.appBarBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="#1b263b" />
         </TouchableOpacity>
-        <Text style={S.appBarTitle}>Admin Panel</Text>
-        <TouchableOpacity
-          style={S.backBtn}
+        <Text style={styles.appBarTitle}>CONTROL PANEL</Text>
+        <TouchableOpacity 
+          style={styles.appBarBtn} 
           onPress={() => {
-            if (Platform.OS === 'web') {
-              if (window.confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
-                logout();
-                navigation.replace('Login');
-              }
-            } else {
-              Alert.alert(
-                'Đăng xuất',
-                'Bạn có chắc chắn muốn đăng xuất không?',
-                [
-                  { text: 'Hủy', style: 'cancel' },
-                  {
-                    text: 'Đăng xuất',
-                    style: 'destructive',
-                    onPress: () => { logout(); navigation.replace('Login'); }
-                  }
-                ]
-              );
-            }
+            Alert.alert(
+              'Đăng xuất',
+              'Bạn có chắc chắn muốn đăng xuất không?',
+              [
+                { text: 'Hủy', style: 'cancel' },
+                {
+                  text: 'Đăng xuất',
+                  style: 'destructive',
+                  onPress: () => { logout(); navigation.replace('Login'); }
+                }
+              ]
+            );
           }}
         >
-          <AppIcon name="logout" size={24} color={COLORS.danger} />
+          <Ionicons name="log-out-outline" size={24} color="#c92a2a" />
         </TouchableOpacity>
       </View>
 
-      {/* ── Tabs ──────────────────────────────────────── */}
-      <View style={S.tabsContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={S.tabsScroll}>
+      {/* Tabs Menu in high contrast brutalist styles */}
+      <View style={styles.tabsContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
           {[
-            { key: 'dashboard', label: 'Tổng quan', icon: 'pie-chart' },
-            { key: 'users', label: 'Người dùng', icon: 'user' },
-            { key: 'mentor_requests', label: 'Yêu cầu Mentor', icon: 'ribbon' },
-            { key: 'exams', label: 'Đề thi', icon: 'book' },
+            { key: 'dashboard', label: 'TỔNG QUAN', icon: 'grid-outline' },
+            { key: 'users', label: 'NGƯỜI DÙNG', icon: 'people-outline' },
+            { key: 'mentor_requests', label: 'DUYỆT MENTOR', icon: 'ribbon-outline' },
+            { key: 'submissions', label: 'ĐIỂM SỐ', icon: 'trophy-outline' },
+            { key: 'exams', label: 'ĐỀ THI', icon: 'book-outline' },
+            { key: 'bookings', label: 'LỊCH HỌC', icon: 'calendar-outline' },
           ].map((tab) => {
             const isActive = tab.key === activeTab;
             return (
               <TouchableOpacity
                 key={tab.key}
-                onPress={() => setActiveTab(tab.key)}
-                style={[S.tabItem, isActive && S.tabItemActive]}
+                onPress={() => {
+                  setActiveTab(tab.key);
+                  setSearchQuery('');
+                }}
+                style={[styles.tabItem, isActive && styles.tabItemActive]}
               >
-                {tab.icon === 'ribbon' ? (
-                  <Ionicons name="ribbon-outline" size={16} color={isActive ? COLORS.textInverse : COLORS.textSecondary} />
-                ) : (
-                  <AppIcon name={tab.icon} size={16} color={isActive ? COLORS.textInverse : COLORS.textSecondary} />
-                )}
-                <Text style={[S.tabText, isActive && S.tabTextActive, { marginLeft: 6 }]}>
+                <Ionicons name={tab.icon} size={15} color={isActive ? '#fff' : '#1b263b'} />
+                <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -234,323 +579,1145 @@ const AdminScreen = ({ navigation }) => {
         </ScrollView>
       </View>
 
-      <ScrollView style={S.scroll} contentContainerStyle={S.scrollContent} showsVerticalScrollIndicator={false}>
+      {isLoading && !refreshing && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#1b263b" />
+          <Text style={styles.loadingText}>Đang đồng bộ dữ liệu hệ thống...</Text>
+        </View>
+      )}
 
-        {/* ==================== DASHBOARD ==================== */}
+      <ScrollView 
+        style={styles.scroll} 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await fetchAllData(true);
+              setRefreshing(false);
+            }}
+            tintColor="#1b263b"
+          />
+        }
+      >
+        {/* ==================== DASHBOARD TAB ==================== */}
         {activeTab === 'dashboard' && (
           <View>
-            <Text style={S.sectionTitle}>Xin chào, {adminName}</Text>
-            <View style={S.kpiGrid}>
-              {[
-                { label: 'Tổng người dùng', value: usersList.length, color: COLORS.primary },
-                { label: 'Đang hoạt động', value: usersList.filter(u => u.status === 'active').length, color: COLORS.success },
-                { label: 'Bị khóa', value: usersList.filter(u => u.status === 'inactive').length, color: COLORS.danger },
-                { label: 'Đề thi', value: examsList.length, color: COLORS.warning },
-              ].map((kpi, idx) => (
-                <View key={idx} style={S.kpiCard}>
-                  <Text style={S.kpiLabel}>{kpi.label}</Text>
-                  <Text style={[S.kpiValue, { color: kpi.color }]}>{kpi.value}</Text>
+            {/* Greeting Sticky Note with tape effect */}
+            <View style={styles.heroSection}>
+              <View style={styles.stickyNote}>
+                <View style={styles.tape} />
+                <Text style={styles.stickyGreeting}>Hey {adminName} –</Text>
+                <Text style={styles.stickyText}>
+                  Hệ thống đang chạy ổn định. Dưới đây là báo cáo tổng quát các hoạt động và cơ sở dữ liệu Apex IELTS của bạn ngày hôm nay.
+                </Text>
+                <View style={styles.stickyFooter}>
+                  <Text style={styles.stickyBadge}>SYSTEM ACTIVE</Text>
+                  <View style={styles.streakBadge}>
+                    <Ionicons name="shield-checkmark" size={12} color="#005c42" />
+                    <Text style={styles.streakText}>Secure Connection</Text>
+                  </View>
                 </View>
+              </View>
+            </View>
+
+            {/* KPI Cards Wrapper */}
+            <Text style={styles.sectionBadge}>✎ METRICS</Text>
+            <Text style={styles.sectionTitle}>Database Overview</Text>
+
+            <View style={styles.kpiGrid}>
+              {[
+                { label: 'TỔNG USER', value: usersList.length, color: '#4682b4', emoji: '👥' },
+                { label: 'MENTOR CHỜ', value: requestsList.length, color: '#c92a2a', emoji: '🎖️' },
+                { label: 'BÀI LÀM', value: submissionsList.length, color: '#d97706', emoji: '📝' },
+                { label: 'ĐỀ THI', value: examsList.length, color: '#1b263b', emoji: '📖' },
+                { label: 'LỊCH HỌC', value: bookingsList.length, color: '#7b2cbf', emoji: '🗓️' },
+                { label: 'GIA SƯ', value: usersList.filter(u => u.role === 'MENTOR').length, color: '#005c42', emoji: '👨‍🏫' },
+              ].map((kpi, idx) => (
+                <BrutalistShadow key={idx} style={styles.kpiCard} offset={4}>
+                  <View style={styles.kpiInner}>
+                    <View style={styles.kpiHeader}>
+                      <Text style={styles.kpiEmoji}>{kpi.emoji}</Text>
+                      <Text style={[styles.kpiValue, { color: kpi.color }]}>{kpi.value}</Text>
+                    </View>
+                    <Text style={styles.kpiLabel}>{kpi.label}</Text>
+                  </View>
+                </BrutalistShadow>
               ))}
             </View>
 
-            <View style={S.recentCard}>
-              <Text style={S.recentTitle}>Hoạt động gần đây</Text>
-              {[
-                { title: 'Tài khoản mới đăng ký', time: '2 phút trước' },
-                { title: 'Đơn hàng thành công', time: '1 giờ trước' },
-              ].map((act, idx) => (
-                <View key={idx} style={S.recentItem}>
-                  <View style={S.recentDot} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={S.recentText}>{act.title}</Text>
-                    <Text style={S.recentTime}>{act.time}</Text>
+            {/* Recent Log Activities */}
+            <Text style={styles.sectionBadge}>✎ LOGS</Text>
+            <Text style={styles.sectionTitle}>Recent Activities</Text>
+            <BrutalistShadow style={styles.logCard} offset={4}>
+              <View style={styles.logCardInner}>
+                {submissionsList.slice(0, 4).map((sub, idx) => (
+                  <View key={idx} style={styles.logItem}>
+                    <View style={[styles.logDot, { backgroundColor: getSkillColor(sub.type) }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.logText}>
+                        <Text style={styles.logBold}>{sub.student?.fullName || 'Học viên'}</Text> nộp bài thi{' '}
+                        <Text style={styles.logBold}>{sub.test?.title || 'Practice Test'}</Text> đạt{' '}
+                        <Text style={[styles.logBold, { color: getSkillColor(sub.type) }]}>Band {sub.bandScore?.toFixed(1) || '—'}</Text>
+                      </Text>
+                      <Text style={styles.logTime}>{formatDate(sub.createdAt)}</Text>
+                    </View>
                   </View>
-                </View>
-              ))}
-            </View>
+                ))}
+                {requestsList.slice(0, 2).map((req, idx) => (
+                  <View key={`req-${idx}`} style={styles.logItem}>
+                    <View style={[styles.logDot, { backgroundColor: '#c92a2a' }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.logText}>
+                        Yêu cầu nâng cấp Mentor mới từ <Text style={styles.logBold}>{req.user?.fullName || 'Người dùng'}</Text> đang chờ phê duyệt.
+                      </Text>
+                      <Text style={styles.logTime}>{formatDate(req.createdAt)}</Text>
+                    </View>
+                  </View>
+                ))}
+                {submissionsList.length === 0 && requestsList.length === 0 && (
+                  <Text style={styles.emptyText}>Chưa ghi nhận hoạt động nào gần đây.</Text>
+                )}
+              </View>
+            </BrutalistShadow>
           </View>
         )}
 
-        {/* ==================== USERS ==================== */}
+        {/* ==================== USERS TAB ==================== */}
         {activeTab === 'users' && (
           <View>
-            <AppTextInput
-              placeholder="Tìm kiếm người dùng..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              leftIconName="search"
-              containerStyle={{ marginBottom: SPACING.md }}
-            />
+            <View style={styles.searchRow}>
+              <TextInput
+                style={styles.brutalistInput}
+                placeholder="Tìm kiếm theo Tên, Email..."
+                placeholderTextColor="#666"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
 
-            {usersLoading ? (
-              <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
-            ) : (
-              filteredUsers.map((u) => (
-                <View key={u.id} style={S.listCard}>
-                  <View style={S.listCardHeader}>
-                    <Text style={S.listCardTitle}>{u.fullName}</Text>
-                    <View style={[S.badge, { backgroundColor: u.status === 'active' ? COLORS.successLight : COLORS.dangerLight }]}>
-                      <Text style={[S.badgeText, { color: u.status === 'active' ? COLORS.success : COLORS.danger }]}>
-                        {u.status === 'active' ? 'Active' : 'Locked'}
-                      </Text>
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              style={styles.actionBtnContainer}
+              onPress={handleOpenCreateUser}
+            >
+              <BrutalistShadow style={styles.createBtn} offset={3}>
+                <View style={styles.createBtnInner}>
+                  <Ionicons name="person-add-outline" size={16} color="#1b263b" />
+                  <Text style={styles.createBtnText}>THÊM USER MỚI</Text>
+                </View>
+              </BrutalistShadow>
+            </TouchableOpacity>
+
+            <Text style={styles.sectionBadge}>✎ MEMBERSHIP</Text>
+            <Text style={styles.sectionTitle}>User Database ({filteredUsers.length})</Text>
+
+            {filteredUsers.map((u) => (
+              <View key={u.id || u._id} style={styles.listCardContainer}>
+                <BrutalistShadow style={styles.listCard} offset={4}>
+                  <View style={styles.listCardInner}>
+                    <View style={styles.listCardHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.listCardTitle}>{u.fullName}</Text>
+                        <Text style={styles.listCardSub}>@{u.username || 'unknown'} • {u.email}</Text>
+                        {u.phone ? <Text style={styles.listCardSub}>SĐT: {u.phone}</Text> : null}
+                      </View>
+                      
+                      <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                        <View style={[styles.badge, { backgroundColor: getRoleColor(u.role) }]}>
+                          <Text style={styles.badgeText}>{u.role}</Text>
+                        </View>
+                        
+                        <View style={[styles.badge, { backgroundColor: u.status === 'active' ? '#e6f9f5' : '#fee2e2', borderColor: u.status === 'active' ? '#00A87E' : '#EF4444' }]}>
+                          <Text style={[styles.badgeText, { color: u.status === 'active' ? '#00A87E' : '#EF4444' }]}>
+                            {u.status === 'active' ? 'Active' : 'Locked'}
+                          </Text>
+                        </View>
+                      </View>
                     </View>
+
+                    {/* Actions button group */}
+                    <View style={styles.cardActionsGroup}>
+                      <TouchableOpacity 
+                        style={[styles.brutalistMiniBtn, { backgroundColor: u.status === 'active' ? '#ffeb3b' : '#a7f3d0' }]}
+                        onPress={() => handleToggleUserStatus(u)}
+                      >
+                        <Ionicons name={u.status === 'active' ? 'lock-closed-outline' : 'lock-open-outline'} size={14} color="#1b263b" />
+                        <Text style={styles.brutalistMiniBtnText}>{u.status === 'active' ? 'KHÓA' : 'MỞ KHÓA'}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity 
+                        style={[styles.brutalistMiniBtn, { backgroundColor: '#e1f5fe' }]}
+                        onPress={() => handleOpenEditUser(u)}
+                      >
+                        <Ionicons name="create-outline" size={14} color="#1b263b" />
+                        <Text style={styles.brutalistMiniBtnText}>SỬA</Text>
+                      </TouchableOpacity>
+
+                      {u.role !== 'ADMIN' && (
+                        <TouchableOpacity 
+                          style={[styles.brutalistMiniBtn, { backgroundColor: '#fee2e2' }]}
+                          onPress={() => handleDeleteUser(u)}
+                        >
+                          <Ionicons name="trash-outline" size={14} color="#c92a2a" />
+                          <Text style={[styles.brutalistMiniBtnText, { color: '#c92a2a' }]}>XÓA</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
                   </View>
-                  <Text style={S.listCardSub}>{u.email}</Text>
-                  <Text style={S.listCardSub}>Role: {u.role}</Text>
-                </View>
-              ))
-            )}
-          </View>
-        )}
-
-        {/* ==================== EXAMS ==================== */}
-        {activeTab === 'exams' && (
-          <View>
-            <AppTextInput
-              placeholder="Tìm kiếm đề thi..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              leftIconName="search"
-              containerStyle={{ marginBottom: SPACING.md }}
-            />
-
-            <AppButton
-              title="Tạo đề thi mới"
-              onPress={() => Toast.show({ type: 'info', text1: 'Thông báo', text2: 'Tính năng đang phát triển.' })}
-              style={{ marginBottom: SPACING.lg }}
-              leftIconName="book"
-            />
-
-            {filteredExams.map((e) => (
-              <View key={e.id} style={S.listCard}>
-                <View style={S.listCardHeader}>
-                  <Text style={S.listCardTitle}>{e.title}</Text>
-                  <View style={S.badge}>
-                    <Text style={S.badgeText}>{e.type}</Text>
-                  </View>
-                </View>
-                <Text style={S.listCardSub}>{e.duration} Phút • {e.questionsCount} Câu hỏi</Text>
+                </BrutalistShadow>
               </View>
             ))}
-          </View>
-        )}
 
-        {/* ==================== MENTOR REQUESTS ==================== */}
-        {activeTab === 'mentor_requests' && (
-          <View>
-            <Text style={S.sectionTitle}>Yêu cầu nâng cấp Mentor đang chờ duyệt</Text>
-
-            {requestsLoading ? (
-              <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
-            ) : requestsList.length === 0 ? (
-              <Text style={{ textAlign: 'center', marginVertical: 30, color: COLORS.textSecondary, fontFamily: TYPOGRAPHY.fontMedium }}>
-                Không có yêu cầu nào đang chờ duyệt.
-              </Text>
-            ) : (
-              requestsList.map((req) => (
-                <View key={req.id || req._id} style={S.listCard}>
-                  <View style={S.listCardHeader}>
-                    <Text style={S.listCardTitle}>{req.user?.fullName || req.user?.username || 'Người dùng'}</Text>
-                    <View style={[S.badge, { backgroundColor: COLORS.warningLight }]}>
-                      <Text style={[S.badgeText, { color: COLORS.warning }]}>PENDING</Text>
-                    </View>
-                  </View>
-                  <Text style={S.listCardSub}>Email: {req.user?.email}</Text>
-                  <Text style={S.listCardSub}>SĐT: {req.user?.phone || 'Chưa cung cấp'}</Text>
-
-                  <View style={{ marginTop: 10, padding: 10, backgroundColor: COLORS.background, borderRadius: RADIUS.md }}>
-                    <Text style={{ fontSize: 13, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary }}>Chuyên môn:</Text>
-                    <Text style={{ fontSize: 13, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary, marginTop: 2 }}>{req.expertise}</Text>
-
-                    <Text style={{ fontSize: 13, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary, marginTop: 6 }}>Giới thiệu:</Text>
-                    <Text style={{ fontSize: 13, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary, marginTop: 2 }}>{req.bio}</Text>
-
-                    <Text style={{ fontSize: 13, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary, marginTop: 6 }}>Chứng chỉ đính kèm:</Text>
-                    {req.certificates?.map((url, idx) => (
-                      <TouchableOpacity
-                        key={idx}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}
-                        onPress={() => Linking.openURL(url)}
-                      >
-                        <Ionicons name="document-text-outline" size={16} color={COLORS.primary} />
-                        <Text style={{ fontSize: 12, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.primary, textDecorationLine: 'underline' }}>
-                          Xem chứng chỉ {idx + 1}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-                    <TouchableOpacity
-                      style={[S.actionBtn, { backgroundColor: COLORS.success }]}
-                      onPress={() => handleApprove(req.id || req._id)}
-                    >
-                      <Text style={S.actionBtnText}>PHÊ DUYỆT</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[S.actionBtn, { backgroundColor: COLORS.danger }]}
-                      onPress={() => handleOpenReject(req)}
-                    >
-                      <Text style={S.actionBtnText}>TỪ CHỐI</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))
+            {filteredUsers.length === 0 && (
+              <Text style={styles.emptyText}>Không tìm thấy người dùng nào phù hợp.</Text>
             )}
           </View>
         )}
 
+        {/* ==================== MENTOR REQUESTS TAB ==================== */}
+        {activeTab === 'mentor_requests' && (
+          <View>
+            <Text style={styles.sectionBadge}>✎ APPLICANTS</Text>
+            <Text style={styles.sectionTitle}>Upgrade Requests ({requestsList.length})</Text>
+
+            {requestsList.map((req) => (
+              <View key={req.id || req._id} style={styles.listCardContainer}>
+                <BrutalistShadow style={styles.listCard} offset={4}>
+                  <View style={styles.listCardInner}>
+                    <View style={styles.listCardHeader}>
+                      <View>
+                        <Text style={styles.listCardTitle}>{req.user?.fullName || 'Người dùng'}</Text>
+                        <Text style={styles.listCardSub}>Email: {req.user?.email}</Text>
+                        <Text style={styles.listCardSub}>Số điện thoại: {req.user?.phone || 'Chưa cung cấp'}</Text>
+                      </View>
+                      <View style={[styles.badge, { backgroundColor: '#ffe082' }]}>
+                        <Text style={[styles.badgeText, { color: '#b58100' }]}>PENDING</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.requestDetailBox}>
+                      <Text style={styles.requestDetailHeader}>Chuyên môn:</Text>
+                      <Text style={styles.requestDetailContent}>{req.expertise}</Text>
+
+                      <Text style={styles.requestDetailHeader}>Tiểu sử / Bio:</Text>
+                      <Text style={styles.requestDetailContent}>{req.bio}</Text>
+
+                      <Text style={styles.requestDetailHeader}>Chứng chỉ đính kèm:</Text>
+                      {req.certificates && req.certificates.length > 0 ? (
+                        req.certificates.map((url, idx) => (
+                          <TouchableOpacity
+                            key={idx}
+                            style={styles.certificateBtn}
+                            onPress={() => Linking.openURL(url)}
+                          >
+                            <Ionicons name="document-attach-outline" size={16} color="#4682b4" />
+                            <Text style={styles.certificateBtnText}>Xem chứng chỉ {idx + 1}</Text>
+                          </TouchableOpacity>
+                        ))
+                      ) : (
+                        <Text style={styles.requestDetailContent}>Không tải lên tài liệu.</Text>
+                      )}
+                    </View>
+
+                    <View style={styles.cardActionsGroup}>
+                      <TouchableOpacity 
+                        style={[styles.brutalistMiniBtn, { backgroundColor: '#a7f3d0', flex: 1 }]}
+                        onPress={() => handleApproveRequest(req.id || req._id)}
+                      >
+                        <Ionicons name="checkmark-circle-outline" size={15} color="#005c42" />
+                        <Text style={[styles.brutalistMiniBtnText, { color: '#005c42' }]}>PHÊ DUYỆT</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity 
+                        style={[styles.brutalistMiniBtn, { backgroundColor: '#fee2e2', flex: 1 }]}
+                        onPress={() => handleOpenRejectRequest(req)}
+                      >
+                        <Ionicons name="close-circle-outline" size={15} color="#c92a2a" />
+                        <Text style={[styles.brutalistMiniBtnText, { color: '#c92a2a' }]}>TỪ CHỐI</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                  </View>
+                </BrutalistShadow>
+              </View>
+            ))}
+
+            {requestsList.length === 0 && (
+              <Text style={styles.emptyText}>Hiện không có yêu cầu nâng cấp Mentor nào.</Text>
+            )}
+          </View>
+        )}
+
+        {/* ==================== SUBMISSIONS (GRADES) TAB ==================== */}
+        {activeTab === 'submissions' && (
+          <View>
+            <View style={styles.searchRow}>
+              <TextInput
+                style={styles.brutalistInput}
+                placeholder="Tìm học viên, đề thi..."
+                placeholderTextColor="#666"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+
+            {/* Skill type selector buttons */}
+            <View style={styles.subFilterRow}>
+              {['ALL', 'READING', 'LISTENING', 'WRITING', 'SPEAKING'].map((skill) => (
+                <TouchableOpacity
+                  key={skill}
+                  style={[styles.subFilterBtn, activeSkillFilter === skill && styles.subFilterBtnActive]}
+                  onPress={() => setActiveSkillFilter(skill)}
+                >
+                  <Text style={[styles.subFilterText, activeSkillFilter === skill && styles.subFilterTextActive]}>
+                    {skill}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.sectionBadge}>✎ REPORT CARD</Text>
+            <Text style={styles.sectionTitle}>Exam Submissions ({filteredSubmissions.length})</Text>
+
+            {filteredSubmissions.map((sub) => {
+              const color = getSkillColor(sub.type);
+              return (
+                <View key={sub.id} style={styles.listCardContainer}>
+                  <BrutalistShadow style={styles.listCard} offset={4}>
+                    <View style={styles.listCardInner}>
+                      <View style={styles.listCardHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.listCardTitle} numberOfLines={1}>{sub.test?.title || 'Luyện tập tự do'}</Text>
+                          <Text style={styles.listCardSub}>Học viên: {sub.student?.fullName || 'Học viên ẩn danh'}</Text>
+                          <Text style={styles.listCardSub}>Email: {sub.student?.email || '—'}</Text>
+                          <Text style={styles.listCardSub}>Ngày thi: {formatDate(sub.createdAt)}</Text>
+                        </View>
+                        
+                        <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                          <View style={[styles.badge, { backgroundColor: color }]}>
+                            <Text style={styles.badgeText}>{sub.type?.toUpperCase()}</Text>
+                          </View>
+                          
+                          <View style={styles.brutalistScoreBadge}>
+                            <Text style={styles.brutalistScoreLabel}>BAND</Text>
+                            <Text style={[styles.brutalistScoreValue, { color }]}>{sub.bandScore?.toFixed(1) || '—'}</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Small stats summary inside */}
+                      <View style={styles.subStatsRow}>
+                        {sub.correctCount != null && (
+                          <Text style={styles.subStatText}>✅ {sub.correctCount}/40 câu đúng</Text>
+                        )}
+                        {sub.timeTaken != null && (
+                          <Text style={styles.subStatText}>⏱️ {Math.round(sub.timeTaken / 60)} phút làm bài</Text>
+                        )}
+                      </View>
+
+                      <View style={styles.cardActionsGroup}>
+                        {(sub.type?.toUpperCase() === 'WRITING' || sub.type?.toUpperCase() === 'SPEAKING') && (
+                          <TouchableOpacity 
+                            style={[styles.brutalistMiniBtn, { backgroundColor: '#ffd54f', flex: 1.5 }]}
+                            onPress={() => {
+                              setSelectedSubmission(sub);
+                              setSubmissionModalVisible(true);
+                            }}
+                          >
+                            <Ionicons name="analytics-outline" size={14} color="#1b263b" />
+                            <Text style={styles.brutalistMiniBtnText}>XEM AI FEEDBACK</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        <TouchableOpacity 
+                          style={[styles.brutalistMiniBtn, { backgroundColor: '#fee2e2', flex: 1 }]}
+                          onPress={() => handleDeleteSubmission(sub)}
+                        >
+                          <Ionicons name="trash-outline" size={14} color="#c92a2a" />
+                          <Text style={[styles.brutalistMiniBtnText, { color: '#c92a2a' }]}>XÓA ĐIỂM</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                    </View>
+                  </BrutalistShadow>
+                </View>
+              );
+            })}
+
+            {filteredSubmissions.length === 0 && (
+              <Text style={styles.emptyText}>Không tìm thấy kết quả làm bài nào.</Text>
+            )}
+          </View>
+        )}
+
+        {/* ==================== EXAMS TAB ==================== */}
+        {activeTab === 'exams' && (
+          <View>
+            <View style={styles.searchRow}>
+              <TextInput
+                style={styles.brutalistInput}
+                placeholder="Tìm tên đề thi..."
+                placeholderTextColor="#666"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+
+            <View style={styles.subFilterRow}>
+              {['ALL', 'READING', 'LISTENING', 'WRITING', 'SPEAKING'].map((skill) => (
+                <TouchableOpacity
+                  key={skill}
+                  style={[styles.subFilterBtn, activeSkillFilter === skill && styles.subFilterBtnActive]}
+                  onPress={() => setActiveSkillFilter(skill)}
+                >
+                  <Text style={[styles.subFilterText, activeSkillFilter === skill && styles.subFilterTextActive]}>
+                    {skill}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              style={styles.actionBtnContainer}
+              onPress={handleOpenCreateExam}
+            >
+              <BrutalistShadow style={styles.createBtn} offset={3}>
+                <View style={styles.createBtnInner}>
+                  <Ionicons name="add-circle-outline" size={16} color="#1b263b" />
+                  <Text style={styles.createBtnText}>TẠO ĐỀ THI MỚI</Text>
+                </View>
+              </BrutalistShadow>
+            </TouchableOpacity>
+
+            <Text style={styles.sectionBadge}>✎ STORAGE</Text>
+            <Text style={styles.sectionTitle}>Practice Exams ({filteredExams.length})</Text>
+
+            {filteredExams.map((exam) => {
+              const color = getSkillColor(exam.type);
+              return (
+                <View key={exam.id || exam._id} style={styles.listCardContainer}>
+                  <BrutalistShadow style={styles.listCard} offset={4}>
+                    <View style={styles.listCardInner}>
+                      <View style={styles.listCardHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.listCardTitle} numberOfLines={2}>{exam.title}</Text>
+                          <Text style={styles.listCardSub}>Thời gian: {exam.duration || 0} Phút</Text>
+                          {exam.questionsCount != null ? (
+                            <Text style={styles.listCardSub}>Số câu hỏi: {exam.questionsCount} câu</Text>
+                          ) : null}
+                        </View>
+                        
+                        <View style={[styles.badge, { backgroundColor: color }]}>
+                          <Text style={styles.badgeText}>{exam.type?.toUpperCase()}</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.cardActionsGroup}>
+                        <TouchableOpacity 
+                          style={[styles.brutalistMiniBtn, { backgroundColor: '#e1f5fe', flex: 1 }]}
+                          onPress={() => handleOpenEditExam(exam)}
+                        >
+                          <Ionicons name="create-outline" size={14} color="#1b263b" />
+                          <Text style={styles.brutalistMiniBtnText}>SỬA ĐỀ</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={[styles.brutalistMiniBtn, { backgroundColor: '#fee2e2', flex: 1 }]}
+                          onPress={() => handleDeleteExam(exam)}
+                        >
+                          <Ionicons name="trash-outline" size={14} color="#c92a2a" />
+                          <Text style={[styles.brutalistMiniBtnText, { color: '#c92a2a' }]}>XÓA ĐỀ</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                    </View>
+                  </BrutalistShadow>
+                </View>
+              );
+            })}
+
+            {filteredExams.length === 0 && (
+              <Text style={styles.emptyText}>Không tìm thấy đề thi nào phù hợp.</Text>
+            )}
+          </View>
+        )}
+
+        {/* ==================== BOOKINGS TAB ==================== */}
+        {activeTab === 'bookings' && (
+          <View>
+            <View style={styles.searchRow}>
+              <TextInput
+                style={styles.brutalistInput}
+                placeholder="Tìm gia sư, học sinh..."
+                placeholderTextColor="#666"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+
+            <Text style={styles.sectionBadge}>✎ SCHEDULES</Text>
+            <Text style={styles.sectionTitle}>Active Bookings ({filteredBookings.length})</Text>
+
+            {filteredBookings.map((b) => (
+              <View key={b.id || b._id} style={styles.listCardContainer}>
+                <BrutalistShadow style={styles.listCard} offset={4}>
+                  <View style={styles.listCardInner}>
+                    <View style={styles.listCardHeader}>
+                      <View>
+                        <Text style={styles.listCardTitle}>
+                          🎙️ {b.mentor?.fullName || 'Gia sư'} & {b.student?.fullName || 'Học viên'}
+                        </Text>
+                        <Text style={styles.listCardSub}>Bắt đầu: {formatDate(b.availability?.startTime)}</Text>
+                        <Text style={styles.listCardSub}>Kết thúc: {formatDate(b.availability?.endTime)}</Text>
+                      </View>
+                      
+                      <View style={[styles.badge, { 
+                        backgroundColor: b.status === 'CONFIRMED' ? '#e6f9f5' : b.status === 'PENDING' ? '#ffe082' : '#fee2e2'
+                      }]}>
+                        <Text style={[styles.badgeText, { 
+                          color: b.status === 'CONFIRMED' ? '#005c42' : b.status === 'PENDING' ? '#b58100' : '#c92a2a'
+                        }]}>
+                          {b.status}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.cardActionsGroup}>
+                      {b.status === 'PENDING' && (
+                        <TouchableOpacity 
+                          style={[styles.brutalistMiniBtn, { backgroundColor: '#a7f3d0', flex: 1 }]}
+                          onPress={() => handleConfirmBooking(b.id || b._id)}
+                        >
+                          <Ionicons name="checkmark-circle-outline" size={14} color="#005c42" />
+                          <Text style={[styles.brutalistMiniBtnText, { color: '#005c42' }]}>XÁC NHẬN</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {b.status !== 'CANCELLED' && b.status !== 'COMPLETED' && (
+                        <TouchableOpacity 
+                          style={[styles.brutalistMiniBtn, { backgroundColor: '#fee2e2', flex: 1 }]}
+                          onPress={() => handleCancelBooking(b.id || b._id)}
+                        >
+                          <Ionicons name="close-circle-outline" size={14} color="#c92a2a" />
+                          <Text style={[styles.brutalistMiniBtnText, { color: '#c92a2a' }]}>HỦY LỊCH</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                  </View>
+                </BrutalistShadow>
+              </View>
+            ))}
+
+            {filteredBookings.length === 0 && (
+              <Text style={styles.emptyText}>Không tìm thấy lịch học nào.</Text>
+            )}
+          </View>
+        )}
       </ScrollView>
 
-      {/* Reject Modal */}
-      <Modal visible={rejectModalVisible} transparent animationType="fade">
-        <View style={S.modalOverlay}>
-          <View style={[S.modalContainer, { width: '90%', maxWidth: 400, borderRadius: RADIUS.xl, padding: SPACING.lg, borderWidth: 2, borderColor: COLORS.borderLight }]}>
-            <Text style={[S.modalTitle, { fontSize: 18, fontFamily: TYPOGRAPHY.fontBold, marginBottom: 12 }]}>Từ chối nâng cấp Mentor</Text>
-            <Text style={{ fontSize: 13, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary, marginBottom: 10 }}>
-              Nhập lý do từ chối yêu cầu của {selectedRequest?.user?.fullName || selectedRequest?.user?.username}:
-            </Text>
-            <TextInput
-              style={{
-                width: '100%',
-                height: 80,
-                borderWidth: 1.5,
-                borderColor: COLORS.borderLight,
-                borderRadius: RADIUS.md,
-                padding: 10,
-                backgroundColor: '#fff',
-                textAlignVertical: 'top',
-                fontFamily: TYPOGRAPHY.fontMedium,
-                fontSize: 13,
-                marginBottom: 16
-              }}
-              value={rejectReason}
-              onChangeText={setRejectReason}
-              placeholder="Nhập lý do chi tiết..."
-              placeholderTextColor="#999"
-              multiline
-            />
-            <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
-              <TouchableOpacity
-                style={{ flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.borderLight, alignItems: 'center' }}
-                onPress={() => setRejectModalVisible(false)}
+      {/* ==================== USER MODAL (CREATE / EDIT) ==================== */}
+      <Modal visible={userModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <BrutalistShadow style={styles.modalContainer} offset={6}>
+            <View style={styles.modalInner}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{editingUser ? 'Cập nhật User' : 'Tạo User Mới'}</Text>
+                <TouchableOpacity onPress={() => setUserModalVisible(false)}>
+                  <Ionicons name="close" size={24} color="#1b263b" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 400 }}>
+                <Text style={styles.inputLabel}>Tên đăng nhập / Username *</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={userForm.username}
+                  onChangeText={(val) => setUserForm({ ...userForm, username: val })}
+                  placeholder="Nhập username..."
+                />
+
+                <Text style={styles.inputLabel}>Họ và tên *</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={userForm.fullName}
+                  onChangeText={(val) => setUserForm({ ...userForm, fullName: val })}
+                  placeholder="Nhập họ và tên..."
+                />
+
+                <Text style={styles.inputLabel}>Email *</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={userForm.email}
+                  onChangeText={(val) => setUserForm({ ...userForm, email: val })}
+                  placeholder="Nhập email..."
+                  keyboardType="email-address"
+                />
+
+                <Text style={styles.inputLabel}>Số điện thoại</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={userForm.phone}
+                  onChangeText={(val) => setUserForm({ ...userForm, phone: val })}
+                  placeholder="Nhập số điện thoại..."
+                  keyboardType="phone-pad"
+                />
+
+                <Text style={styles.inputLabel}>Vai trò / Role</Text>
+                <View style={styles.rolePickerRow}>
+                  {['STUDENT', 'MENTOR', 'ADMIN'].map((r) => (
+                    <TouchableOpacity
+                      key={r}
+                      style={[styles.roleSelectBtn, userForm.role === r && styles.roleSelectBtnActive]}
+                      onPress={() => setUserForm({ ...userForm, role: r })}
+                    >
+                      <Text style={[styles.roleSelectText, userForm.role === r && styles.roleSelectTextActive]}>
+                        {r}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.inputLabel}>
+                  Mật khẩu {editingUser ? '(Để trống nếu giữ nguyên)' : '*'}
+                </Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={userForm.password}
+                  onChangeText={(val) => setUserForm({ ...userForm, password: val })}
+                  placeholder="Nhập mật khẩu..."
+                  secureTextEntry
+                />
+              </ScrollView>
+
+              <TouchableOpacity 
+                activeOpacity={0.8}
+                style={styles.modalSaveBtnContainer}
+                onPress={handleSaveUser}
               >
-                <Text style={{ fontFamily: TYPOGRAPHY.fontBold, fontSize: 13, color: COLORS.textPrimary }}>HỦY</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{ flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, backgroundColor: COLORS.danger, alignItems: 'center' }}
-                onPress={handleRejectSubmit}
-              >
-                <Text style={{ fontFamily: TYPOGRAPHY.fontBold, fontSize: 13, color: '#fff' }}>GỬI TỪ CHỐI</Text>
+                <BrutalistShadow style={styles.modalSaveBtn} offset={3}>
+                  <View style={styles.modalSaveBtnInner}>
+                    <Text style={styles.modalSaveBtnText}>LƯU THÔNG TIN</Text>
+                  </View>
+                </BrutalistShadow>
               </TouchableOpacity>
             </View>
-          </View>
+          </BrutalistShadow>
         </View>
       </Modal>
+
+      {/* ==================== EXAM MODAL (CREATE / EDIT) ==================== */}
+      <Modal visible={examModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <BrutalistShadow style={styles.modalContainer} offset={6}>
+            <View style={styles.modalInner}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{editingExam ? 'Sửa Đề Thi' : 'Tạo Đề Thi Mới'}</Text>
+                <TouchableOpacity onPress={() => setExamModalVisible(false)}>
+                  <Ionicons name="close" size={24} color="#1b263b" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 400 }}>
+                <Text style={styles.inputLabel}>Tiêu đề đề thi *</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={examForm.title}
+                  onChangeText={(val) => setExamForm({ ...examForm, title: val })}
+                  placeholder="Ví dụ: Cambridge 18 - Reading Test 1"
+                />
+
+                <Text style={styles.inputLabel}>Kỹ năng / Skill Type</Text>
+                <View style={styles.rolePickerRow}>
+                  {['READING', 'LISTENING', 'WRITING', 'SPEAKING'].map((t) => (
+                    <TouchableOpacity
+                      key={t}
+                      style={[styles.roleSelectBtn, examForm.type === t && styles.roleSelectBtnActive]}
+                      onPress={() => setExamForm({ ...examForm, type: t })}
+                    >
+                      <Text style={[styles.roleSelectText, examForm.type === t && styles.roleSelectTextActive]}>
+                        {t}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.inputLabel}>Thời gian làm bài (Phút)</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={examForm.duration}
+                  onChangeText={(val) => setExamForm({ ...examForm, duration: val })}
+                  placeholder="60"
+                  keyboardType="number-pad"
+                />
+
+                {(examForm.type === 'READING' || examForm.type === 'LISTENING') && (
+                  <View>
+                    <Text style={styles.inputLabel}>Số câu hỏi</Text>
+                    <TextInput
+                      style={styles.modalInput}
+                      value={examForm.questionsCount}
+                      onChangeText={(val) => setExamForm({ ...examForm, questionsCount: val })}
+                      placeholder="40"
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                )}
+              </ScrollView>
+
+              <TouchableOpacity 
+                activeOpacity={0.8}
+                style={styles.modalSaveBtnContainer}
+                onPress={handleSaveExam}
+              >
+                <BrutalistShadow style={styles.modalSaveBtn} offset={3}>
+                  <View style={styles.modalSaveBtnInner}>
+                    <Text style={styles.modalSaveBtnText}>LƯU ĐỀ THI</Text>
+                  </View>
+                </BrutalistShadow>
+              </TouchableOpacity>
+            </View>
+          </BrutalistShadow>
+        </View>
+      </Modal>
+
+      {/* ==================== REJECT REQUEST MODAL ==================== */}
+      <Modal visible={rejectModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <BrutalistShadow style={styles.modalContainer} offset={5}>
+            <View style={styles.modalInner}>
+              <Text style={[styles.modalTitle, { marginBottom: 12 }]}>Từ chối yêu cầu nâng cấp</Text>
+              <Text style={styles.inputLabel}>Lý do từ chối (Gửi qua email cho người dùng):</Text>
+              <TextInput
+                style={[styles.modalInput, { height: 100, textAlignVertical: 'top' }]}
+                value={rejectReason}
+                onChangeText={setRejectReason}
+                placeholder="Nhập lý do chi tiết..."
+                multiline
+              />
+              
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                <TouchableOpacity 
+                  style={[styles.brutalistMiniBtn, { flex: 1, backgroundColor: '#e5e7eb' }]}
+                  onPress={() => setRejectModalVisible(false)}
+                >
+                  <Text style={styles.brutalistMiniBtnText}>HỦY</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.brutalistMiniBtn, { flex: 1, backgroundColor: '#fee2e2' }]}
+                  onPress={handleRejectRequestSubmit}
+                >
+                  <Text style={[styles.brutalistMiniBtnText, { color: '#c92a2a' }]}>GỬI TỪ CHỐI</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </BrutalistShadow>
+        </View>
+      </Modal>
+
+      {/* ==================== SUBMISSION DETAIL MODAL (AI FEEDBACK) ==================== */}
+      <Modal visible={submissionModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <BrutalistShadow style={styles.modalContainer} offset={6}>
+            <View style={[styles.modalInner, { paddingHorizontal: 16 }]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>AI Detailed Evaluation</Text>
+                <TouchableOpacity onPress={() => setSubmissionModalVisible(false)}>
+                  <Ionicons name="close" size={24} color="#1b263b" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+                <Text style={styles.inputLabel}>🎯 OVERALL BAND SCORE: {selectedSubmission?.bandScore?.toFixed(1) || '—'}</Text>
+                
+                {/* Score breakdown metrics */}
+                <View style={styles.scoreDetailsGrid}>
+                  {selectedSubmission?.type?.toUpperCase() === 'WRITING' ? (
+                    <>
+                      <View style={styles.scoreDetailBox}>
+                        <Text style={styles.scoreDetailVal}>{selectedSubmission?.taskAchievement || '—'}</Text>
+                        <Text style={styles.scoreDetailLbl}>Task Achievement</Text>
+                      </View>
+                      <View style={styles.scoreDetailBox}>
+                        <Text style={styles.scoreDetailVal}>{selectedSubmission?.coherenceCohesion || '—'}</Text>
+                        <Text style={styles.scoreDetailLbl}>Coherence & Cohesion</Text>
+                      </View>
+                      <View style={styles.scoreDetailBox}>
+                        <Text style={styles.scoreDetailVal}>{selectedSubmission?.lexicalResource || '—'}</Text>
+                        <Text style={styles.scoreDetailLbl}>Lexical Resource</Text>
+                      </View>
+                      <View style={styles.scoreDetailBox}>
+                        <Text style={styles.scoreDetailVal}>{selectedSubmission?.grammarAccuracy || '—'}</Text>
+                        <Text style={styles.scoreDetailLbl}>Grammatical Accuracy</Text>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.scoreDetailBox}>
+                        <Text style={styles.scoreDetailVal}>{selectedSubmission?.fluencyCoherence || '—'}</Text>
+                        <Text style={styles.scoreDetailLbl}>Fluency & Coherence</Text>
+                      </View>
+                      <View style={styles.scoreDetailBox}>
+                        <Text style={styles.scoreDetailVal}>{selectedSubmission?.lexicalResource || '—'}</Text>
+                        <Text style={styles.scoreDetailLbl}>Lexical Resource</Text>
+                      </View>
+                      <View style={styles.scoreDetailBox}>
+                        <Text style={styles.scoreDetailVal}>{selectedSubmission?.grammarAccuracy || '—'}</Text>
+                        <Text style={styles.scoreDetailLbl}>Grammatical Accuracy</Text>
+                      </View>
+                      <View style={styles.scoreDetailBox}>
+                        <Text style={styles.scoreDetailVal}>{selectedSubmission?.pronunciation || '—'}</Text>
+                        <Text style={styles.scoreDetailLbl}>Pronunciation</Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+
+                {selectedSubmission?.prompt ? (
+                  <View style={styles.feedbackSection}>
+                    <Text style={styles.feedbackSectionTitle}>Đề bài / Prompt:</Text>
+                    <Text style={styles.feedbackContentText}>{selectedSubmission.prompt}</Text>
+                  </View>
+                ) : null}
+
+                {selectedSubmission?.essayText ? (
+                  <View style={styles.feedbackSection}>
+                    <Text style={styles.feedbackSectionTitle}>Bài viết của học viên:</Text>
+                    <Text style={styles.feedbackContentText}>{selectedSubmission.essayText}</Text>
+                  </View>
+                ) : null}
+
+                {selectedSubmission?.transcription ? (
+                  <View style={styles.feedbackSection}>
+                    <Text style={styles.feedbackSectionTitle}>Bài nói (Transcription):</Text>
+                    <Text style={styles.feedbackContentText}>{selectedSubmission.transcription}</Text>
+                  </View>
+                ) : null}
+
+                <View style={[styles.feedbackSection, { backgroundColor: '#e8f5e9', borderColor: '#4caf50' }]}>
+                  <Text style={[styles.feedbackSectionTitle, { color: '#2e7d32' }]}>AI Evaluation Feedback:</Text>
+                  <Text style={[styles.feedbackContentText, { color: '#2e7d32' }]}>
+                    {selectedSubmission?.aiFeedback || 'Không có phản hồi chi tiết từ AI.'}
+                  </Text>
+                </View>
+              </ScrollView>
+
+              <TouchableOpacity 
+                activeOpacity={0.8}
+                style={[styles.modalSaveBtnContainer, { marginTop: 12 }]}
+                onPress={() => setSubmissionModalVisible(false)}
+              >
+                <BrutalistShadow style={styles.modalSaveBtn} offset={3}>
+                  <View style={styles.modalSaveBtnInner}>
+                    <Text style={styles.modalSaveBtnText}>ĐÓNG PHẢN HỒI</Text>
+                  </View>
+                </BrutalistShadow>
+              </TouchableOpacity>
+            </View>
+          </BrutalistShadow>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 };
 
-const S = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: '#f5f3dc' },
   appBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.base,
-    paddingVertical: SPACING.md,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: '#fcfbf7',
+    borderBottomWidth: 2,
+    borderBottomColor: '#1b263b'
   },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  appBarTitle: { fontSize: TYPOGRAPHY.md, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary },
-
+  appBarBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  appBarTitle: { fontSize: 16, fontFamily: 'Outfit_900Black', color: '#1b263b', letterSpacing: 1.5 },
+  
   tabsContainer: {
-    backgroundColor: COLORS.surface,
-    padding: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    backgroundColor: '#fcfbf7',
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: '#1b263b',
   },
-  tabsScroll: { gap: SPACING.sm, paddingHorizontal: SPACING.xs },
+  tabsScroll: { paddingHorizontal: 16, gap: 10 },
   tabItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.background,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#fcfbf7',
+    borderWidth: 2,
+    borderColor: '#1b263b',
   },
-  tabItemActive: { backgroundColor: COLORS.primary },
-  tabText: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary },
-  tabTextActive: { color: COLORS.textInverse, fontFamily: TYPOGRAPHY.fontBold },
+  tabItemActive: { backgroundColor: '#1b263b' },
+  tabText: { fontSize: 11, fontFamily: 'Outfit_900Black', color: '#1b263b', marginLeft: 6 },
+  tabTextActive: { color: '#fff' },
 
   scroll: { flex: 1 },
-  scrollContent: { padding: SPACING.base, paddingBottom: SPACING['3xl'] },
+  scrollContent: { padding: 20, paddingBottom: 60 },
 
-  sectionTitle: { fontSize: TYPOGRAPHY.lg, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary, marginBottom: SPACING.md },
+  sectionBadge: { fontFamily: 'Outfit_900Black', fontSize: 10, color: '#c92a2a', letterSpacing: 2, marginBottom: 4 },
+  sectionTitle: { fontSize: 24, fontFamily: 'Outfit_900Black', color: '#1b263b', marginBottom: 16 },
 
-  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.lg },
-  kpiCard: {
-    width: '48%',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.md,
-    ...SHADOWS.sm,
+  // Dashboard styles
+  heroSection: { marginBottom: 28 },
+  stickyNote: {
+    backgroundColor: '#fffebc',
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    borderRadius: 16,
+    padding: 20,
+    position: 'relative',
+    transform: [{ rotate: '-1deg' }]
   },
-  kpiLabel: { fontSize: TYPOGRAPHY.xs, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textSecondary, marginBottom: 4 },
-  kpiValue: { fontSize: TYPOGRAPHY['2xl'], fontFamily: TYPOGRAPHY.fontBlack },
-
-  recentCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.md,
-    ...SHADOWS.sm,
+  tape: {
+    position: 'absolute',
+    top: -10,
+    left: '35%',
+    width: 100,
+    height: 24,
+    backgroundColor: 'rgba(27,38,59,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(27,38,59,0.3)',
+    transform: [{ rotate: '2deg' }]
   },
-  recentTitle: { fontSize: TYPOGRAPHY.md, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary, marginBottom: SPACING.md },
-  recentItem: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
-  recentDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary, marginRight: SPACING.sm },
-  recentText: { fontSize: TYPOGRAPHY.sm, fontFamily: TYPOGRAPHY.fontMedium, color: COLORS.textPrimary },
-  recentTime: { fontSize: TYPOGRAPHY.xs, color: COLORS.textSecondary },
+  stickyGreeting: { fontFamily: 'Outfit_900Black', fontSize: 18, color: '#1b263b', marginBottom: 8 },
+  stickyText: { fontFamily: 'Outfit_400Regular', fontSize: 13, color: '#1b263b', lineHeight: 18, marginBottom: 16 },
+  stickyFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  stickyBadge: { backgroundColor: '#1b263b', color: '#fff', fontSize: 9, fontFamily: 'Outfit_900Black', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  streakBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e6f9f5', borderWidth: 1.5, borderColor: '#005c42', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
+  streakText: { fontFamily: 'Outfit_900Black', fontSize: 9, color: '#005c42', marginLeft: 4 },
 
-  listCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
-    ...SHADOWS.sm,
+  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 28 },
+  kpiCard: { width: '46%', borderRadius: 16 },
+  kpiInner: { backgroundColor: '#fcfbf7', padding: 16 },
+  kpiHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  kpiEmoji: { fontSize: 22 },
+  kpiValue: { fontSize: 28, fontFamily: 'Outfit_900Black' },
+  kpiLabel: { fontSize: 10, fontFamily: 'Outfit_900Black', color: '#666', letterSpacing: 0.5 },
+
+  logCard: { borderRadius: 16, marginBottom: 20 },
+  logCardInner: { backgroundColor: '#fcfbf7', padding: 16 },
+  logItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  logDot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
+  logText: { fontSize: 12, fontFamily: 'Outfit_400Regular', color: '#1b263b', lineHeight: 16 },
+  logBold: { fontFamily: 'Outfit_700Bold' },
+  logTime: { fontSize: 9, fontFamily: 'Outfit_400Regular', color: '#999', marginTop: 2 },
+
+  // Search input and action buttons
+  searchRow: { marginBottom: 16 },
+  brutalistInput: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    borderRadius: 10,
+    padding: 12,
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 13,
+    color: '#1b263b'
   },
-  listCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
-  listCardTitle: { fontSize: TYPOGRAPHY.md, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.textPrimary, flex: 1 },
-  listCardSub: { fontSize: TYPOGRAPHY.sm, color: COLORS.textSecondary, marginTop: 2 },
-  badge: { backgroundColor: COLORS.primaryLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: RADIUS.sm, alignSelf: 'flex-start' },
-  badgeText: { fontSize: TYPOGRAPHY.xs, fontFamily: TYPOGRAPHY.fontBold, color: COLORS.primary },
-  actionBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: RADIUS.md,
+  actionBtnContainer: { marginBottom: 20 },
+  createBtn: { borderRadius: 12 },
+  createBtnInner: {
+    backgroundColor: '#ffd54f',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8
   },
-  actionBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontFamily: TYPOGRAPHY.fontBold,
+  createBtnText: { fontFamily: 'Outfit_900Black', fontSize: 12, color: '#1b263b' },
+
+  // List Cards layouts
+  listCardContainer: { marginBottom: 16 },
+  listCard: { borderRadius: 16 },
+  listCardInner: { backgroundColor: '#fcfbf7', padding: 16 },
+  listCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  listCardTitle: { fontSize: 15, fontFamily: 'Outfit_900Black', color: '#1b263b' },
+  listCardSub: { fontSize: 11, fontFamily: 'Outfit_700Bold', color: '#666', marginTop: 2 },
+  
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#1b263b',
+    alignSelf: 'flex-start'
   },
+  badgeText: { fontSize: 9, fontFamily: 'Outfit_900Black', color: '#fff', textTransform: 'uppercase' },
+
+  brutalistScoreBadge: {
+    borderWidth: 2,
+    borderColor: '#1b263b',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 46
+  },
+  brutalistScoreLabel: { fontSize: 7, fontFamily: 'Outfit_900Black', color: '#666' },
+  brutalistScoreValue: { fontSize: 18, fontFamily: 'Outfit_900Black' },
+
+  subStatsRow: { flexDirection: 'row', gap: 16, marginVertical: 8, borderTopWidth: 1, borderTopColor: 'rgba(27,38,59,0.08)', paddingTop: 8 },
+  subStatText: { fontSize: 11, fontFamily: 'Outfit_700Bold', color: '#666' },
+
+  cardActionsGroup: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(27,38,59,0.08)',
+    paddingTop: 12
+  },
+  brutalistMiniBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#1b263b',
+    gap: 4
+  },
+  brutalistMiniBtnText: { fontSize: 10, fontFamily: 'Outfit_900Black', color: '#1b263b' },
+
+  // Mentor applicant specific
+  requestDetailBox: {
+    backgroundColor: '#f5f3dc',
+    borderWidth: 1.5,
+    borderColor: '#1b263b',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 6
+  },
+  requestDetailHeader: { fontSize: 11, fontFamily: 'Outfit_900Black', color: '#1b263b', marginTop: 6 },
+  requestDetailContent: { fontSize: 12, fontFamily: 'Outfit_400Regular', color: '#333', marginTop: 2, lineHeight: 16 },
+  certificateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#1b263b',
+    borderRadius: 6,
+    padding: 6,
+    alignSelf: 'flex-start'
+  },
+  certificateBtnText: { fontSize: 11, fontFamily: 'Outfit_700Bold', color: '#4682b4', textDecorationLine: 'underline' },
+
+  // Skill subfilters
+  subFilterRow: { flexDirection: 'row', gap: 6, marginBottom: 16 },
+  subFilterBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#1b263b',
+    backgroundColor: '#fcfbf7',
+    alignItems: 'center'
+  },
+  subFilterBtnActive: { backgroundColor: '#1b263b' },
+  subFilterText: { fontSize: 9, fontFamily: 'Outfit_900Black', color: '#1b263b' },
+  subFilterTextActive: { color: '#fff' },
+
+  emptyText: { fontSize: 13, fontFamily: 'Outfit_700Bold', color: '#999', textAlign: 'center', paddingVertical: 40 },
+
+  // Loading indicator states
+  loadingOverlay: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    backgroundColor: '#f5f3dc'
+  },
+  loadingText: { fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#666', marginTop: 12 },
+
+  // Modals Styling
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(27, 38, 59, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: SPACING.md,
+    padding: 20
   },
-  modalContainer: {
-    backgroundColor: COLORS.surface,
+  modalContainer: { width: '100%', maxWidth: 420, borderRadius: 20 },
+  modalInner: { backgroundColor: '#fcfbf7', padding: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottomWidth: 2, borderBottomColor: '#1b263b', paddingBottom: 10 },
+  modalTitle: { fontSize: 18, fontFamily: 'Outfit_900Black', color: '#1b263b' },
+  modalInput: {
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#1b263b',
+    borderRadius: 8,
+    padding: 10,
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 13,
+    color: '#1b263b',
+    marginBottom: 12
   },
-  modalTitle: {
-    color: COLORS.textPrimary,
+  inputLabel: { fontSize: 11, fontFamily: 'Outfit_900Black', color: '#1b263b', marginBottom: 4 },
+  
+  rolePickerRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  roleSelectBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#1b263b',
+    backgroundColor: '#fff',
+    alignItems: 'center'
   },
+  roleSelectBtnActive: { backgroundColor: '#ffd54f' },
+  roleSelectText: { fontSize: 10, fontFamily: 'Outfit_900Black', color: '#1b263b' },
+  roleSelectTextActive: { color: '#1b263b' },
+
+  modalSaveBtnContainer: { marginTop: 8 },
+  modalSaveBtn: { borderRadius: 10 },
+  modalSaveBtnInner: {
+    backgroundColor: '#00c1a0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12
+  },
+  modalSaveBtnText: { fontFamily: 'Outfit_900Black', fontSize: 12, color: '#fff' },
+
+  // Score breakdowns in details modal
+  scoreDetailsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 12 },
+  scoreDetailBox: {
+    width: '47%',
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#1b263b',
+    borderRadius: 8,
+    padding: 8,
+    alignItems: 'center'
+  },
+  scoreDetailVal: { fontSize: 18, fontFamily: 'Outfit_900Black', color: '#1b263b' },
+  scoreDetailLbl: { fontSize: 8, fontFamily: 'Outfit_900Black', color: '#666', marginTop: 2, textAlign: 'center' },
+
+  feedbackSection: {
+    borderWidth: 1.5,
+    borderColor: '#1b263b',
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: '#fff',
+    marginBottom: 12
+  },
+  feedbackSectionTitle: { fontSize: 11, fontFamily: 'Outfit_900Black', color: '#1b263b', marginBottom: 4 },
+  feedbackContentText: { fontSize: 12, fontFamily: 'Outfit_400Regular', color: '#333', lineHeight: 18 }
 });
 
 export default AdminScreen;

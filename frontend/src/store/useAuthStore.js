@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { storage } from '../utils/storage';
 import client from '../api/client';
 
-const useAuthStore = create((set) => ({
+const useAuthStore = create((set, get) => ({
   user: null,
   token: null,
   isLoading: false,
@@ -89,7 +89,19 @@ const useAuthStore = create((set) => ({
   },
   logout: async () => {
     try {
-      await client.post('/auth/logout');
+      const currentUser = get().user;
+      const currentToken = get().token;
+      const headers = {};
+      if (currentUser) {
+        const userId = currentUser._id || currentUser.id;
+        if (userId) {
+          headers['x-client-id'] = userId.toString();
+        }
+      }
+      if (currentToken) {
+        headers['Authorization'] = `Bearer ${currentToken}`;
+      }
+      await client.post('/auth/logout', {}, { headers, hideToast: true });
     } catch (error) {
       // Continue clearing local auth state even if the remote session is already gone.
     } finally {
