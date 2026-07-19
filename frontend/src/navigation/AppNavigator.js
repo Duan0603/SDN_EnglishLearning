@@ -73,7 +73,7 @@ const MainTabNavigator = () => (
       name="Home"
       component={HomeScreen}
       options={{
-        title: 'Trang chủ',
+        title: 'Home',
         tabBarIcon: ({ focused }) => (
           <AppIcon
             name={focused ? 'home' : 'home-outline'}
@@ -81,14 +81,14 @@ const MainTabNavigator = () => (
             color={focused ? COLORS.tabActive : COLORS.tabInactive}
           />
         ),
-        tabBarLabel: ({ focused }) => <TabLabel label="Trang chủ" focused={focused} />,
+        tabBarLabel: ({ focused }) => <TabLabel label="Home" focused={focused} />,
       }}
     />
     <Tab.Screen
       name="Practice"
       component={PracticeScreen}
       options={{
-        title: 'Luyện tập',
+        title: 'Practice',
         tabBarIcon: ({ focused }) => (
           <AppIcon
             name={focused ? 'practice' : 'practice-outline'}
@@ -96,14 +96,14 @@ const MainTabNavigator = () => (
             color={focused ? COLORS.tabActive : COLORS.tabInactive}
           />
         ),
-        tabBarLabel: ({ focused }) => <TabLabel label="Luyện tập" focused={focused} />,
+        tabBarLabel: ({ focused }) => <TabLabel label="Practice" focused={focused} />,
       }}
     />
     <Tab.Screen
       name="Progress"
       component={ProgressScreen}
       options={{
-        title: 'Tiến độ',
+        title: 'Progress',
         tabBarIcon: ({ focused }) => (
           <AppIcon
             name="progress"
@@ -111,14 +111,14 @@ const MainTabNavigator = () => (
             color={focused ? COLORS.tabActive : COLORS.tabInactive}
           />
         ),
-        tabBarLabel: ({ focused }) => <TabLabel label="Tiến độ" focused={focused} />,
+        tabBarLabel: ({ focused }) => <TabLabel label="Progress" focused={focused} />,
       }}
     />
     <Tab.Screen
       name="Mentors"
       component={MentorsScreen}
       options={{
-        title: 'Gia sư',
+        title: 'Tutors',
         tabBarIcon: ({ focused }) => (
           <AppIcon
             name="practice" // Fallback icon since mentors might not exist in HEAD
@@ -126,14 +126,14 @@ const MainTabNavigator = () => (
             color={focused ? COLORS.tabActive : COLORS.tabInactive}
           />
         ),
-        tabBarLabel: ({ focused }) => <TabLabel label="Gia sư" focused={focused} />,
+        tabBarLabel: ({ focused }) => <TabLabel label="Tutors" focused={focused} />,
       }}
     />
     <Tab.Screen
       name="Profile"
       component={ProfileScreen}
       options={{
-        title: 'Cá nhân',
+        title: 'Profile',
         tabBarIcon: ({ focused }) => (
           <AppIcon
             name={focused ? 'profile' : 'profile-outline'}
@@ -141,7 +141,7 @@ const MainTabNavigator = () => (
             color={focused ? COLORS.tabActive : COLORS.tabInactive}
           />
         ),
-        tabBarLabel: ({ focused }) => <TabLabel label="Cá nhân" focused={focused} />,
+        tabBarLabel: ({ focused }) => <TabLabel label="Profile" focused={focused} />,
       }}
     />
   </Tab.Navigator>

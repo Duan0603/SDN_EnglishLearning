@@ -383,3 +383,86 @@ export const updateTestStreak = async (req: any, res: any, next: any) => {
     next(err);
   }
 };
+
+/**
+ * GET /api/v1/users/me/results/test/:id
+ * Get detail of a specific Reading/Listening TestResult
+ */
+export const getTestResultDetail = async (req: any, res: any, next: any) => {
+  try {
+    const userId = req.user?.userId || req.user?.id || req.headers['x-client-id'] as string;
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { id } = req.params;
+    const result = await prisma.testResult.findFirst({
+      where: { id, userId },
+      include: {
+        test: {
+          include: {
+            sections: {
+              include: {
+                questions: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!result) return res.status(404).json({ success: false, message: 'Result not found' });
+
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/v1/users/me/results/writing/:id
+ * Get detail of a specific WritingSubmission
+ */
+export const getWritingSubmissionDetail = async (req: any, res: any, next: any) => {
+  try {
+    const userId = req.user?.userId || req.user?.id || req.headers['x-client-id'] as string;
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { id } = req.params;
+    const submission = await prisma.writingSubmission.findFirst({
+      where: { id, userId },
+      include: {
+        test: true
+      }
+    });
+
+    if (!submission) return res.status(404).json({ success: false, message: 'Submission not found' });
+
+    res.status(200).json({ success: true, data: submission });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/v1/users/me/results/speaking/:id
+ * Get detail of a specific SpeakingSubmission
+ */
+export const getSpeakingSubmissionDetail = async (req: any, res: any, next: any) => {
+  try {
+    const userId = req.user?.userId || req.user?.id || req.headers['x-client-id'] as string;
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { id } = req.params;
+    const submission = await prisma.speakingSubmission.findFirst({
+      where: { id, userId },
+      include: {
+        test: true
+      }
+    });
+
+    if (!submission) return res.status(404).json({ success: false, message: 'Submission not found' });
+
+    res.status(200).json({ success: true, data: submission });
+  } catch (err) {
+    next(err);
+  }
+};
