@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import client from '../api/client';
 import useAuthStore from '../store/useAuthStore';
 import { useFocusEffect } from '@react-navigation/native';
+import ReviewModal from '../components/ReviewModal';
 
 // Brutalist shadow wrapper
 const BrutalistShadow = ({ children, style, offset = 4 }) => (
@@ -40,8 +41,8 @@ const BandBar = ({ label, score, color, maxScore = 9 }) => {
 };
 
 // History item
-const HistoryItem = ({ title, date, score, type, color }) => (
-  <View style={styles.historyItem}>
+const HistoryItem = ({ title, date, score, type, color, onPress }) => (
+  <TouchableOpacity style={styles.historyItem} onPress={onPress}>
     <View style={[styles.historyIcon, { backgroundColor: color + '20' }]}>
       <Text style={{ fontSize: 18 }}>
         {type === 'SPEAKING' ? '🎙️' : type === 'WRITING' ? '✍️' : type === 'LISTENING' ? '🎧' : '📖'}
@@ -54,7 +55,7 @@ const HistoryItem = ({ title, date, score, type, color }) => (
     <View style={[styles.historyScore, { borderColor: color }]}>
       <Text style={[styles.historyScoreText, { color }]}>{score?.toFixed(1) || '—'}</Text>
     </View>
-  </View>
+  </TouchableOpacity>
 );
 
 const TYPE_COLORS = {
@@ -172,6 +173,11 @@ const ProgressScreen = ({ navigation }) => {
   // API data
   const [stats, setStats] = useState(null);
   const [history, setHistory] = useState([]);
+
+  // Review Modal state
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
+  const [selectedSubmissionType, setSelectedSubmissionType] = useState('READING');
 
   const filters = [
     { key: 'all',       label: 'ALL' },
@@ -377,6 +383,11 @@ const ProgressScreen = ({ navigation }) => {
                       score={item.bandScore}
                       type={type}
                       color={color}
+                      onPress={() => {
+                        setSelectedSubmissionId(item.id);
+                        setSelectedSubmissionType(type);
+                        setReviewModalVisible(true);
+                      }}
                     />
                     {i < filtered.length - 1 && <View style={styles.historyDivider} />}
                   </React.Fragment>
@@ -396,6 +407,14 @@ const ProgressScreen = ({ navigation }) => {
 
         </ScrollView>
       )}
+
+      {/* Review Modal */}
+      <ReviewModal
+        visible={reviewModalVisible}
+        onClose={() => setReviewModalVisible(false)}
+        submissionId={selectedSubmissionId}
+        type={selectedSubmissionType}
+      />
     </SafeAreaView>
   );
 };

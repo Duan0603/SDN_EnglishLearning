@@ -52,7 +52,11 @@ export class STTService {
       return text.trim();
     } catch (error: any) {
       console.error('[STT Service] Gemini Transcription failed:', error);
-      throw new Error(`STT Gemini Error: ${error?.message || 'Unknown error'}`);
+      const errorMessage = error?.message || '';
+      if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+        throw new Error('Hệ thống AI đang quá tải hoặc hết lượt đánh giá miễn phí. Vui lòng đợi khoảng 1 phút rồi thử lại nhé!');
+      }
+      throw new Error(`Lỗi nhận diện giọng nói: ${errorMessage}`);
     }
   }
 }

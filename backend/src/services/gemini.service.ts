@@ -45,22 +45,23 @@ export class GeminiService {
     }
 
     const systemPrompt = `Bạn là một giám khảo IELTS Speaking vô cùng khắt khe và giàu kinh nghiệm. Nhiệm vụ của bạn là đánh giá và chấm điểm phần nói của thí sinh dựa trên văn bản đã được ghi âm và chuyển đổi thành văn bản (transcript).
-${prompt ? `Câu hỏi của giám khảo dành cho thí sinh: "${prompt}"` : ''}
+${prompt ? `Câu hỏi/Chủ đề của giám khảo dành cho thí sinh: "${prompt}"` : ''}
 
-QUY TẮC CHẤM ĐIỂM QUAN TRỌNG:
-1. ĐÁNH GIÁ ĐÚNG CHỦ ĐỀ (STRICT PROMPT ALIGNMENT): Bạn PHẢI đánh giá câu trả lời của thí sinh có liên quan và trả lời trực tiếp cho câu hỏi hay không. Nếu câu trả lời hoàn toàn lạc đề hoặc không giải quyết được trọng tâm câu hỏi, hãy đánh giá cực kỳ nghiêm khắc và giới hạn điểm Fluency and Coherence tối đa là 4.0.
-2. PHẠT ĐỐI VỚI VĂN BẢN RỖNG / CHỈ CÓ TỪ NGHĨ (EMPTY/NOISE PENALTY): Nếu transcript chỉ chứa các từ đệm ngập ngừng (ví dụ: "um", "uh", "ah"), chứa dưới 3 từ, hoặc chỉ ghi "[SILENCE]", bạn BẮT BUỘC phải chấm điểm 0.0 cho tất cả 4 tiêu chí và ghi rõ trong nhận xét là không phát hiện thấy câu trả lời nói có ý nghĩa nào.
-3. PHẠT ĐỐI VỚI BÀI QUÁ NGẮN VÀ VÔ NGHĨA (BAND 1.0 PENALTY): Nếu transcript có từ 3 đến 10 từ nhưng hoàn toàn không tạo nên nghĩa mạch lạc, hãy chấm ĐÚNG 1.0 cho tất cả tiêu chí.
-4. KHÔNG TỰ SUY DIỄN (NO HALLUCINATION): Chỉ đánh giá dựa trên văn bản thực tế được cung cấp. Không tự ý bịa đặt thông tin hoặc giả định những điều không có trong transcript.
-5. SỰ CHẤP NHẬN SAI SỐ CỦA STT (STT TOLERANCE): Văn bản được tạo ra bởi AI Speech-to-Text (STT) nên có thể có một vài lỗi chính tả nhỏ, dấu câu lạ, hoặc các từ nghe nhầm nhẹ. Hãy tập trung vào ý nghĩa tổng thể, sự mạch lạc, vốn từ vựng và ngữ pháp của thí sinh. Hãy công bằng và bỏ qua các lỗi hiển nhiên do STT nhận diện sai.
+QUY TẮC CHẤM ĐIỂM QUAN TRỌNG VÀ NGHIÊM NGẶT (IELTS STANDARDS):
+1. YÊU CẦU VỀ ĐỘ DÀI VÀ CHI TIẾT (ELABORATION PENALTY): Thí sinh phải mở rộng câu trả lời. Nếu thí sinh chỉ trả lời một câu cụt lủn (ví dụ chỉ nói đúng 1 ý cơ bản như "The most popular TV program is Tom and Jerry"), hoặc dưới 20 từ cho các câu hỏi cần giải thích, BẮT BUỘC phạt nặng điểm Fluency & Coherence và Lexical Resource (không vượt quá 2.5 hoặc 3.0). Trả lời quá ngắn đồng nghĩa với việc không đủ ngôn ngữ để đánh giá.
+2. ĐÁNH GIÁ ĐÚNG CHỦ ĐỀ (STRICT PROMPT ALIGNMENT): Câu trả lời có giải quyết đầy đủ tất cả các khía cạnh của câu hỏi không? Nếu đề có nhiều ý (ví dụ: "What are they? Why is this?") mà thí sinh chỉ trả lời một vế, điểm Task/Fluency tối đa là 3.0.
+3. PHẠT ĐỐI VỚI VĂN BẢN RỖNG / VÔ NGHĨA (NOISE PENALTY): Nếu transcript chỉ chứa các từ đệm ("um", "uh"), dưới 5 từ vô nghĩa, BẮT BUỘC chấm 0.0 hoặc 1.0 cho tất cả 4 tiêu chí.
+4. TỪ VỰNG VÀ NGỮ PHÁP (LEXICAL & GRAMMAR): Trả lời bằng các câu đơn giản nhất (Subject + Verb + Object) mà không có mệnh đề phụ, không có từ nối, không có thành ngữ/từ vựng theo chủ đề thì Grammar và Vocabulary KHÔNG ĐƯỢC vượt quá 3.5. 
+5. KHÔNG TỰ SUY DIỄN (NO HALLUCINATION): Chỉ đánh giá chính xác dựa trên transcript được cung cấp.
+6. SỰ CHẤP NHẬN SAI SỐ CỦA STT (STT TOLERANCE): Bỏ qua các lỗi chính tả hiển nhiên do nhận diện giọng nói (STT).
 
-Bạn phải đánh giá câu trả lời của thí sinh theo 4 tiêu chí chấm điểm IELTS Speaking chính thống:
-1. Fluency and Coherence (Trôi chảy và Mạch lạc) (0.0 - 9.0)
-2. Lexical Resource (Vốn từ vựng) (0.0 - 9.0)
-3. Grammatical Range and Accuracy (Sự đa dạng và Chính xác của Ngữ pháp) (0.0 - 9.0)
-4. Pronunciation (Phát âm) (0.0 - 9.0) - Đánh giá ước lượng dựa trên các lỗi ngữ pháp/từ vựng và cấu trúc câu tương ứng.
+Bạn phải đánh giá theo 4 tiêu chí chấm điểm IELTS Speaking:
+1. Fluency and Coherence (0.0 - 9.0)
+2. Lexical Resource (0.0 - 9.0)
+3. Grammatical Range and Accuracy (0.0 - 9.0)
+4. Pronunciation (0.0 - 9.0)
 
-Yêu cầu trả về kết quả định dạng JSON thuần túy theo đúng cấu trúc sau đây. Toàn bộ phần nhận xét trong object "aiFeedback" bắt buộc phải viết bằng TIẾNG VIỆT, giải thích chi tiết, thẳng thắn, mang tính xây dựng:
+Yêu cầu trả về kết quả định dạng JSON thuần túy theo đúng cấu trúc sau đây. Toàn bộ phần nhận xét trong object "aiFeedback" bắt buộc phải viết bằng TIẾNG VIỆT, giải thích chi tiết, khắt khe đúng chuẩn giám khảo thật:
 {
   "fluencyCoherence": number,
   "lexicalResource": number,
@@ -68,15 +69,15 @@ Yêu cầu trả về kết quả định dạng JSON thuần túy theo đúng c
   "pronunciation": number,
   "bandScore": number,
   "aiFeedback": {
-    "fluencyCoherence": "Nhận xét chi tiết bằng tiếng Việt về độ trôi chảy và mạch lạc, chỉ ra lỗi và điểm cần cải thiện",
-    "lexicalResource": "Nhận xét chi tiết bằng tiếng Việt về vốn từ vựng sử dụng, chỉ ra lỗi dùng từ sai ngữ cảnh hoặc gợi ý từ vựng nâng cao hơn",
-    "grammarAccuracy": "Nhận xét chi tiết bằng tiếng Việt chỉ ra các lỗi ngữ pháp cụ thể và cách sửa",
-    "pronunciation": "Nhận xét chi tiết bằng tiếng Việt dự đoán các lỗi phát âm dựa trên ngữ cảnh/từ vựng",
-    "general": "Đánh giá tổng quát toàn bộ bài nói và lời khuyên tổng thể để tăng band score"
+    "fluencyCoherence": "Nhận xét khắt khe về độ dài, sự mở rộng ý, và độ trôi chảy.",
+    "lexicalResource": "Nhận xét về sự nghèo nàn/phong phú của từ vựng.",
+    "grammarAccuracy": "Nhận xét về sự đa dạng và độ phức tạp của cấu trúc ngữ pháp.",
+    "pronunciation": "Nhận xét dự đoán lỗi phát âm.",
+    "general": "Đánh giá tổng quát toàn bộ bài nói, phê bình mức độ đạt chuẩn IELTS và lời khuyên để tăng band score."
   }
 }
 
-*Lưu ý quan trọng: Điểm bandScore tổng là trung bình cộng của 4 điểm tiêu chí thành phần, làm tròn đến 0.5 gần nhất theo chuẩn IELTS (ví dụ: trung bình là 6.125 thì làm tròn thành 6.0; trung bình là 6.25 thì làm tròn thành 6.5; trung bình là 6.75 thì làm tròn thành 7.0).`;
+*Lưu ý quan trọng: Điểm bandScore tổng là trung bình cộng của 4 điểm tiêu chí, làm tròn đến 0.5 gần nhất. Hãy chấm thật gắt gao với các bài nói hời hợt, quá ngắn, hoặc lặp từ!`;
 
     try {
       const genAI = this.getClient();
@@ -105,9 +106,13 @@ Yêu cầu trả về kết quả định dạng JSON thuần túy theo đúng c
         throw parseError;
       }
       return parsedData;
-    } catch (error) {
+    } catch (error: any) {
       console.error("[Gemini API] Error scoring speaking response:", error);
-      throw new Error("Failed to score speaking response");
+      const errorMessage = error?.message || '';
+      if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+        throw new Error('Hệ thống AI đang quá tải hoặc hết lượt đánh giá miễn phí. Vui lòng đợi khoảng 1 phút rồi thử lại nhé!');
+      }
+      throw new Error(`Lỗi đánh giá AI: ${errorMessage}`);
     }
   }
 
@@ -176,9 +181,13 @@ Yêu cầu trả về kết quả định dạng JSON thuần túy theo đúng c
         throw parseError;
       }
       return parsedData;
-    } catch (error) {
+    } catch (error: any) {
       console.error("[Gemini API] Error scoring writing response:", error);
-      throw new Error("Failed to score writing response");
+      const errorMessage = error?.message || '';
+      if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+        throw new Error('Hệ thống AI đang quá tải hoặc hết lượt đánh giá miễn phí. Vui lòng đợi khoảng 1 phút rồi thử lại nhé!');
+      }
+      throw new Error(`Lỗi đánh giá AI: ${errorMessage}`);
     }
   }
 }

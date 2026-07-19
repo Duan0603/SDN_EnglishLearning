@@ -577,6 +577,8 @@ export default function SettingsPage() {
                         {t.account.save}
                       </button>
                     </form>
+
+                    
                   </div>
                 )}
 
@@ -737,6 +739,65 @@ export default function SettingsPage() {
                       <p className={`text-[10px] font-black ${themeSubText} uppercase mt-0.5`}>{t.security.desc}</p>
                     </div>
 
+                    {/* Change Password inside Account Panel */}
+                    <div className={`border-t ${isDark ? 'border-slate-800' : 'border-[#1b263b]/10'} pt-6 space-y-4`}>
+                      <h4 className="font-serif font-black text-lg">{t.security.changePwd}</h4>
+                      
+                      {passwordMessage && (
+                        <div className={`p-3.5 rounded-xl border-2 text-xs font-bold shadow-[2px_2px_0px_0px_#1b263b] ${
+                          passwordMessage.type === 'success'
+                            ? 'bg-emerald-100 border-emerald-800 text-emerald-800'
+                            : 'bg-rose-100 border-rose-800 text-rose-800'
+                        }`}>
+                          {passwordMessage.text}
+                        </div>
+                      )}
+
+                      <form onSubmit={handleChangePassword} className="space-y-3">
+                        <div className="space-y-1">
+                          <label className={`text-[9px] font-black uppercase ${themeLabelColor} tracking-wider`}>{t.security.oldPwd}</label>
+                          <input
+                            type="password"
+                            required
+                            value={oldPassword}
+                            onChange={(e) => setOldPassword(e.target.value)}
+                            className={`w-full ${themeInputBg} border-2 ${themeInputBorder} rounded-xl px-4 py-2 text-xs font-bold ${themeInputText} outline-none`}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className={`text-[9px] font-black uppercase ${themeLabelColor} tracking-wider`}>{t.security.newPwd}</label>
+                            <input
+                              type="password"
+                              required
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              className={`w-full ${themeInputBg} border-2 ${themeInputBorder} rounded-xl px-4 py-2 text-xs font-bold ${themeInputText} outline-none`}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className={`text-[9px] font-black uppercase ${themeLabelColor} tracking-wider`}>{t.security.confirmPwd}</label>
+                            <input
+                              type="password"
+                              required
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              className={`w-full ${themeInputBg} border-2 ${themeInputBorder} rounded-xl px-4 py-2 text-xs font-bold ${themeInputText} outline-none`}
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={passwordLoading}
+                          className="w-full bg-[#fbcfe8] text-[#c92a2a] border-2 border-[#1b263b] py-2.5 rounded-xl font-black text-xs uppercase hover:bg-[#f9a8d4] disabled:opacity-50 transition-all shadow-[2px_2px_0px_0px_#1b263b] text-center cursor-pointer mt-2"
+                        >
+                          {passwordLoading ? t.security.pwdLoading : t.security.pwdSave}
+                        </button>
+                      </form>
+                    </div>
+
                     {/* 2FA Section */}
                     <div className={`border-2 ${themeBorder} rounded-2xl p-4 shadow-[2px_2px_0px_0px_#1b263b] flex items-center justify-between ${isDark ? 'bg-slate-800/40' : 'bg-[#fdfaf2]'}`}>
                       <div className="text-left max-w-[75%]">
@@ -794,65 +855,6 @@ export default function SettingsPage() {
                           </label>
                         ))}
                       </div>
-                    </div>
-
-                    {/* Change Password */}
-                    <div className={`border-t ${isDark ? 'border-slate-800' : 'border-[#1b263b]/10'} pt-4 space-y-4`}>
-                      <h4 className="font-serif font-black text-lg">{t.security.changePwd}</h4>
-                      
-                      {passwordMessage && (
-                        <div className={`p-3.5 rounded-xl border-2 text-xs font-bold shadow-[2px_2px_0px_0px_#1b263b] ${
-                          passwordMessage.type === 'success'
-                            ? 'bg-emerald-100 border-emerald-800 text-emerald-800'
-                            : 'bg-rose-100 border-rose-800 text-rose-800'
-                        }`}>
-                          {passwordMessage.text}
-                        </div>
-                      )}
-
-                      <form onSubmit={handleChangePassword} className="space-y-3">
-                        <div className="space-y-1">
-                          <label className={`text-[9px] font-black uppercase ${themeLabelColor} tracking-wider`}>{t.security.oldPwd}</label>
-                          <input
-                            type="password"
-                            required
-                            value={oldPassword}
-                            onChange={(e) => setOldPassword(e.target.value)}
-                            className={`w-full ${themeInputBg} border-2 ${themeInputBorder} rounded-xl px-4 py-2 text-xs font-bold ${themeInputText} outline-none`}
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className={`text-[9px] font-black uppercase ${themeLabelColor} tracking-wider`}>{t.security.newPwd}</label>
-                            <input
-                              type="password"
-                              required
-                              value={newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                              className={`w-full ${themeInputBg} border-2 ${themeInputBorder} rounded-xl px-4 py-2 text-xs font-bold ${themeInputText} outline-none`}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className={`text-[9px] font-black uppercase ${themeLabelColor} tracking-wider`}>{t.security.confirmPwd}</label>
-                            <input
-                              type="password"
-                              required
-                              value={confirmPassword}
-                              onChange={(e) => setConfirmPassword(e.target.value)}
-                              className={`w-full ${themeInputBg} border-2 ${themeInputBorder} rounded-xl px-4 py-2 text-xs font-bold ${themeInputText} outline-none`}
-                            />
-                          </div>
-                        </div>
-
-                        <button
-                          type="submit"
-                          disabled={passwordLoading}
-                          className="w-full bg-[#fbcfe8] text-[#c92a2a] border-2 border-[#1b263b] py-2.5 rounded-xl font-black text-xs uppercase hover:bg-[#f9a8d4] disabled:opacity-50 transition-all shadow-[2px_2px_0px_0px_#1b263b] text-center cursor-pointer mt-2"
-                        >
-                          {passwordLoading ? t.security.pwdLoading : t.security.pwdSave}
-                        </button>
-                      </form>
                     </div>
                   </div>
                 )}
@@ -913,3 +915,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+
