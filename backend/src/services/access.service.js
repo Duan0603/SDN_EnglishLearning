@@ -76,7 +76,7 @@ export class AccessService {
 
         // 3. Create privateKey, publicKey
         const {privateKey, publicKey} = crypto.generateKeyPairSync('rsa', {
-            modulusLength: 4096,
+            modulusLength: 2048,
             publicKeyEncoding: {
                 type: 'pkcs1',
                 format: 'pem'
@@ -146,7 +146,7 @@ export class AccessService {
         if(newUser){
             //tao privateKey, publicKey
             const {privateKey, publicKey} = crypto.generateKeyPairSync('rsa', {
-                modulusLength: 4096, //tang do phuc tap cua thuat toan, so cang to cpu xu ly cang nhieu
+                modulusLength: 2048, //tang do phuc tap cua thuat toan, so cang to cpu xu ly cang nhieu
                 publicKeyEncoding: {
                     type: 'pkcs1',
                     format: 'pem'
@@ -216,7 +216,7 @@ export class AccessService {
 
         // 3. Create tokens
         const {privateKey, publicKey} = crypto.generateKeyPairSync('rsa', {
-            modulusLength: 4096,
+            modulusLength: 2048,
             publicKeyEncoding: { type: 'pkcs1', format: 'pem' },
             privateKeyEncoding: { type: 'pkcs1', format: 'pem' }
         });
@@ -259,7 +259,7 @@ export class AccessService {
 
         // Create key pair & generate tokens
         const {privateKey, publicKey} = crypto.generateKeyPairSync('rsa', {
-            modulusLength: 4096,
+            modulusLength: 2048,
             publicKeyEncoding: {
                 type: 'pkcs1',
                 format: 'pem'
