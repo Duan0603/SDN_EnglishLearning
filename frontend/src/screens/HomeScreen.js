@@ -679,6 +679,18 @@ const HomeScreen = ({ navigation }) => {
               <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#1b263b' }}>Cài đặt</Text>
             </TouchableOpacity>
 
+            {user?.role === 'ADMIN' && (
+              <TouchableOpacity 
+                onPress={() => { closeMenu(); navigate('Admin'); }}
+                style={{
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                }}
+              >
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#005c42' }}>Admin Panel 🛠️</Text>
+              </TouchableOpacity>
+            )}
+
             <View style={{ height: 2, backgroundColor: '#1b263b', marginHorizontal: 8, marginVertical: 4 }} />
 
             <TouchableOpacity 

@@ -33,6 +33,21 @@ const adminUserService = {
 
   // PATCH /admin/mentor-requests/:id/reject — reject a mentor request
   rejectMentorRequest: (id, reason) => client.patch(`/admin/mentor-requests/${id}/reject`, { reason }),
+
+  // GET /admin/submissions — list all student submissions
+  getSubmissions: (params = {}) => client.get('/admin/submissions', { params }),
+
+  // DELETE /admin/submissions/:id — delete a student's result/submission
+  deleteSubmission: (id, type) => client.delete(`/admin/submissions/${id}`, { params: { type } }),
+
+  // GET /admin/bookings — list all mentor/student bookings
+  getAllBookings: (params = {}) => client.get('/admin/bookings', { params }),
+
+  // PATCH /admin/bookings/:id/confirm — confirm booking
+  confirmBooking: (id) => client.patch(`/admin/bookings/${id}/confirm`),
+
+  // PATCH /admin/bookings/:id/cancel — cancel booking
+  cancelBooking: (id) => client.patch(`/admin/bookings/${id}/cancel`),
 };
 
 export default adminUserService;

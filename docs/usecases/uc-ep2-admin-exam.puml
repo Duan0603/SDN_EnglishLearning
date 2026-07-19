@@ -1,0 +1,45 @@
+@startuml
+title 3.3 USE CASE DIAGRAM\nExam Management - Admin
+
+skinparam actorStyle stick
+skinparam usecase {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+    FontSize 13
+}
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+left to right direction
+
+' ── Actors ──────────────────────────────────
+actor "Admin" as Admin
+
+' ── System Boundary ─────────────────────────
+rectangle "Exam Management" {
+    usecase "View All Exams"       as UC_ViewAll
+    usecase "Create Exam"          as UC_Create
+    usecase "Update Exam"          as UC_Update
+    usecase "Delete Exam"          as UC_Delete
+    usecase "Bulk Import Exams\n(JSON / CSV)" as UC_Import
+    usecase "View Submissions"     as UC_Subs
+    usecase "Delete Submission"    as UC_DelSub
+}
+
+' ── Associations ────────────────────────────
+Admin -- UC_ViewAll
+Admin -- UC_Create
+Admin -- UC_Update
+Admin -- UC_Delete
+Admin -- UC_Import
+Admin -- UC_Subs
+Admin -- UC_DelSub
+
+' ── Include / Extend ────────────────────────
+UC_Create ..> UC_ViewAll : <<include>>
+UC_Update ..> UC_ViewAll : <<include>>
+UC_Delete ..> UC_ViewAll : <<include>>
+UC_Import ..> UC_Create  : <<include>>
+
+@enduml

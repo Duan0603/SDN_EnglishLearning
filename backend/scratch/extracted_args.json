@@ -1,0 +1,8 @@
+{
+  "Description": "\"Add Become a Mentor application form, status view, and tab navigation to the user profile page.\"",
+  "Instruction": "\"Integrate states, API methods, button headers, tab navigation, and neobrutalist UI elements to support role upgrade requests from students.\"",
+  "ReplacementChunks": "[{\"AllowMultiple\":false,\"EndLine\":43,\"ReplacementContent\":\"  // Change Password States\\n  const [oldPassword, setOldPassword] = useState('');\\n  const [newPassword, setNewPassword] = useState('');\\n  const [confirmPassword, setConfirmPassword] = useState('\n<truncated 24683 bytes>",
+  "TargetFile": "\"e:\\\\ProjectKi7\\\\SDN_EnglishLearning\\\\web\\\\src\\\\features\\\\profile\\\\ProfilePage.tsx\"",
+  "toolAction": "\"Implement Become a Mentor feature\"",
+  "toolSummary": "\"Edit ProfilePage.tsx to add Mentor application flow\""
+}
