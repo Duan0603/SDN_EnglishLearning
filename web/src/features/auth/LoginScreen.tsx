@@ -55,7 +55,7 @@ export default function LoginScreen() {
       const btnContainer = document.getElementById('google-signin-btn');
       if (btnContainer && (window as any).google) {
         (window as any).google.accounts.id.initialize({
-          client_id: '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '300923489735-b17vb0n3gv3ob3eb81er9v7rh6a8bqb7.apps.googleusercontent.com',
           callback: handleGoogleCredentialResponse,
         });
         (window as any).google.accounts.id.renderButton(
