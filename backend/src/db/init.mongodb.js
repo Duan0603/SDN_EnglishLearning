@@ -12,9 +12,8 @@ class Database {
             mongoose.set("debug", {color: true})
         }
 
-        // MONGOOSE_URL: standalone MongoDB — no Replica Set required (auth/user routes)
-        // Fallback to DATABASE_URL for backward compatibility
-        const connectString = process.env.MONGOOSE_URL || process.env.DATABASE_URL;
+        // Prioritize DATABASE_URL (MongoDB Atlas / Production) over local MONGOOSE_URL
+        const connectString = process.env.DATABASE_URL || process.env.MONGOOSE_URL;
 
         if (!connectString) {
             console.error('[Mongoose] No database URL found. Set MONGOOSE_URL in .env');
