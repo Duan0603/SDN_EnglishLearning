@@ -775,7 +775,16 @@ const AdminScreen = ({ navigation }) => {
 
       {/* App Bar (Brutalist style matching HomeScreen) */}
       <View style={styles.appBar}>
-        <TouchableOpacity style={styles.appBarBtn} onPress={() => navigation.goBack()}>
+        <TouchableOpacity 
+          style={styles.appBarBtn} 
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.replace('Main');
+            }
+          }}
+        >
           <Ionicons name="arrow-back" size={24} color="#1b263b" />
         </TouchableOpacity>
         <Text style={styles.appBarTitle}>CONTROL PANEL</Text>

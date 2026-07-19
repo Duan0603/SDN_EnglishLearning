@@ -580,6 +580,15 @@ const ProfileScreen = ({ navigation }) => {
                   </View>
                 </TouchableOpacity>
                 
+                {user?.role === 'ADMIN' && (
+                  <TouchableOpacity 
+                    style={[styles.logoutBtn, { marginTop: 20, borderColor: '#005c42', backgroundColor: '#e8f5e9' }]} 
+                    onPress={() => navigation.navigate('Admin')}
+                  >
+                    <Text style={[styles.logoutBtnText, { color: '#005c42' }]}>ADMIN CONTROL PANEL 🛠️</Text>
+                  </TouchableOpacity>
+                )}
+
                 <TouchableOpacity style={[styles.logoutBtn, { marginTop: 20 }]} onPress={() => setShowLogoutModal(true)}>
                   <Text style={styles.logoutBtnText}>LOG OUT</Text>
                 </TouchableOpacity>
