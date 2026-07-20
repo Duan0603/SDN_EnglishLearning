@@ -5,7 +5,8 @@ Dự án học tiếng Anh IELTS tích hợp AI, xây dựng theo kiến trúc F
 ## 🔗 Liên kết dự án
 
 - **Jira**: [Jira board của nhóm](https://knightdragon184.atlassian.net/jira/software/projects/EMAL/boards/1)
-- **SRS**: [Tài liệu SRS của nhóm](https://docs.google.com/document/d/1KBLJLe8Z7QSNdK9XqvogO0MOMtQrduZYJ1euGcqtld8/edit?tab=t.0)
+- **SRS**: [Tài liệu SRS của nhóm](https://docs.google.com/document/d/1xxVmo3fKyjVYv26wnMUgjPBxrnSdjT2p85UtQNA7IMY/edit?usp=sharing)
+- **Overleaf**: [Link Overleaf của nhóm](https://www.overleaf.com/read/zfnjhyvpcwwp#999b02)
 - **Paper Draft**: [Bản thảo bài báo khoa học (Paper Draft)](docs/paper_draft.md)
 - **Google Drive Paper Draft**: [Thư mục tài liệu của nhóm](https://drive.google.com/drive/folders/1urDFKghlIHYq8umarsMMz3xHF15hPWYZ?usp=sharing)
 - **Swagger UI**: `http://localhost:5000/api-docs`

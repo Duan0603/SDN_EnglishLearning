@@ -23,7 +23,7 @@ import useAuthStore from '../store/useAuthStore';
 import Toast from 'react-native-toast-message';
 import client from '../api/client';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import mentorRequestService from '../api/mentorRequest.service';
 
 // Brutalist shadow wrapper
@@ -153,7 +153,7 @@ const ProfileScreen = ({ navigation }) => {
           });
         } else {
           base64Data = await FileSystem.readAsStringAsync(file.uri, {
-            encoding: FileSystem.EncodingType.Base64,
+            encoding: FileSystem.EncodingType?.Base64 || 'base64',
           });
         }
 
@@ -211,7 +211,7 @@ const ProfileScreen = ({ navigation }) => {
         });
       } else {
         base64Data = await FileSystem.readAsStringAsync(selectedFile.uri, {
-          encoding: FileSystem.EncodingType.Base64,
+          encoding: FileSystem.EncodingType?.Base64 || 'base64',
         });
       }
 

@@ -26,6 +26,9 @@ import useAuthStore from '../store/useAuthStore';
 import adminUserService from '../api/adminUser.service';
 import examService from '../api/exam.service';
 import Toast from 'react-native-toast-message';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import client from '../api/client';
 
 // Brutalist Shadow Wrapper matching HomeScreen / ProgressScreen
 const BrutalistShadow = ({ children, style, offset = 4 }) => (
@@ -274,6 +277,66 @@ const AdminScreen = ({ navigation }) => {
   const [examStep, setExamStep] = useState(1); // 1: Info, 2: Sections & Questions
   const [modalSections, setModalSections] = useState([]);
   const [selectedSectionIdx, setSelectedSectionIdx] = useState(0);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
+
+  const handlePickAudioFile = async (sectionIdx) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'audio/*',
+        copyToCacheDirectory: true
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const selectedFile = result.assets[0];
+      setUploadingAudio(true);
+
+      let base64Data = '';
+      if (Platform.OS === 'web') {
+        const response = await fetch(selectedFile.uri);
+        const blob = await response.blob();
+        base64Data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64 = (reader.result || '').split(',')[1] || '';
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } else {
+        base64Data = await FileSystem.readAsStringAsync(selectedFile.uri, {
+          encoding: FileSystem.EncodingType?.Base64 || 'base64',
+        });
+      }
+
+      const res = await client.post('/upload', {
+        filename: selectedFile.name || `audio_${Date.now()}.mp3`,
+        base64Data
+      });
+
+      if (res.data && res.data.success && res.data.data?.url) {
+        const uploadedUrl = res.data.data.url;
+        const updated = [...modalSections];
+        updated[sectionIdx].audioUrl = uploadedUrl;
+        setModalSections(updated);
+        Toast.show({
+          type: 'success',
+          text1: 'Thành công',
+          text2: 'Đã tải lên file audio MP3 thành công!'
+        });
+      } else {
+        Alert.alert('Lỗi', 'Không thể tải lên file audio.');
+      }
+    } catch (err) {
+      console.error('Pick and upload audio error:', err);
+      Alert.alert('Lỗi', err.response?.data?.message || err.message || 'Lỗi khi tải file audio mp3.');
+    } finally {
+      setUploadingAudio(false);
+    }
+  };
 
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -1660,18 +1723,42 @@ const AdminScreen = ({ navigation }) => {
 
                         {/* Section Audio URL (Listening only) */}
                         {examForm.type === 'LISTENING' && (
-                          <View>
+                          <View style={{ gap: 6 }}>
                             <Text style={styles.inputLabel}>Audio URL (File .mp3)</Text>
-                            <TextInput
-                              style={styles.modalInput}
-                              value={modalSections[selectedSectionIdx].audioUrl || ''}
-                              onChangeText={(val) => {
-                                const updated = [...modalSections];
-                                updated[selectedSectionIdx].audioUrl = val;
-                                setModalSections(updated);
-                              }}
-                              placeholder="Nhập link file âm thanh..."
-                            />
+                            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                              <TextInput
+                                style={[styles.modalInput, { flex: 1, marginBottom: 0 }]}
+                                value={modalSections[selectedSectionIdx].audioUrl || ''}
+                                onChangeText={(val) => {
+                                  const updated = [...modalSections];
+                                  updated[selectedSectionIdx].audioUrl = val;
+                                  setModalSections(updated);
+                                }}
+                                placeholder="Nhập link hoặc chọn file .mp3..."
+                              />
+                              <TouchableOpacity
+                                style={{
+                                  backgroundColor: '#1b263b',
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 10,
+                                  borderRadius: 8,
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 6
+                                }}
+                                onPress={() => handlePickAudioFile(selectedSectionIdx)}
+                                disabled={uploadingAudio}
+                              >
+                                {uploadingAudio ? (
+                                  <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                  <>
+                                    <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+                                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Tải MP3</Text>
+                                  </>
+                                )}
+                              </TouchableOpacity>
+                            </View>
                           </View>
                         )}
 
@@ -1912,7 +1999,13 @@ const AdminScreen = ({ navigation }) => {
                 <View style={[styles.feedbackSection, { backgroundColor: '#e8f5e9', borderColor: '#4caf50' }]}>
                   <Text style={[styles.feedbackSectionTitle, { color: '#2e7d32' }]}>AI Evaluation Feedback:</Text>
                   <Text style={[styles.feedbackContentText, { color: '#2e7d32' }]}>
-                    {selectedSubmission?.aiFeedback || 'Không có phản hồi chi tiết từ AI.'}
+                    {typeof selectedSubmission?.aiFeedback === 'string'
+                      ? selectedSubmission.aiFeedback
+                      : selectedSubmission?.aiFeedback
+                      ? Object.entries(selectedSubmission.aiFeedback)
+                          .map(([key, val]) => `${key}: ${typeof val === 'object' ? JSON.stringify(val) : val}`)
+                          .join('\n\n')
+                      : 'Không có phản hồi chi tiết từ AI.'}
                   </Text>
                 </View>
               </ScrollView>
