@@ -2520,7 +2520,7 @@ export default function AdminDashboard() {
                                   if (window.confirm(`Bạn có chắc chắn muốn xóa phần "${modalSections[selectedSectionIdx].title || `Phần ${selectedSectionIdx + 1}`}" và toàn bộ câu hỏi bên trong?`)) {
                                     const updated = modalSections.filter((_, sIdx) => sIdx !== selectedSectionIdx);
                                     // Re-index sectionOrder
-                                    const standardized = updated.map((sec, sIdx) => {
+                                    const standardized = updated.map((sec: any, sIdx: number) => {
                                       const isDefaultTitle = /^(Section|Passage|Task|Part)\s*\d+$/i.test(sec.title || '');
                                       const defaultTitlePrefix = newExamType === 'Listening' ? 'Section' :
                                                                  newExamType === 'Reading' ? 'Passage' :
@@ -2535,8 +2535,8 @@ export default function AdminDashboard() {
                                     
                                     // Re-index question numbers sequentially
                                     let currentQNum = 1;
-                                    const finalSecs = standardized.map(sec => {
-                                      const updatedQs = (sec.questions || []).map(q => {
+                                    const finalSecs = standardized.map((sec: any) => {
+                                      const updatedQs = (sec.questions || []).map((q: any) => {
                                         const newQ = { ...q, questionNumber: currentQNum };
                                         currentQNum++;
                                         return newQ;
