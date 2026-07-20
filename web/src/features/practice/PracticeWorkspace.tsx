@@ -90,6 +90,13 @@ export default function PracticeWorkspace() {
   const [commentInput, setCommentInput] = useState('');
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
+  // Specialty Filter & Mentor Reviews State
+  const [selectedSpecialtyFilter, setSelectedSpecialtyFilter] = useState<'ALL' | 'SPEAKING' | 'WRITING' | 'READING' | 'LISTENING'>('ALL');
+  const [viewReviewsMentor, setViewReviewsMentor] = useState<any>(null);
+  const [mentorReviewsData, setMentorReviewsData] = useState<any>(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsFilterRating, setReviewsFilterRating] = useState<number>(0);
+
   // Chat Modal
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
@@ -411,11 +418,31 @@ export default function PracticeWorkspace() {
       setBookingSuccess('Đánh giá buổi học thành công! Cảm ơn ý kiến đóng góp của bạn. ❤️');
       setShowRatingModal(false);
       fetchMyBookings();
+      // Re-fetch mentors list so updated average ratings reflect immediately
+      const res = await apiClient.get('/mentors');
+      if (res.data?.success) setMentorsList(res.data.data);
     } catch (err: any) {
       console.error('Submit rating error:', err);
       setBookingError(err.response?.data?.message || 'Không thể gửi đánh giá. Vui lòng thử lại.');
     } finally {
       setIsSubmittingRating(false);
+    }
+  };
+
+  const handleOpenMentorReviews = async (mentor: any) => {
+    setViewReviewsMentor(mentor);
+    setMentorReviewsData(null);
+    setReviewsFilterRating(0);
+    setReviewsLoading(true);
+    try {
+      const res = await apiClient.get(`/mentors/${mentor.id}/reviews`);
+      if (res.data?.success) {
+        setMentorReviewsData(res.data.data);
+      }
+    } catch (err: any) {
+      console.error('Error fetching mentor reviews:', err);
+    } finally {
+      setReviewsLoading(false);
     }
   };
 
@@ -994,16 +1021,42 @@ export default function PracticeWorkspace() {
                     {/* SUB TAB: MENTORS DIRECTORY */}
                     {activeStudentTab === 'directory' && (
                       <div className="space-y-6">
-                        {/* Search Query */}
+                        {/* Search Query & Specialty Filters */}
                         {!selectedMentor && (
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                              placeholder="Tìm gia sư theo tên hoặc chuyên môn..."
-                              className="flex-1 bg-white border-2 border-[#1b263b] rounded-2xl px-4 py-3 text-xs font-bold outline-none shadow-[2px_2px_0px_0px_#1b263b] focus:bg-gray-50"
-                            />
+                          <div className="space-y-3">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Tìm gia sư theo tên hoặc chuyên môn (Speaking, Writing, Reading, Listening)..."
+                                className="flex-1 bg-white border-2 border-[#1b263b] rounded-2xl px-4 py-3 text-xs font-bold outline-none shadow-[2px_2px_0px_0px_#1b263b] focus:bg-gray-50"
+                              />
+                            </div>
+
+                            {/* Specialty quick filter buttons */}
+                            <div className="flex flex-wrap gap-2 items-center text-left">
+                              <span className="text-[10px] font-black uppercase text-gray-500 mr-1">Lọc Chuyên Môn:</span>
+                              {[
+                                { id: 'ALL', label: '🎯 Tất Cả' },
+                                { id: 'SPEAKING', label: '🗣️ Speaking' },
+                                { id: 'WRITING', label: '✍️ Writing' },
+                                { id: 'READING', label: '📖 Reading' },
+                                { id: 'LISTENING', label: '🎧 Listening' },
+                              ].map((spec) => (
+                                <button
+                                  key={spec.id}
+                                  onClick={() => setSelectedSpecialtyFilter(spec.id as any)}
+                                  className={`text-[11px] font-black px-3 py-1.5 rounded-xl border-2 transition-all shadow-[2px_2px_0px_0px_#1b263b] ${
+                                    selectedSpecialtyFilter === spec.id
+                                      ? 'bg-[#1b263b] text-white border-[#1b263b]'
+                                      : 'bg-white text-[#1b263b] border-[#1b263b] hover:bg-gray-100'
+                                  }`}
+                                >
+                                  {spec.label}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         )}
 
@@ -1016,10 +1069,27 @@ export default function PracticeWorkspace() {
                           ) : (
                             <div className="grid md:grid-cols-2 gap-6">
                               {mentorsList
-                                .filter(m => 
-                                  m.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                  m.expertise?.toLowerCase().includes(searchQuery.toLowerCase())
-                                )
+                                .filter((m) => {
+                                  const query = searchQuery.toLowerCase();
+                                  const matchSearch =
+                                    !query ||
+                                    m.fullName?.toLowerCase().includes(query) ||
+                                    m.expertise?.toLowerCase().includes(query) ||
+                                    m.bio?.toLowerCase().includes(query);
+
+                                  let matchSpecialty = true;
+                                  if (selectedSpecialtyFilter === 'SPEAKING') {
+                                    matchSpecialty = m.expertise?.toLowerCase().includes('speaking') || m.bio?.toLowerCase().includes('speaking');
+                                  } else if (selectedSpecialtyFilter === 'WRITING') {
+                                    matchSpecialty = m.expertise?.toLowerCase().includes('writing') || m.bio?.toLowerCase().includes('writing');
+                                  } else if (selectedSpecialtyFilter === 'READING') {
+                                    matchSpecialty = m.expertise?.toLowerCase().includes('reading') || m.bio?.toLowerCase().includes('reading');
+                                  } else if (selectedSpecialtyFilter === 'LISTENING') {
+                                    matchSpecialty = m.expertise?.toLowerCase().includes('listening') || m.bio?.toLowerCase().includes('listening');
+                                  }
+
+                                  return matchSearch && matchSpecialty;
+                                })
                                 .map((mentor, idx) => {
                                   const colors = [
                                     'bg-emerald-50 border-emerald-300',
@@ -1029,30 +1099,70 @@ export default function PracticeWorkspace() {
                                   ];
                                   const color = colors[idx % colors.length];
                                   return (
-                                    <div key={mentor.id} className={`${color} border-2 rounded-2xl p-5 flex flex-col justify-between min-h-[200px] shadow-sm`}>
-                                      <div className="space-y-2 text-left">
-                                        <div className="flex items-center gap-3">
-                                          <div className="w-10 h-10 rounded-full border-2 border-[#1b263b] bg-[#1b263b] text-white flex items-center justify-center font-black text-sm">
-                                            {(mentor.fullName || 'M')[0].toUpperCase()}
+                                    <div key={mentor.id} className={`${color} border-2 border-[#1b263b] rounded-2xl p-5 flex flex-col justify-between min-h-[220px] shadow-[4px_4px_0px_0px_#1b263b] transition-all hover:-translate-y-0.5`}>
+                                      <div className="space-y-3 text-left">
+                                        <div className="flex justify-between items-start gap-2">
+                                          <div className="flex items-center gap-3">
+                                            <div className="w-12 h-12 rounded-2xl border-2 border-[#1b263b] bg-[#1b263b] text-white flex items-center justify-center font-serif font-black text-lg shadow-[2px_2px_0px_0px_#1b263b]">
+                                              {(mentor.fullName || 'M')[0].toUpperCase()}
+                                            </div>
+                                            <div>
+                                              <h3 className="font-serif font-black text-base text-[#1b263b] leading-snug">{mentor.fullName || mentor.username}</h3>
+                                              <p className="text-[10px] text-gray-500 font-bold">{mentor.email}</p>
+                                            </div>
                                           </div>
-                                          <div>
-                                            <h3 className="font-serif font-black text-base text-[#1b263b]">{mentor.fullName || mentor.username}</h3>
-                                            <p className="text-[10px] text-gray-500 font-bold">{mentor.email}</p>
-                                          </div>
+
+                                          {/* Star Rating Badge */}
+                                          {mentor.totalReviews > 0 ? (
+                                            <div className="bg-amber-100 border-2 border-[#1b263b] px-2.5 py-1 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] flex items-center gap-1 shrink-0">
+                                              <span className="text-amber-500 text-xs">⭐</span>
+                                              <span className="text-xs font-black text-[#1b263b]">{mentor.averageRating?.toFixed(1)}</span>
+                                              <span className="text-[9px] font-bold text-gray-600">({mentor.totalReviews})</span>
+                                            </div>
+                                          ) : (
+                                            <div className="bg-gray-100 border border-gray-300 px-2 py-0.5 rounded-lg text-[9px] font-bold text-gray-400 shrink-0">
+                                              Chưa có đánh giá
+                                            </div>
+                                          )}
                                         </div>
+
+                                        {/* Expertise tags */}
                                         {mentor.expertise && (
-                                          <span className="inline-block text-[9px] bg-white border border-[#1b263b] font-black px-2 py-0.5 rounded uppercase tracking-wider">{mentor.expertise}</span>
+                                          <div className="space-y-1">
+                                            <span className="text-[9px] font-black uppercase text-gray-400 block tracking-wider">Chuyên môn chính:</span>
+                                            <div className="flex flex-wrap gap-1">
+                                              {mentor.expertise.split(/[,/]/).map((exp: string, i: number) => (
+                                                <span key={i} className="text-[10px] bg-white border border-[#1b263b] text-[#1b263b] font-black px-2.5 py-0.5 rounded-lg shadow-[1px_1px_0px_0px_#1b263b]">
+                                                  ⚡ {exp.trim()}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
                                         )}
+
+                                        {/* Bio */}
                                         {mentor.bio && (
-                                          <p className="text-xs text-gray-700 leading-relaxed font-semibold line-clamp-3">{mentor.bio}</p>
+                                          <p className="text-xs text-gray-700 leading-relaxed font-semibold line-clamp-2 bg-white/70 border border-[#1b263b]/10 p-2.5 rounded-xl">
+                                            "{mentor.bio}"
+                                          </p>
                                         )}
                                       </div>
-                                      <button
-                                        onClick={() => { setSelectedMentor(mentor); setBookingSuccess(null); setBookingError(null); }}
-                                        className="w-full mt-4 border-2 border-[#1b263b] py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-white text-[#1b263b] hover:bg-[#1b263b] hover:text-white transition-all shadow-[2px_2px_0px_0px_#1b263b]"
-                                      >
-                                        Xem lịch trống & Đặt lịch 📅
-                                      </button>
+
+                                      {/* Action Buttons */}
+                                      <div className="mt-4 grid grid-cols-2 gap-2">
+                                        <button
+                                          onClick={() => handleOpenMentorReviews(mentor)}
+                                          className="border-2 border-[#1b263b] py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-sky-50 text-[#1b263b] hover:bg-sky-100 transition-all shadow-[2px_2px_0px_0px_#1b263b]"
+                                        >
+                                          💬 Đánh giá & Hồ sơ
+                                        </button>
+                                        <button
+                                          onClick={() => { setSelectedMentor(mentor); setBookingSuccess(null); setBookingError(null); }}
+                                          className="border-2 border-[#1b263b] py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-[#ffd54f] text-[#1b263b] hover:bg-yellow-400 transition-all shadow-[2px_2px_0px_0px_#1b263b]"
+                                        >
+                                          📅 Xem lịch & Đặt
+                                        </button>
+                                      </div>
                                     </div>
                                   );
                                 })}
@@ -1875,6 +1985,179 @@ export default function PracticeWorkspace() {
                       className="border-2 border-[#1b263b] bg-[#ffd54f] hover:bg-yellow-400 text-[#1b263b] rounded-xl px-4 py-2 font-black shadow-[2px_2px_0px_0px_#1b263b] transition-all"
                     >
                       Gửi
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MENTOR REVIEWS & PROFILE MODAL */}
+            {viewReviewsMentor && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+                <div className="bg-[#fcfbf7] border-2 border-[#1b263b] rounded-3xl p-6 shadow-[6px_6px_0px_0px_#1b263b] max-w-2xl w-full max-h-[85vh] flex flex-col relative overflow-hidden">
+                  {/* Header */}
+                  <div className="flex justify-between items-start border-b border-[#1b263b]/10 pb-4 shrink-0">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl border-2 border-[#1b263b] bg-[#1b263b] text-white flex items-center justify-center font-serif font-black text-2xl shadow-[2px_2px_0px_0px_#1b263b]">
+                        {(viewReviewsMentor.fullName || 'M')[0].toUpperCase()}
+                      </div>
+                      <div className="text-left">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-serif font-black text-xl text-[#1b263b]">{viewReviewsMentor.fullName || viewReviewsMentor.username}</h3>
+                          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-400">✓ Certified Mentor</span>
+                        </div>
+                        <p className="text-xs text-gray-500 font-bold">{viewReviewsMentor.email}</p>
+                        {/* Expertise tags */}
+                        {(mentorReviewsData?.mentor?.expertise || viewReviewsMentor.expertise) && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {(mentorReviewsData?.mentor?.expertise || viewReviewsMentor.expertise).split(/[,/]/).map((exp: string, idx: number) => (
+                              <span key={idx} className="text-[10px] font-black bg-amber-100 text-[#1b263b] border border-[#1b263b] px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                ⚡ {exp.trim()}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <button onClick={() => setViewReviewsMentor(null)} className="text-2xl font-black text-[#1b263b] hover:opacity-70">✕</button>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="flex-1 overflow-y-auto py-4 space-y-6 text-left pr-1">
+                    {/* Mentor Bio */}
+                    {(mentorReviewsData?.mentor?.bio || viewReviewsMentor.bio) && (
+                      <div className="bg-white border-2 border-[#1b263b] rounded-2xl p-4 shadow-[2px_2px_0px_0px_#1b263b]">
+                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">📖 Giới thiệu & Kinh nghiệm giảng dạy</h4>
+                        <p className="text-xs text-gray-800 font-bold leading-relaxed whitespace-pre-line">{mentorReviewsData?.mentor?.bio || viewReviewsMentor.bio}</p>
+                      </div>
+                    )}
+
+                    {/* Rating Overview Card */}
+                    <div className="bg-amber-50 border-2 border-[#1b263b] rounded-2xl p-5 shadow-[3px_3px_0px_0px_#1b263b]">
+                      <h4 className="text-xs font-black uppercase text-[#1b263b] tracking-wider mb-3">⭐ Tổng quan đánh giá từ Học Viên</h4>
+                      {reviewsLoading ? (
+                        <p className="text-xs font-bold text-gray-400 animate-pulse text-center py-4">⏳ Đang tải đánh giá...</p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                          {/* Left score box */}
+                          <div className="flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-[#1b263b]/10 pb-3 md:pb-0">
+                            <span className="text-4xl font-serif font-black text-[#1b263b]">
+                              {mentorReviewsData?.averageRating ? mentorReviewsData.averageRating.toFixed(1) : '0.0'}
+                            </span>
+                            <div className="flex text-amber-400 text-lg my-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <span key={star}>{(mentorReviewsData?.averageRating || 0) >= star ? '★' : '☆'}</span>
+                              ))}
+                            </div>
+                            <span className="text-[10px] font-black text-gray-500 uppercase">
+                              {mentorReviewsData?.totalReviews || 0} Nhận xét từ học viên
+                            </span>
+                          </div>
+
+                          {/* Right distribution bars */}
+                          <div className="md:col-span-2 space-y-1.5">
+                            {[5, 4, 3, 2, 1].map((star) => {
+                              const count = mentorReviewsData?.distribution?.[star] || 0;
+                              const total = mentorReviewsData?.totalReviews || 1;
+                              const percent = mentorReviewsData?.totalReviews ? Math.round((count / total) * 100) : 0;
+                              return (
+                                <div key={star} className="flex items-center gap-2 text-xs font-bold">
+                                  <span className="w-8 text-[10px] font-black text-gray-600">{star} ★</span>
+                                  <div className="flex-1 bg-white border border-[#1b263b] h-3 rounded-full overflow-hidden">
+                                    <div className="bg-amber-400 h-full rounded-full transition-all" style={{ width: `${percent}%` }} />
+                                  </div>
+                                  <span className="w-8 text-[10px] font-black text-gray-500 text-right">{count}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Filter & Reviews List */}
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-xs font-black uppercase text-[#1b263b] tracking-wider">
+                          💬 Tất cả nhận xét ({mentorReviewsData?.reviews?.length || 0})
+                        </h4>
+                        {/* Filter buttons */}
+                        <div className="flex gap-1">
+                          {[0, 5, 4, 3].map((starVal) => (
+                            <button
+                              key={starVal}
+                              onClick={() => setReviewsFilterRating(starVal)}
+                              className={`text-[10px] font-black px-2 py-0.5 rounded-lg border transition-all ${
+                                reviewsFilterRating === starVal
+                                  ? 'bg-[#1b263b] text-white border-[#1b263b]'
+                                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'
+                              }`}
+                            >
+                              {starVal === 0 ? 'Tất cả' : `${starVal} ★`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {reviewsLoading ? (
+                        <div className="text-center py-8 text-xs font-bold text-gray-400 animate-pulse">⏳ Đang tải nội dung nhận xét...</div>
+                      ) : !mentorReviewsData?.reviews || mentorReviewsData.reviews.length === 0 ? (
+                        <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-2xl bg-white text-xs font-bold text-gray-400">
+                          Gia sư này chưa có lượt nhận xét nào từ học viên.
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {mentorReviewsData.reviews
+                            .filter((r: any) => reviewsFilterRating === 0 || r.rating === reviewsFilterRating)
+                            .map((rev: any) => (
+                              <div key={rev.id} className="bg-white border-2 border-[#1b263b] rounded-2xl p-4 shadow-[2px_2px_0px_0px_#1b263b]">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-full border border-[#1b263b] bg-indigo-100 text-indigo-900 font-black text-xs flex items-center justify-center">
+                                      {(rev.student?.fullName || 'H')[0].toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-black text-[#1b263b]">{rev.student?.fullName || 'Học viên ẩn danh'}</p>
+                                      <p className="text-[9px] font-bold text-gray-400">{new Date(rev.createdAt).toLocaleDateString('vi-VN')}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex text-amber-400 text-xs font-black bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-full">
+                                    {'⭐'.repeat(rev.rating)}
+                                  </div>
+                                </div>
+                                {rev.comment ? (
+                                  <p className="text-xs font-semibold text-gray-700 leading-relaxed bg-gray-50 p-2.5 rounded-xl border border-gray-200">
+                                    "{rev.comment}"
+                                  </p>
+                                ) : (
+                                  <p className="text-[10px] text-gray-400 italic">Học viên không để lại bình luận chữ.</p>
+                                )}
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Footer CTA */}
+                  <div className="border-t border-[#1b263b]/10 pt-4 shrink-0 flex gap-3">
+                    <button
+                      onClick={() => setViewReviewsMentor(null)}
+                      className="w-1/3 border-2 border-[#1b263b] bg-white py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-all shadow-[2px_2px_0px_0px_#1b263b]"
+                    >
+                      Đóng
+                    </button>
+                    <button
+                      onClick={() => {
+                        const m = viewReviewsMentor;
+                        setViewReviewsMentor(null);
+                        setSelectedMentor(m);
+                        setBookingSuccess(null);
+                        setBookingError(null);
+                      }}
+                      className="w-2/3 border-2 border-[#1b263b] bg-[#ffd54f] hover:bg-yellow-400 text-[#1b263b] py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-[3px_3px_0px_0px_#1b263b]"
+                    >
+                      📅 Đặt Lịch Ngay Với Mentor Này
                     </button>
                   </div>
                 </div>

@@ -155,4 +155,149 @@ export class MentorService {
       where: { id: slotId },
     });
   }
+
+  /**
+   * Get list of active mentors with aggregated ratings and review counts.
+   */
+  static async getAllActiveMentorsWithRatings() {
+    const mentors = await prisma.user.findMany({
+      where: {
+        role: 'MENTOR',
+        status: 'active',
+      },
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        email: true,
+        avatar: true,
+        bio: true,
+        expertise: true,
+      },
+    });
+
+    if (mentors.length === 0) return [];
+
+    const mentorIds = mentors.map((m) => m.id);
+
+    const ratingStats = await prisma.booking.groupBy({
+      by: ['mentorId'],
+      where: {
+        mentorId: { in: mentorIds },
+        rating: { not: null },
+      },
+      _avg: {
+        rating: true,
+      },
+      _count: {
+        rating: true,
+      },
+    });
+
+    const statsMap = new Map<string, { averageRating: number; totalReviews: number }>(
+      ratingStats.map((stat) => [
+        stat.mentorId,
+        {
+          averageRating: stat._avg.rating ? Math.round(stat._avg.rating * 10) / 10 : 0,
+          totalReviews: stat._count.rating || 0,
+        },
+      ])
+    );
+
+    const defaultExpertise = 'IELTS Speaking, Writing Task 2, Reading & Listening Strategies';
+    const defaultBio = 'Giảng viên IELTS giàu kinh nghiệm, chuyên đồng hành cùng học viên phát triển toàn diện kỹ năng tiếng Anh và đạt mục tiêu band mong muốn.';
+
+    return mentors.map((mentor) => {
+      const stat = statsMap.get(mentor.id);
+      return {
+        ...mentor,
+        expertise: mentor.expertise && mentor.expertise.trim() !== '' ? mentor.expertise : defaultExpertise,
+        bio: mentor.bio && mentor.bio.trim() !== '' ? mentor.bio : defaultBio,
+        averageRating: stat ? stat.averageRating : 0,
+        totalReviews: stat ? stat.totalReviews : 0,
+      };
+    });
+  }
+
+  /**
+   * Get detailed reviews and rating distribution for a specific mentor.
+   */
+  static async getMentorReviews(mentorId: string) {
+    const mentor = await prisma.user.findFirst({
+      where: {
+        id: mentorId,
+        role: 'MENTOR',
+      },
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        email: true,
+        avatar: true,
+        bio: true,
+        expertise: true,
+      },
+    });
+
+    if (!mentor) {
+      throw new Error('Mentor không tồn tại.');
+    }
+
+    const defaultExpertise = 'IELTS Speaking, Writing Task 2, Reading & Listening Strategies';
+    const defaultBio = 'Giảng viên IELTS giàu kinh nghiệm, chuyên đồng hành cùng học viên phát triển toàn diện kỹ năng tiếng Anh và đạt mục tiêu band mong muốn.';
+
+    const mentorProfile = {
+      ...mentor,
+      expertise: mentor.expertise && mentor.expertise.trim() !== '' ? mentor.expertise : defaultExpertise,
+      bio: mentor.bio && mentor.bio.trim() !== '' ? mentor.bio : defaultBio,
+    };
+
+    const reviews = await prisma.booking.findMany({
+      where: {
+        mentorId,
+        rating: { not: null },
+      },
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+        student: {
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+            avatar: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    const totalReviews = reviews.length;
+    const sumRating = reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+    const averageRating = totalReviews > 0 ? Math.round((sumRating / totalReviews) * 10) / 10 : 0;
+
+    const distribution: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    reviews.forEach((r) => {
+      if (r.rating && r.rating >= 1 && r.rating <= 5) {
+        distribution[r.rating] = (distribution[r.rating] || 0) + 1;
+      }
+    });
+
+    return {
+      mentor: {
+        ...mentorProfile,
+        averageRating,
+        totalReviews,
+      },
+      averageRating,
+      totalReviews,
+      distribution,
+      reviews,
+    };
+  }
 }
+

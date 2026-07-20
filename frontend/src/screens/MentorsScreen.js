@@ -19,7 +19,7 @@ import { Menu, Divider } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import client from '../api/client';
 import useAuthStore from '../store/useAuthStore';
 import { socket } from '../utils/socket';
@@ -919,7 +919,7 @@ const MentorsScreen = ({ navigation }) => {
       });
     } else {
       const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: FileSystem.EncodingType?.Base64 || 'base64',
       });
       return `data:${mimeType || 'application/octet-stream'};base64,${base64}`;
     }

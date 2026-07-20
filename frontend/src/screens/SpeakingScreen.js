@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Audio } from 'expo-av';
 import Toast from 'react-native-toast-message';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../store/useAuthStore';
 import AppIcon from '../shared/icons/AppIcon';
@@ -45,6 +45,7 @@ const SpeakingScreen = ({ route, navigation }) => {
   const durationRef = useRef(0);
   const audioUriRef = useRef(null); // lưu URI file sau khi dừng
   const streamRef = useRef(null);
+  const recordingRef = useRef(null);
 
   useEffect(() => {
     if (examId) {
@@ -79,16 +80,20 @@ const SpeakingScreen = ({ route, navigation }) => {
   }, [examId]);
 
   useEffect(() => {
+    recordingRef.current = recording;
+  }, [recording]);
+
+  useEffect(() => {
     return () => {
       // Cleanup khi rời màn hình
-      if (recording) recording.stopAndUnloadAsync().catch(() => {});
+      if (recordingRef.current) recordingRef.current.stopAndUnloadAsync().catch(() => {});
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
       streamRef.current?.getTracks().forEach(t => t.stop());
-      clearInterval(timerRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [recording]);
+  }, []);
 
   const formatTime = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
@@ -230,7 +235,7 @@ const SpeakingScreen = ({ route, navigation }) => {
           reader.readAsDataURL(blob);
         });
       } else {
-        base64Data = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        base64Data = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType?.Base64 || 'base64' });
       }
 
       const activeSection = sections[activeSectionIndex] || {};

@@ -10,21 +10,7 @@ export class MentorController {
    */
   static async getAllActiveMentors(req: Request, res: Response, next: NextFunction) {
     try {
-      const mentors = await prisma.user.findMany({
-        where: {
-          role: 'MENTOR',
-          status: 'active',
-        },
-        select: {
-          id: true,
-          username: true,
-          fullName: true,
-          email: true,
-          avatar: true,
-          bio: true,
-          expertise: true,
-        },
-      });
+      const mentors = await MentorService.getAllActiveMentorsWithRatings();
       res.status(200).json({
         success: true,
         data: mentors,
@@ -123,6 +109,23 @@ export class MentorController {
       });
     } catch (error: any) {
       next(new ApiError(error.message || 'Failed to delete availability.', 400));
+    }
+  }
+
+  /**
+   * GET /api/v1/mentors/:id/reviews
+   * Get public reviews and ratings for a mentor
+   */
+  static async getMentorReviews(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const data = await MentorService.getMentorReviews(id);
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error: any) {
+      next(new ApiError(error.message || 'Failed to fetch mentor reviews.', 400));
     }
   }
 }
