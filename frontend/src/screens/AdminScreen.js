@@ -132,20 +132,44 @@ const createExamTemplate = (type) => {
   return [];
 };
 
-const QuestionEditCard = ({ question, onChange }) => {
+const reindexQuestions = (sections) => {
+  let currentNumber = 1;
+  return (sections || []).map(sec => {
+    const updatedQuestions = (sec.questions || []).map(q => {
+      const newQ = { ...q, questionNumber: currentNumber };
+      currentNumber++;
+      return newQ;
+    });
+    return { ...sec, questions: updatedQuestions };
+  });
+};
+
+const QuestionEditCard = ({ question, onChange, onDelete }) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
     <View style={styles.qCard}>
-      <TouchableOpacity 
-        style={styles.qCardHeader}
-        onPress={() => setExpanded(!expanded)}
-      >
-        <Text style={styles.qCardTitle}>
-          Câu {question.questionNumber}: {question.content ? question.content.substring(0, 40) + (question.content.length > 40 ? '...' : '') : '(Chưa nhập nội dung)'}
-        </Text>
-        <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color="#1b263b" />
-      </TouchableOpacity>
+      <View style={[styles.qCardHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+        <TouchableOpacity 
+          style={{ flex: 1, paddingVertical: 10 }}
+          onPress={() => setExpanded(!expanded)}
+        >
+          <Text style={styles.qCardTitle}>
+            Câu {question.questionNumber}: {question.content ? question.content.substring(0, 30) + (question.content.length > 30 ? '...' : '') : '(Chưa nhập nội dung)'}
+          </Text>
+        </TouchableOpacity>
+        
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          {onDelete && (
+            <TouchableOpacity onPress={onDelete} style={{ padding: 4 }}>
+              <Ionicons name="trash-outline" size={16} color="#c92a2a" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={() => setExpanded(!expanded)} style={{ padding: 4 }}>
+            <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color="#1b263b" />
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {expanded && (
         <View style={styles.qCardBody}>
@@ -1538,30 +1562,91 @@ const AdminScreen = ({ navigation }) => {
                 <View>
                   {/* Step 2: Section / Questions Wizard */}
                   <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
-                    {/* Section Horizontal tabs */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionTabsScroll}>
-                      {modalSections.map((sec, idx) => (
-                        <TouchableOpacity
-                          key={idx}
-                          style={[
-                            styles.sectionTabBtn,
-                            selectedSectionIdx === idx && styles.sectionTabBtnActive
-                          ]}
-                          onPress={() => setSelectedSectionIdx(idx)}
-                        >
-                          <Text style={[
-                            styles.sectionTabBtnText,
-                            selectedSectionIdx === idx && styles.sectionTabBtnActiveText
-                          ]}>
-                            {sec.title || `Phần ${idx + 1}`}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
+                    {/* Section Horizontal tabs and Add button */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.sectionTabsScroll, { marginBottom: 0 }]}>
+                        {modalSections.map((sec, idx) => (
+                          <TouchableOpacity
+                            key={idx}
+                            style={[
+                              styles.sectionTabBtn,
+                              selectedSectionIdx === idx && styles.sectionTabBtnActive
+                            ]}
+                            onPress={() => setSelectedSectionIdx(idx)}
+                          >
+                            <Text style={[
+                              styles.sectionTabBtnText,
+                              selectedSectionIdx === idx && styles.sectionTabBtnActiveText
+                            ]}>
+                              {sec.title || `Phần ${idx + 1}`}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                      
+                      <TouchableOpacity
+                        style={[styles.sectionTabBtn, { backgroundColor: '#ffd54f', marginLeft: 6, minWidth: 32, alignItems: 'center', justifyContent: 'center' }]}
+                        onPress={() => {
+                          const newOrder = modalSections.length + 1;
+                          const type = examForm.type.toUpperCase();
+                          let defaultTitle = `Section ${newOrder}`;
+                          if (type === 'READING') defaultTitle = `Passage ${newOrder}`;
+                          else if (type === 'WRITING') defaultTitle = `Writing Task ${newOrder}`;
+                          else if (type === 'SPEAKING') defaultTitle = `Part ${newOrder}`;
+
+                          const newSec = {
+                            sectionOrder: newOrder,
+                            title: defaultTitle,
+                            audioUrl: '',
+                            passageText: '',
+                            images: [],
+                            questions: []
+                          };
+                          setModalSections([...modalSections, newSec]);
+                          setSelectedSectionIdx(modalSections.length); // Select new section
+                        }}
+                      >
+                        <Ionicons name="add" size={14} color="#1b263b" />
+                      </TouchableOpacity>
+                    </View>
 
                     {modalSections[selectedSectionIdx] && (
                       <View style={styles.sectionEditArea}>
-                        <Text style={styles.inputLabel}>Tiêu đề phần / Section Title</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <Text style={styles.inputLabel}>Tiêu đề phần / Section Title</Text>
+                          {modalSections.length > 1 && (
+                            <TouchableOpacity
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2, paddingHorizontal: 6 }}
+                              onPress={() => {
+                                Alert.alert(
+                                  'Xác nhận xóa',
+                                  `Bạn có chắc chắn muốn xóa phần "${modalSections[selectedSectionIdx].title || `Phần ${selectedSectionIdx + 1}`}" và toàn bộ câu hỏi bên trong?`,
+                                  [
+                                    { text: 'Hủy', style: 'cancel' },
+                                    {
+                                      text: 'Xóa',
+                                      style: 'destructive',
+                                      onPress: () => {
+                                        const updated = modalSections.filter((_, sIdx) => sIdx !== selectedSectionIdx);
+                                        // Re-index sectionOrder
+                                        const standardized = updated.map((sec, sIdx) => ({
+                                          ...sec,
+                                          sectionOrder: sIdx + 1
+                                        }));
+                                        const reindexed = reindexQuestions(standardized);
+                                        setModalSections(reindexed);
+                                        setSelectedSectionIdx(Math.max(0, selectedSectionIdx - 1));
+                                      }
+                                    }
+                                  ]
+                                );
+                              }}
+                            >
+                              <Ionicons name="trash-outline" size={12} color="#c92a2a" />
+                              <Text style={{ fontSize: 10, fontFamily: 'Outfit_900Black', color: '#c92a2a' }}>Xóa phần này</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
                         <TextInput
                           style={styles.modalInput}
                           value={modalSections[selectedSectionIdx].title}
@@ -1615,9 +1700,33 @@ const AdminScreen = ({ navigation }) => {
                         {/* Questions List (Listening, Reading, Speaking only) */}
                         {examForm.type !== 'WRITING' && (
                           <View style={{ marginTop: 15 }}>
-                            <Text style={[styles.inputLabel, { fontSize: 13, marginBottom: 8, fontFamily: 'Outfit_700Bold' }]}>
-                              Danh sách câu hỏi ({modalSections[selectedSectionIdx].questions?.length || 0})
-                            </Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                              <Text style={[styles.inputLabel, { fontSize: 13, marginBottom: 0, fontFamily: 'Outfit_700Bold' }]}>
+                                Danh sách câu hỏi ({modalSections[selectedSectionIdx].questions?.length || 0})
+                              </Text>
+                              <TouchableOpacity
+                                style={[styles.brutalistMiniBtn, { backgroundColor: '#ffd54f', paddingVertical: 4, paddingHorizontal: 8 }]}
+                                onPress={() => {
+                                  const updated = [...modalSections];
+                                  const currentSec = updated[selectedSectionIdx];
+                                  const newQ = {
+                                    questionNumber: 1, // Will be reindexed
+                                    type: 'FILL_IN_BLANKS',
+                                    content: '',
+                                    options: '',
+                                    answer: '',
+                                    explanation: ''
+                                  };
+                                  currentSec.questions = [...(currentSec.questions || []), newQ];
+                                  const reindexed = reindexQuestions(updated);
+                                  setModalSections(reindexed);
+                                }}
+                              >
+                                <Ionicons name="add" size={12} color="#1b263b" />
+                                <Text style={[styles.brutalistMiniBtnText, { fontSize: 8 }]}>THÊM CÂU HỎI</Text>
+                              </TouchableOpacity>
+                            </View>
+                            
                             {(modalSections[selectedSectionIdx].questions || []).map((q, qIdx) => (
                               <QuestionEditCard
                                 key={qIdx}
@@ -1626,6 +1735,25 @@ const AdminScreen = ({ navigation }) => {
                                   const updated = [...modalSections];
                                   updated[selectedSectionIdx].questions[qIdx][field] = val;
                                   setModalSections(updated);
+                                }}
+                                onDelete={() => {
+                                  Alert.alert(
+                                    'Xác nhận xóa câu hỏi',
+                                    `Bạn có chắc chắn muốn xóa Câu ${q.questionNumber}?`,
+                                    [
+                                      { text: 'Hủy', style: 'cancel' },
+                                      {
+                                        text: 'Xóa',
+                                        style: 'destructive',
+                                        onPress: () => {
+                                          const updated = [...modalSections];
+                                          updated[selectedSectionIdx].questions = updated[selectedSectionIdx].questions.filter((_, qIdx2) => qIdx2 !== qIdx);
+                                          const reindexed = reindexQuestions(updated);
+                                          setModalSections(reindexed);
+                                        }
+                                      }
+                                    ]
+                                  );
                                 }}
                               />
                             ))}
