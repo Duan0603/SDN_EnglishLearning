@@ -132,6 +132,31 @@ export default function AdminDashboard() {
   const [showBulkImportModal, setShowBulkImportModal] = useState(false)
   const [bulkJsonPayload, setBulkJsonPayload] = useState('')
 
+  // Custom Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const triggerConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmModal({
+      show: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmModal(prev => ({ ...prev, show: false }));
+      }
+    });
+  };
+
   // Submissions (Practice Results) State
   const [submissionsList, setSubmissionsList] = useState<any[]>([])
   const [submissionsLoading, setSubmissionsLoading] = useState(false)
@@ -2517,36 +2542,40 @@ export default function AdminDashboard() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (window.confirm(`Bạn có chắc chắn muốn xóa phần "${modalSections[selectedSectionIdx].title || `Phần ${selectedSectionIdx + 1}`}" và toàn bộ câu hỏi bên trong?`)) {
-                                    const updated = modalSections.filter((_, sIdx) => sIdx !== selectedSectionIdx);
-                                    // Re-index sectionOrder
-                                    const standardized = updated.map((sec: any, sIdx: number) => {
-                                      const isDefaultTitle = /^(Section|Passage|Task|Part)\s*\d+$/i.test(sec.title || '');
-                                      const defaultTitlePrefix = newExamType === 'Listening' ? 'Section' :
-                                                                 newExamType === 'Reading' ? 'Passage' :
-                                                                 newExamType === 'Writing' ? 'Task' : 'Part';
-                                      const nextTitle = isDefaultTitle ? `${defaultTitlePrefix} ${sIdx + 1}` : (sec.title || `${defaultTitlePrefix} ${sIdx + 1}`);
-                                      return {
-                                        ...sec,
-                                        sectionOrder: sIdx + 1,
-                                        title: nextTitle
-                                      };
-                                    });
-                                    
-                                    // Re-index question numbers sequentially
-                                    let currentQNum = 1;
-                                    const finalSecs = standardized.map((sec: any) => {
-                                      const updatedQs = (sec.questions || []).map((q: any) => {
-                                        const newQ = { ...q, questionNumber: currentQNum };
-                                        currentQNum++;
-                                        return newQ;
+                                  triggerConfirm(
+                                    'Xác nhận xóa phần thi',
+                                    `Bạn có chắc chắn muốn xóa phần "${modalSections[selectedSectionIdx].title || `Phần ${selectedSectionIdx + 1}`}" và toàn bộ câu hỏi bên trong?`,
+                                    () => {
+                                      const updated = modalSections.filter((_, sIdx) => sIdx !== selectedSectionIdx);
+                                      // Re-index sectionOrder
+                                      const standardized = updated.map((sec: any, sIdx: number) => {
+                                        const isDefaultTitle = /^(Section|Passage|Task|Part)\s*\d+$/i.test(sec.title || '');
+                                        const defaultTitlePrefix = newExamType === 'Listening' ? 'Section' :
+                                                                   newExamType === 'Reading' ? 'Passage' :
+                                                                   newExamType === 'Writing' ? 'Task' : 'Part';
+                                        const nextTitle = isDefaultTitle ? `${defaultTitlePrefix} ${sIdx + 1}` : (sec.title || `${defaultTitlePrefix} ${sIdx + 1}`);
+                                        return {
+                                          ...sec,
+                                          sectionOrder: sIdx + 1,
+                                          title: nextTitle
+                                        };
                                       });
-                                      return { ...sec, questions: updatedQs };
-                                    });
+                                      
+                                      // Re-index question numbers sequentially
+                                      let currentQNum = 1;
+                                      const finalSecs = standardized.map((sec: any) => {
+                                        const updatedQs = (sec.questions || []).map((q: any) => {
+                                          const newQ = { ...q, questionNumber: currentQNum };
+                                          currentQNum++;
+                                          return newQ;
+                                        });
+                                        return { ...sec, questions: updatedQs };
+                                      });
 
-                                    setModalSections(finalSecs);
-                                    setSelectedSectionIdx(Math.max(0, selectedSectionIdx - 1));
-                                  }
+                                      setModalSections(finalSecs);
+                                      setSelectedSectionIdx(Math.max(0, selectedSectionIdx - 1));
+                                    }
+                                  );
                                 }}
                                 className="text-[9px] font-black text-rose-700 hover:text-rose-950 uppercase tracking-wider"
                               >
@@ -2858,6 +2887,39 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirmation Modal */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-fade-in">
+          <div className="bg-[#fcfbf7] border-4 border-[#1b263b] rounded-2xl max-w-sm w-full p-5 shadow-[5px_5px_0px_0px_#1b263b] space-y-4">
+            <div className="flex items-center gap-2 text-[#c92a2a]">
+              <span className="text-xl">⚠️</span>
+              <h4 className="text-xs font-serif font-black uppercase tracking-wider">{confirmModal.title}</h4>
+            </div>
+            
+            <p className="text-xs text-[#1b263b] font-bold leading-relaxed">
+              {confirmModal.message}
+            </p>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+                className="bg-white hover:bg-gray-100 border-2 border-[#1b263b] text-[#1b263b] font-black text-[10px] px-4 py-2 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] transition-all"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={confirmModal.onConfirm}
+                className="bg-[#c92a2a] hover:bg-[#b01e1e] text-white border-2 border-[#1b263b] font-black text-[10px] px-4 py-2 rounded-xl shadow-[2px_2px_0px_0px_#1b263b] active:scale-95 transition-all"
+              >
+                Đồng ý
+              </button>
+            </div>
           </div>
         </div>
       )}
