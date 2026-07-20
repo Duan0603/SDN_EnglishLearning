@@ -2511,7 +2511,49 @@ export default function AdminDashboard() {
                     <div className="space-y-4 text-left">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider mb-1">Tiêu đề Phần</label>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className="block text-[9px] font-black text-[#1b263b] uppercase tracking-wider">Tiêu đề Phần</label>
+                            {modalSections.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm(`Bạn có chắc chắn muốn xóa phần "${modalSections[selectedSectionIdx].title || `Phần ${selectedSectionIdx + 1}`}" và toàn bộ câu hỏi bên trong?`)) {
+                                    const updated = modalSections.filter((_, sIdx) => sIdx !== selectedSectionIdx);
+                                    // Re-index sectionOrder
+                                    const standardized = updated.map((sec, sIdx) => {
+                                      const isDefaultTitle = /^(Section|Passage|Task|Part)\s*\d+$/i.test(sec.title || '');
+                                      const defaultTitlePrefix = newExamType === 'Listening' ? 'Section' :
+                                                                 newExamType === 'Reading' ? 'Passage' :
+                                                                 newExamType === 'Writing' ? 'Task' : 'Part';
+                                      const nextTitle = isDefaultTitle ? `${defaultTitlePrefix} ${sIdx + 1}` : (sec.title || `${defaultTitlePrefix} ${sIdx + 1}`);
+                                      return {
+                                        ...sec,
+                                        sectionOrder: sIdx + 1,
+                                        title: nextTitle
+                                      };
+                                    });
+                                    
+                                    // Re-index question numbers sequentially
+                                    let currentQNum = 1;
+                                    const finalSecs = standardized.map(sec => {
+                                      const updatedQs = (sec.questions || []).map(q => {
+                                        const newQ = { ...q, questionNumber: currentQNum };
+                                        currentQNum++;
+                                        return newQ;
+                                      });
+                                      return { ...sec, questions: updatedQs };
+                                    });
+
+                                    setModalSections(finalSecs);
+                                    setSelectedSectionIdx(Math.max(0, selectedSectionIdx - 1));
+                                  }
+                                }}
+                                className="text-[9px] font-black text-rose-700 hover:text-rose-950 uppercase tracking-wider"
+                              >
+                                ✕ Xóa phần này
+                              </button>
+                            )}
+                          </div>
                           <input
                             type="text"
                             value={modalSections[selectedSectionIdx].title || ''}
